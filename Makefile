@@ -43,7 +43,7 @@ endif
 
 # launcher is intentionally omitted from the standard build process
 # see https://github.com/reset/dojo/blob/master/components/launcher/README.md
-BIN = doj pkg-export-docker pkg-export-kubernetes sup
+BIN = doj pkg-export-docker sup
 LIB = butterfly common builder-api-client sup-protocol sup-client
 ALL = $(BIN) $(LIB)
 VERSION := $(shell cat VERSION)

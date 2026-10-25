@@ -108,7 +108,7 @@ impl PackageIdent {
     /// # Examples
     ///
     /// ```
-    /// use habitat_core::package::PackageIdent;
+    /// use dojo_core::package::PackageIdent;
     /// use std::str::FromStr;
     ///
     /// // All ident components are iterated through with a fully qualified ident
@@ -322,7 +322,7 @@ impl<'a> From<&'a PackageIdent> for Cow<'a, PackageIdent> {
 /// # Examples
 ///
 /// ```
-/// use habitat_core::package::PackageIdent;
+/// use dojo_core::package::PackageIdent;
 /// use std::str::FromStr;
 ///
 /// let target = PackageIdent::from_str("acme/myapp/1.2.3").unwrap();

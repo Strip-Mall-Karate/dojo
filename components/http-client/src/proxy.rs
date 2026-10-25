@@ -17,7 +17,7 @@ use url::{self,
           Url};
 
 use base64;
-use habitat_core::env;
+use dojo_core::env;
 
 use crate::error::{Error,
                    Result};
@@ -29,10 +29,10 @@ use crate::error::{Error,
 /// A proxy server with no credentials required:
 ///
 /// ```
-/// extern crate habitat_http_client;
+/// extern crate dojo_http_client;
 /// extern crate url;
 ///
-/// use habitat_http_client::proxy::ProxyInfo;
+/// use dojo_http_client::proxy::ProxyInfo;
 /// use std::str::FromStr;
 /// use url::Url;
 ///
@@ -49,10 +49,10 @@ use crate::error::{Error,
 /// A proxy server using basic authorization:
 ///
 /// ```
-/// extern crate habitat_http_client;
+/// extern crate dojo_http_client;
 /// extern crate url;
 ///
-/// use habitat_http_client::proxy::{ProxyBasicAuthorization,
+/// use dojo_http_client::proxy::{ProxyBasicAuthorization,
 ///                                  ProxyInfo};
 /// use std::str::FromStr;
 /// use url::Url;
@@ -131,7 +131,7 @@ impl ProxyInfo {
 /// # Examples
 ///
 /// ```
-/// use habitat_http_client::proxy::ProxyBasicAuthorization;
+/// use dojo_http_client::proxy::ProxyBasicAuthorization;
 ///
 /// let authz = ProxyBasicAuthorization::new("foo".to_string(), "bar".to_string());
 ///
@@ -177,7 +177,7 @@ impl ProxyBasicAuthorization {
 /// Behavior when environment variable is set:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("http_proxy", "http://proxy.example.com:8001/");
@@ -191,7 +191,7 @@ impl ProxyBasicAuthorization {
 /// Behavior when environment variable is set with basic auth credentials:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("http_proxy", "http://itsme:asecret@proxy.example.com");
@@ -206,7 +206,7 @@ impl ProxyBasicAuthorization {
 /// Behavior when both lower case and upper case environment variables are set:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("HTTP_PROXY", "http://upper.example.com");
@@ -219,7 +219,7 @@ impl ProxyBasicAuthorization {
 /// Behavior when environment variable is empty:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("http_proxy", "");
@@ -264,7 +264,7 @@ pub fn http_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when environment variable is set:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("https_proxy", "http://proxy.example.com:8001/");
@@ -278,7 +278,7 @@ pub fn http_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when environment variable is set with basic auth credentials:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("https_proxy", "http://itsme:asecret@proxy.example.com");
@@ -293,7 +293,7 @@ pub fn http_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when both lower case and upper case environment variables are set:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("HTTPS_PROXY", "http://upper.example.com");
@@ -306,7 +306,7 @@ pub fn http_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when environment variable is empty:
 ///
 /// ```
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std;
 ///
 /// std::env::set_var("https_proxy", "");
@@ -354,10 +354,10 @@ pub fn https_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when domain matches extension set for http_proxy:
 ///
 /// ```
-/// extern crate habitat_http_client;
+/// extern crate dojo_http_client;
 /// extern crate url;
 ///
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std::str::FromStr;
 /// use url::Url;
 ///
@@ -375,10 +375,10 @@ pub fn https_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when domain matches extension set for https_proxy:
 ///
 /// ```
-/// extern crate habitat_http_client;
+/// extern crate dojo_http_client;
 /// extern crate url;
 ///
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std::str::FromStr;
 /// use url::Url;
 ///
@@ -396,10 +396,10 @@ pub fn https_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when both lower case and uppercase environment variables are set:
 ///
 /// ```
-/// extern crate habitat_http_client;
+/// extern crate dojo_http_client;
 /// extern crate url;
 ///
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std::str::FromStr;
 /// use url::Url;
 ///
@@ -418,10 +418,10 @@ pub fn https_proxy() -> Result<Option<ProxyInfo>> {
 /// Behavior when domain does not match extension set:
 ///
 /// ```
-/// extern crate habitat_http_client;
+/// extern crate dojo_http_client;
 /// extern crate url;
 ///
-/// use habitat_http_client::proxy;
+/// use dojo_http_client::proxy;
 /// use std::str::FromStr;
 /// use url::Url;
 ///

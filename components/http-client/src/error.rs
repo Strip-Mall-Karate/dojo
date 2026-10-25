@@ -17,7 +17,7 @@ use std::{error,
           io,
           result};
 
-use habitat_core as hab_core;
+use dojo_core as doj_core;
 use hyper;
 use openssl::{self,
               ssl};
@@ -28,7 +28,7 @@ pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-    HabitatCore(hab_core::Error),
+    DojoCore(doj_core::Error),
     HyperError(hyper::error::Error),
     /// Occurs when an improper http or https proxy value is given.
     InvalidProxyValue(String),
@@ -43,7 +43,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let msg = match *self {
-            Error::HabitatCore(ref e) => format!("{}", e),
+            Error::DojoCore(ref e) => format!("{}", e),
             Error::HyperError(ref err) => format!("{}", err),
             Error::IO(ref e) => format!("{}", e),
             Error::Json(ref e) => format!("{}", e),
@@ -59,7 +59,7 @@ impl fmt::Display for Error {
 impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
-            Error::HabitatCore(ref err) => err.description(),
+            Error::DojoCore(ref err) => err.description(),
             Error::HyperError(ref err) => err.description(),
             Error::IO(ref err) => err.description(),
             Error::Json(ref err) => err.description(),
@@ -71,8 +71,8 @@ impl error::Error for Error {
     }
 }
 
-impl From<hab_core::Error> for Error {
-    fn from(err: hab_core::Error) -> Error { Error::HabitatCore(err) }
+impl From<doj_core::Error> for Error {
+    fn from(err: doj_core::Error) -> Error { Error::DojoCore(err) }
 }
 
 impl From<hyper::error::Error> for Error {

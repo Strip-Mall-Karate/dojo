@@ -46,7 +46,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::CFlags,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::CFlags
             ))
             .unwrap(),
@@ -54,7 +54,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Config,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Config
             ))
             .unwrap(),
@@ -62,7 +62,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Deps,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Deps
             ))
             .unwrap(),
@@ -70,7 +70,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::TDeps,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::TDeps
             ))
             .unwrap(),
@@ -78,7 +78,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::BuildDeps,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::BuildDeps,
             ))
             .unwrap(),
@@ -86,7 +86,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::BuildTDeps,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::BuildTDeps,
             ))
             .unwrap(),
@@ -94,7 +94,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Exposes,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Exposes
             ))
             .unwrap(),
@@ -102,7 +102,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Ident,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Ident
             ))
             .unwrap(),
@@ -110,7 +110,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::LdRunPath,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::LdRunPath
             ))
             .unwrap(),
@@ -118,7 +118,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::LdFlags,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::LdFlags
             ))
             .unwrap(),
@@ -126,7 +126,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::SvcUser,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::SvcUser
             ))
             .unwrap(),
@@ -134,7 +134,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Services,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Services
             ))
             .unwrap(),
@@ -142,7 +142,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::ResolvedServices,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::ResolvedServices
             ))
             .unwrap(),
@@ -150,7 +150,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Manifest,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Manifest
             ))
             .unwrap(),
@@ -158,7 +158,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Path,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Path
             ))
             .unwrap(),
@@ -166,7 +166,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Target,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Target
             ))
             .unwrap(),
@@ -174,7 +174,7 @@ lazy_static::lazy_static! {
         map.insert(
             MetaFile::Type,
             Regex::new(&format!(
-                r"^/?hab/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
+                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
                 MetaFile::Type
             ))
             .unwrap(),
@@ -218,7 +218,7 @@ impl PackageArchive {
         }
     }
 
-    // hab-plan-build.sh only generates SVC_USER and SVC_GROUP files if it thinks a package is
+    // doj-plan-build.sh only generates SVC_USER and SVC_GROUP files if it thinks a package is
     // a service. It determines that by checking for the presence of a run hook file or a
     // pkg_svc_run value. Therefore, if we can detect the presence of a SVC_USER file, we can
     // consider this archive a service.

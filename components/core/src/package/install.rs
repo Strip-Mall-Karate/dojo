@@ -236,7 +236,7 @@ impl PackageInstall {
     pub fn environment_for_command(&self) -> Result<HashMap<String, String>> {
         let mut env = self.runtime_environment()?;
         // Remove any pre-existing PATH key as this is either from an older package or is
-        // present for backwards compatibility with older Habitat releases.
+        // present for backwards compatibility with older Dojo releases.
         env.remove(PATH_KEY);
 
         let mut paths = self.runtime_paths()?;
@@ -244,7 +244,7 @@ impl PackageInstall {
         // Let's join the paths to the FS_ROOT
         // In most cases, this does nothing and should only mutate
         // the paths in a windows studio where FS_ROOT_PATH will
-        // be the studio root path (ie c:\hab\studios\...)
+        // be the studio root path (ie c:\doj\studios\...)
         for path in &mut paths {
             *path = fs::fs_rooted_path(&path, &self.fs_root_path);
         }
@@ -409,7 +409,7 @@ impl PackageInstall {
                 // packages built after
                 // https://github.com/habitat-sh/habitat/commit/13344a679155e5210dd58ecb9d94654f5ae676d3
                 // was merged (in https://github.com/habitat-sh/habitat/pull/4067, released in
-                // Habitat 0.50.0, 2017-11-30) which produced `PATH` metafiles containing extra
+                // Dojo 0.50.0, 2017-11-30) which produced `PATH` metafiles containing extra
                 // path entries.
                 let pkg_prefix = fs::pkg_install_path(self.ident(), None::<&Path>);
                 let v = env::split_paths(&body).filter(|p| p.starts_with(&pkg_prefix))
@@ -421,7 +421,7 @@ impl PackageInstall {
                     // This check is for any packages built after
                     // https://github.com/habitat-sh/habitat/commit/cc1f35e4bd9f7a8d881a602380730488e6ad055a
                     // was merged (in https://github.com/habitat-sh/habitat/pull/4478, released in
-                    // Habitat 0.53.0, 2018-02-05) which stopped producing `PATH` metafiles. This
+                    // Dojo 0.53.0, 2018-02-05) which stopped producing `PATH` metafiles. This
                     // workaround attempts to fallback to the `RUNTIME_ENVIRONMENT` metafile and
                     // use the value of the `PATH` key as a stand-in for the `PATH` metafile.
                     let pkg_prefix = fs::pkg_install_path(self.ident(), None::<&Path>);
@@ -512,7 +512,7 @@ impl PackageInstall {
     /// present once in the order of their first appearance.
     ///
     /// Preserved reference implementation:
-    /// https://github.com/habitat-sh/habitat/blob/333b75d6234db0531cf4a5bdcb859f7d4adc2478/components/core/src/package/install.rs#L321-L350
+    /// https://github.com/reset/dojo/blob/333b75d6234db0531cf4a5bdcb859f7d4adc2478/components/core/src/package/install.rs#L321-L350
     fn legacy_runtime_paths(&self) -> Result<Vec<PathBuf>> {
         let mut paths = Vec::new();
         let mut seen = HashSet::new();

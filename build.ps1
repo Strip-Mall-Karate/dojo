@@ -75,15 +75,11 @@ function Invoke-Configure {
         choco upgrade chocolatey --confirm | Out-Null
     }
 
-    # We need the native library dependencies for `doj`
-    # Until we have dojo packages on Windows, there is
-    # a chocolatey package hosted in MyGet with the native
-    # dependencies built.
-    if ((choco list dojo_native_dependencies --local-only) -match '^1 packages installed\.$') {
-        choco upgrade dojo_native_dependencies --confirm -s https://www.myget.org/F/dojo/api/v2  --allowemptychecksums
-    }
-    else {
-        choco install dojo_native_dependencies --confirm -s https://www.myget.org/F/dojo/api/v2  --allowemptychecksums
+    # We need the native library dependencies for `doj`. Dojo publishes no
+    # package feed for them, so they have to be built and installed locally.
+    if (!((choco list dojo_native_dependencies --local-only) -match '^1 packages installed\.$')) {
+        Write-Error "dojo_native_dependencies is not installed. Dojo has no package feed for it; build and install it locally first."
+        exit 1
     }
 
     if(!(Get-Command git -ErrorAction SilentlyContinue)) {

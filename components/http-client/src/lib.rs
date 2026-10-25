@@ -38,7 +38,7 @@ mod ssl {
               path::Path,
               str::FromStr};
 
-    use habitat_core::{env,
+    use dojo_core::{env,
                        fs::cache_ssl_path,
                        package::{PackageIdent,
                                  PackageInstall}};

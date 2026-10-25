@@ -39,14 +39,14 @@ use serde_derive::{Deserialize,
 pub use crate::os::{filesystem,
                     users};
 
-pub const AUTH_TOKEN_ENVVAR: &str = "HAB_AUTH_TOKEN";
+pub const AUTH_TOKEN_ENVVAR: &str = "DOJ_AUTH_TOKEN";
 
 // A Builder channel
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChannelIdent(String);
 
 impl env::Config for ChannelIdent {
-    const ENVVAR: &'static str = "HAB_BLDR_CHANNEL";
+    const ENVVAR: &'static str = "DOJ_BLDR_CHANNEL";
 }
 
 impl ChannelIdent {

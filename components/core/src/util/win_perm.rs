@@ -28,7 +28,7 @@ use winapi::{shared::{minwindef::DWORD,
 use windows_acl::{acl::ACL,
                   helper};
 
-use habitat_win_users::account::Account;
+use dojo_win_users::account::Account;
 
 use crate::error::{Error,
                    Result};
@@ -118,7 +118,7 @@ mod tests {
     use winapi::um::winnt::FILE_ALL_ACCESS;
     use windows_acl::helper;
 
-    use habitat_win_users::account;
+    use dojo_win_users::account;
 
     use super::*;
     use crate::error::Error;

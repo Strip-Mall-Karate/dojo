@@ -110,10 +110,10 @@ impl SymKey {
     /// Basic usage:
     ///
     /// ```
-    /// extern crate habitat_core;
+    /// extern crate dojo_core;
     /// extern crate tempfile;
     ///
-    /// use habitat_core::crypto::SymKey;
+    /// use dojo_core::crypto::SymKey;
     /// use std::fs::File;
     /// use tempfile::Builder;
     ///
@@ -150,10 +150,10 @@ impl SymKey {
     /// Basic usage:
     ///
     /// ```
-    /// extern crate habitat_core;
+    /// extern crate dojo_core;
     /// extern crate tempfile;
     ///
-    /// use habitat_core::crypto::SymKey;
+    /// use dojo_core::crypto::SymKey;
     /// use tempfile::Builder;
     ///
     /// fn main() {
@@ -182,10 +182,10 @@ impl SymKey {
     /// Basic usage
     ///
     /// ```
-    /// extern crate habitat_core;
+    /// extern crate dojo_core;
     /// extern crate tempfile;
     ///
-    /// use habitat_core::crypto::SymKey;
+    /// use dojo_core::crypto::SymKey;
     /// use tempfile::Builder;
     ///
     /// fn main() {
@@ -266,10 +266,10 @@ impl SymKey {
     /// Basic usage:
     ///
     /// ```
-    /// extern crate habitat_core;
+    /// extern crate dojo_core;
     /// extern crate tempfile;
     ///
-    /// use habitat_core::crypto::{keys::PairType,
+    /// use dojo_core::crypto::{keys::PairType,
     ///                            SymKey};
     /// use tempfile::Builder;
     ///

@@ -236,7 +236,7 @@ pub fn read_metafile<P: AsRef<Path>>(installed_path: P, file: MetaFile) -> Resul
 
 /// Returns the path to a specified MetaFile in an installed path if it exists.
 ///
-/// Useful for fallback logic for dealing with older Habitat packages.
+/// Useful for fallback logic for dealing with older Dojo packages.
 fn existing_metafile<P: AsRef<Path>>(installed_path: P, file: MetaFile) -> Option<PathBuf> {
     let filepath = installed_path.as_ref().join(file.to_string());
     match std::fs::metadata(&filepath) {
@@ -278,8 +278,8 @@ mod test {
     use std::io::Write;
     use tempfile::Builder;
 
-    static ENVIRONMENT: &str = r#"PATH=/hab/pkgs/python/setuptools/35.0.1/20170424072606/bin
-PYTHONPATH=/hab/pkgs/python/setuptools/35.0.1/20170424072606/lib/python3.6/site-packages
+    static ENVIRONMENT: &str = r#"PATH=/doj/pkgs/python/setuptools/35.0.1/20170424072606/bin
+PYTHONPATH=/doj/pkgs/python/setuptools/35.0.1/20170424072606/lib/python3.6/site-packages
 "#;
     static ENVIRONMENT_SEP: &str = r#"PATH=:
 PYTHONPATH=:
@@ -287,7 +287,7 @@ PYTHONPATH=:
     static EXPORTS: &str = r#"status-port=status.port
 port=front-end.port
 "#;
-    static PATH: &str = "/hab/pkgs/python/setuptools/35.0.1/20170424072606/bin";
+    static PATH: &str = "/doj/pkgs/python/setuptools/35.0.1/20170424072606/bin";
 
     /// Write the given contents into the specified metadata file for
     /// the package.
@@ -306,10 +306,10 @@ port=front-end.port
     fn can_parse_environment_file() {
         let mut m: HashMap<String, String> = HashMap::new();
         m.insert("PATH".to_string(),
-                 "/hab/pkgs/python/setuptools/35.0.1/20170424072606/bin".to_string());
+                 "/doj/pkgs/python/setuptools/35.0.1/20170424072606/bin".to_string());
         m.insert(
             "PYTHONPATH".to_string(),
-            "/hab/pkgs/python/setuptools/35.0.1/20170424072606/lib/python3.6/site-packages"
+            "/doj/pkgs/python/setuptools/35.0.1/20170424072606/lib/python3.6/site-packages"
                 .to_string(),
         );
 
@@ -346,10 +346,10 @@ port=front-end.port
         let expected =
             vec![EnvVar { key:       "PATH".to_string(),
                           value:
-                              "/hab/pkgs/python/setuptools/35.0.1/20170424072606/bin".to_string(),
+                              "/doj/pkgs/python/setuptools/35.0.1/20170424072606/bin".to_string(),
                           separator: Some(':'), },
                  EnvVar { key:       "PYTHONPATH".to_string(),
-                          value:     "/hab/pkgs/python/setuptools/35.0.1/20170424072606/lib/\
+                          value:     "/doj/pkgs/python/setuptools/35.0.1/20170424072606/lib/\
                                       python3.6/site-packages"
                                                               .to_string(),
                           separator: Some(':'), },];
@@ -369,7 +369,7 @@ port=front-end.port
                                                                .collect::<Vec<_>>();
 
         let expected = vec![EnvVar { key:       "PATH".to_string(),
-                                     value:     "/hab/pkgs/python/setuptools/35.0.1/\
+                                     value:     "/doj/pkgs/python/setuptools/35.0.1/\
                                                  20170424072606/bin"
                                                                     .to_string(),
                                      separator: Some(ENV_PATH_SEPARATOR), }];

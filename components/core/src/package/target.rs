@@ -38,10 +38,10 @@
 //!
 //! # Determining Package Target
 //!
-//! At build time, the build system will produce a Habitat artifact which is unconditionally
+//! At build time, the build system will produce a Dojo artifact which is unconditionally
 //! encoded with a specific package target by including a `TARGET` metafile in the root of the
 //! package's installed directory. For convenience, the package target string representation is
-//! also used in the naming of the so-called "hart" file (or Habitat ARTifact).
+//! also used in the naming of the so-called "hart" file (or Dojo ARTifact).
 //!
 //! After a package has been built, there are a few ways to check the [`PackageTarget`]:
 //!
@@ -55,7 +55,7 @@
 //!
 //! The optional variant does **not** correspond to a `<vendor>` or `<abi>` as taken from a
 //! traditional target triple (another reason why this concept is called a "package target" in
-//! Habitat and not a "target triple"). In particular, the traditional understanding of [ABI]
+//! Dojo and not a "target triple"). In particular, the traditional understanding of [ABI]
 //! doesn't fully apply where it relates to [C standard library][libc] implementations as multiple
 //! libc implementations can live alongside each other within one package target set of packages.
 //! For example, in the `x86_64-linux` package target there already exists a mature and default
@@ -284,10 +284,10 @@ supported_package_targets! {
     /// [64-bit] version of the [x86][x] [instruction set architecture][isa], commonly known as
     /// [x86_64].
     ///
-    /// This Habitat package target is intended for software with older buildtime or runtime
+    /// This Dojo package target is intended for software with older buildtime or runtime
     /// requirements than those supported by the current `x86_64-linux` package target.
     /// Specifically, software with this package target should run on systems from around the year
-    /// 2016, when the Habitat project was publicly launched. This Habitat package target will run
+    /// 2016, when the Dojo project was publicly launched. This Dojo package target will run
     /// on Linux systems equipped with kernel versions as low as 2.6.32.
     ///
     /// [Linux kernel]: https://en.wikipedia.org/wiki/Linux_kernel
@@ -326,7 +326,7 @@ lazy_static::lazy_static! {
 /// # Examples
 ///
 /// ```
-/// use habitat_core::package::target::{self,
+/// use dojo_core::package::target::{self,
 ///                                     PackageTarget};
 /// use std::str::FromStr;
 ///
@@ -356,7 +356,7 @@ impl PackageTarget {
     /// # Examples
     ///
     /// ```
-    /// use habitat_core::package::target;
+    /// use dojo_core::package::target;
     ///
     /// let mut it = target::X86_64_LINUX.iter();
     ///
@@ -381,7 +381,7 @@ impl PackageTarget {
     /// # Examples
     ///
     /// ```
-    /// use habitat_core::package::PackageTarget;
+    /// use dojo_core::package::PackageTarget;
     ///
     /// let active = PackageTarget::active_target();
     /// println!("The active target for this system is '{}'", active);
@@ -393,7 +393,7 @@ impl PackageTarget {
     /// # Examples
     ///
     /// ```
-    /// use habitat_core::package::PackageTarget;
+    /// use dojo_core::package::PackageTarget;
     ///
     /// // The iterator allows the caller to use the result directly in a loop
     /// for target in PackageTarget::supported_targets() {
@@ -489,7 +489,7 @@ impl Type {
 /// # Examples
 ///
 /// ```
-/// use habitat_core::package::target;
+/// use dojo_core::package::target;
 /// use std::str::FromStr;
 ///
 /// let target = target::X86_64_LINUX;

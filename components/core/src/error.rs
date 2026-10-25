@@ -35,7 +35,7 @@ pub type Result<T> = result::Result<T, Error>;
 /// Core error types
 #[derive(Debug)]
 pub enum Error {
-    /// Occurs when a `habitat_core::package::PackageArchive` is being read.
+    /// Occurs when a `dojo_core::package::PackageArchive` is being read.
     ArchiveError(libarchive::error::ArchiveError),
     BadBindingMode(String),
     /// An invalid path to a keyfile was given.
@@ -303,7 +303,7 @@ impl fmt::Display for Error {
             Error::IO(ref err) => format!("{}", err),
             Error::JoinPathsError(ref err) => format!("{}", err),
             Error::LogonTypeNotGranted => {
-                "hab_svc_user user must possess the 'SE_SERVICE_LOGON_NAME' account right to be \
+                "doj_svc_user user must possess the 'SE_SERVICE_LOGON_NAME' account right to be \
                  spawned as a service by the Supervisor"
                                                         .to_string()
             }
@@ -459,7 +459,7 @@ impl error::Error for Error {
             Error::IO(ref err) => err.description(),
             Error::JoinPathsError(ref err) => err.description(),
             Error::LogonTypeNotGranted => {
-                "Logon type not granted to hab_svc_user to be spawned by the Supervisor"
+                "Logon type not granted to doj_svc_user to be spawned by the Supervisor"
             }
             Error::LogonUserFailed(_) => "LogonUserW failed",
             Error::MetaFileBadBind => {

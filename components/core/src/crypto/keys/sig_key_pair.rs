@@ -141,10 +141,10 @@ impl SigKeyPair {
     /// With a public key:
     ///
     /// ```
-    /// extern crate habitat_core;
+    /// extern crate dojo_core;
     /// extern crate tempfile;
     ///
-    /// use habitat_core::crypto::{keys::PairType,
+    /// use dojo_core::crypto::{keys::PairType,
     ///                            SigKeyPair};
     /// use std::{fs::File,
     ///           io::Read};
@@ -172,10 +172,10 @@ impl SigKeyPair {
     /// With a secret key:
     ///
     /// ```
-    /// extern crate habitat_core;
+    /// extern crate dojo_core;
     /// extern crate tempfile;
     ///
-    /// use habitat_core::crypto::{keys::PairType,
+    /// use dojo_core::crypto::{keys::PairType,
     ///                            SigKeyPair};
     /// use std::{fs::File,
     ///           io::Read};

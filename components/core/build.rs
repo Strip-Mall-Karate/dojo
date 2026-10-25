@@ -10,8 +10,8 @@ fn main() {
 
     gcc::compile_library("libadmincheck.a", &["./src/os/users/admincheck.c"]);
     let mut file =
-        File::create(Path::new(&env::var("OUT_DIR").unwrap()).join("hab-crypt")).unwrap();
-    match env::var("HAB_CRYPTO_KEY") {
+        File::create(Path::new(&env::var("OUT_DIR").unwrap()).join("doj-crypt")).unwrap();
+    match env::var("DOJ_CRYPTO_KEY") {
         Ok(key) => {
             file.write_all(&base64::decode(&key).unwrap()).unwrap();
         }

@@ -1303,11 +1303,6 @@ fn exec_subcommand_if_called(ui: &mut UI) -> Result<()> {
         ("pkg", "export", "docker") => {
             command::pkg::export::docker::start(ui, &args_after_first(4))
         }
-        ("pkg", "export", "cf") => command::pkg::export::cf::start(ui, &args_after_first(4)),
-        ("pkg", "export", "helm") => command::pkg::export::helm::start(ui, &args_after_first(4)),
-        ("pkg", "export", "k8s") | ("pkg", "export", "kubernetes") => {
-            command::pkg::export::kubernetes::start(ui, &args_after_first(4))
-        }
         ("pkg", "export", "tar") => command::pkg::export::tar::start(ui, &args_after_first(4)),
         ("run", ..) => command::launcher::start(ui, &args_after_first(1)),
         ("stu", ..) | ("stud", ..) | ("studi", ..) | ("studio", ..) => {

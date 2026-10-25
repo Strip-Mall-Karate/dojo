@@ -29,7 +29,7 @@ use crate::error::{Error,
 use tempfile::{Builder,
                TempDir};
 
-pub const INSTALL_TMP_PREFIX: &str = ".hab-pkg-install";
+pub const INSTALL_TMP_PREFIX: &str = ".doj-pkg-install";
 
 /// Return a directory which can be used as a temp dir during package install/
 /// uninstall

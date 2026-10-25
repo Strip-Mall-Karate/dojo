@@ -26,12 +26,12 @@ use std::{self,
 /// # Examples
 ///
 /// ```
-/// use habitat_core;
+/// use dojo_core;
 /// use std;
 ///
 /// let key = "_I_AM_A_TEAPOT_COMMA_RIGHT_PEOPLE_QUESTION_MARK_";
 /// std::env::set_var(key, "");
-/// match habitat_core::env::var(key) {
+/// match dojo_core::env::var(key) {
 ///     Ok(val) => panic!("The environment variable {} is set but empty!", key),
 ///     Err(e) => {
 ///         println!("The environment variable {} is set, but empty. Not useful!",
@@ -60,12 +60,12 @@ pub fn var<K: AsRef<OsStr>>(key: K) -> std::result::Result<String, VarError> {
 /// # Examples
 ///
 /// ```
-/// use habitat_core;
+/// use dojo_core;
 /// use std;
 ///
 /// let key = "_I_AM_A_TEAPOT_COMMA_RIGHT_PEOPLE_QUESTION_MARK_";
 /// std::env::set_var(key, "");
-/// match habitat_core::env::var_os(key) {
+/// match dojo_core::env::var_os(key) {
 ///     Some(val) => panic!("The environment variable {} is set but empty!", key),
 ///     None => {
 ///         println!("The environment variable {} is set, but empty. Not useful!",

@@ -14,7 +14,7 @@
 
 // This contains code largely copy/pasted from the rust-lang/rust repo
 // We will need to create processes using different windows API calls in
-// order to be able to start habitat Supervisor services as different users.
+// order to be able to start dojo Supervisor services as different users.
 
 use std::{cmp,
           collections::HashMap,
@@ -107,7 +107,7 @@ use winapi::{shared::{minwindef::{BOOL,
 
 use crate::error::{Error,
                    Result};
-use habitat_win_users::sid::{self,
+use dojo_win_users::sid::{self,
                              Sid};
 
 use super::super::{super::crypto::dpapi::decrypt,

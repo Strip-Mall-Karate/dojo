@@ -118,7 +118,7 @@ impl Drop for TmpKeyfile {
 /// signing will require the secret key to be present.
 #[derive(Clone)]
 pub struct KeyPair<P, S> {
-    /// The name of the key, ex: "habitat"
+    /// The name of the key, ex: "dojo"
     pub name: String,
     /// The revision of the key, which is a timestamp, ex: "201604051449"
     pub rev: String,
@@ -232,7 +232,7 @@ fn check_filename(keyname: &str,
     }
 }
 
-/// Take a key name (ex "habitat"), and find all revisions of that
+/// Take a key name (ex "dojo"), and find all revisions of that
 /// keyname in the default_cache_key_path().
 fn get_key_revisions<P>(keyname: &str,
                         cache_key_path: P,
@@ -376,9 +376,9 @@ pub fn parse_name_with_rev<T>(name_with_rev: T) -> Result<(String, String)>
 /// With a public key:
 ///
 /// ```
-/// extern crate habitat_core;
+/// extern crate dojo_core;
 ///
-/// use habitat_core::crypto::keys::{parse_key_str,
+/// use dojo_core::crypto::keys::{parse_key_str,
 ///                                  PairType};
 ///
 /// fn main() {
@@ -396,9 +396,9 @@ pub fn parse_name_with_rev<T>(name_with_rev: T) -> Result<(String, String)>
 /// With a secret key:
 ///
 /// ```
-/// extern crate habitat_core;
+/// extern crate dojo_core;
 ///
-/// use habitat_core::crypto::keys::{parse_key_str,
+/// use dojo_core::crypto::keys::{parse_key_str,
 ///                                  PairType};
 ///
 /// fn main() {

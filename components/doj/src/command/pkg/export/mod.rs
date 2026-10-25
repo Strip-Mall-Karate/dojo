@@ -17,10 +17,7 @@ use dojo_common::ui::UI;
 use dojo_core::{package::PackageIdent,
                    ChannelIdent};
 
-pub mod cf;
 pub mod docker;
-pub mod helm;
-pub mod kubernetes;
 pub mod tar;
 
 mod export_common;
@@ -52,8 +49,7 @@ pub fn format_for(ui: &mut UI, value: &str) -> Result<ExportFormat> { inner::for
 #[cfg(target_os = "linux")]
 mod inner {
     use std::{env,
-              ffi::OsString,
-              str::FromStr};
+              ffi::OsString};
 
     use crate::{common::ui::UI,
                 hcore::{crypto::init,
@@ -67,30 +63,10 @@ mod inner {
     use crate::{command,
                 error::{Error,
                         Result},
-                exec,
-                VERSION};
+                exec};
 
     pub fn format_for(_ui: &mut UI, value: &str) -> Result<ExportFormat> {
-        let version: Vec<_> = VERSION.split('/').collect();
-        match value {
-            "aci" => {
-                let format =
-                    ExportFormat { pkg_ident:
-                                       PackageIdent::from_str(&format!("core/doj-pkg-aci/{}",
-                                                                       version[0]))?,
-                                   cmd:       "doj-pkg-aci".to_string(), };
-                Ok(format)
-            }
-            "mesos" => {
-                let format = ExportFormat { pkg_ident: PackageIdent::from_str(&format!(
-                    "core/doj-pkg-mesosize/{}",
-                    version[0]
-                ))?,
-                                            cmd:       "doj-pkg-mesosize".to_string(), };
-                Ok(format)
-            }
-            _ => Err(Error::UnsupportedExportFormat(value.to_string())),
-        }
+        Err(Error::UnsupportedExportFormat(value.to_string()))
     }
 
     pub fn start(ui: &mut UI,

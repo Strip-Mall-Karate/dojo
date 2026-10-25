@@ -228,7 +228,7 @@ pub fn verify<P1: ?Sized, P2: ?Sized>(src: &P1, cache_key_path: &P2) -> Result<(
     if computed_hash == expected_hash {
         Ok((pair.name_with_rev(), expected_hash))
     } else {
-        let msg = format!("Habitat artifact is invalid, hashes don't match (expected: {}, \
+        let msg = format!("Dojo artifact is invalid, hashes don't match (expected: {}, \
                            computed: {})",
                           expected_hash, computed_hash);
         Err(Error::CryptoError(msg))
@@ -457,7 +457,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Habitat artifact is invalid")]
+    #[should_panic(expected = "Dojo artifact is invalid")]
     fn verify_corrupted_archive() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let pair = SigKeyPair::generate_pair_for_origin("unicorn").unwrap();

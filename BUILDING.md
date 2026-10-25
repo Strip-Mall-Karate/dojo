@@ -87,57 +87,11 @@ env DOJ_SUP_BINARY=/path/to/dojo/target/debug/doj-sup doj sup status
 
 ## Always test the dojo package
 
-These binary overrides can be great for rapid iteration, but will hide errors like [4832](https://github.com/habitat-sh/habitat/issues/4832) and [4834](https://github.com/habitat-sh/habitat/issues/4834). To do a more authentic test:
+These binary overrides can be great for rapid iteration, but they hide errors in how the package is assembled. To do a more authentic test:
 
 1. Build a new dojo package
 2. Upload to acceptance (or prod, but only in the unstable channel)
 3. Install new package and do normal testing
-
-## Testing exporters
-
-Changes to the exporters can be tested once the exporter package has been built locally. For example, to test changes to the Cloud Foundry exporter (`core/doj-pkg-cfize`), first enter the studio and build a new package:
-```
-➤ doj studio enter
-…
-[1][default:/src:0]# build components/pkg-cfize
-…
-   doj-pkg-cfize: Installed Path: /doj/pkgs/jbauman/doj-pkg-cfize/0.56.0-dev/20180410205025
-```
-Now your modifications are installed locally, under `<DOJ_ORIGIN>/doj-pkg-cfize`. You can run your new exporter with
-```
-[6][default:/src:0]# doj pkg exec $DOJ_ORIGIN/doj-pkg-cfize doj-pkg-cfize --help
-doj-pkg-export-cf 0.56.0-dev/20180410205025
-…
-```
-Note that the version is updated, confirming you're running the new code. The old version is still accessible by running
-```
-[10][default:/src:1]# doj pkg export cf --help
-doj-pkg-export-cf 0.55.0/20180321215151
-…
-```
-
-### Testing Cloud Foundry exporter
-
-See also [Exporting Docker Images for Cloud Foundry with Dojo](https://www.habitat.sh/blog/2018/03/dojo-cloudfoundry/).
-
-In order to test the Cloud Foundry exporter, you'll need a Cloud Foundry environment which supports
-Docker images. If you have one already, you can skip to step 4.
-
-*Note:* Make sure to install PCF Dev on your base operating system. It uses VirtualBox as its virtualizer
-so you can't install that within a VM. Fortunately, PCF Dev is has support for Linux, Windows and Mac OS.
-
-1. Install [the `cf` CLI](http://docs.pivotal.io/pivotalcf/2-1/cf-cli/install-go-cli.html).
-2. Install [VirtualBox 5.0+](https://www.virtualbox.org/).
-3. Install [PCF Dev](https://docs.pivotal.io/pcf-dev/index.html). *Note:* running `cf dev start`
-for the first time requires a very large download (>7 GB as of this writing).
-4. Build a `.hart` file and create a CF mapping `.toml`. See Stark and Wayne's
-[Running Dojo Apps on Cloud Foundry](https://starkandwayne.com/blog/dojo-to-cloud-foundry/) and
-[Exporting to Cloud Foundry documentation](https://www.habitat.sh/docs/developing-packages/#exporting-to-cloud-foundry)
-for more details.
-5. Run the exporter to add the `cf-` tagged image to Docker.
-6. `docker push …` the image to Docker Hub.
-7. `cf push …` the image from Docker Hub to add to the CF instance. *Note:* with PCF Dev this command
-must be run from the source directory of the project to correctly identify the necessary buildpack.
 
 ## DOJ_STUDIO_BINARY
 

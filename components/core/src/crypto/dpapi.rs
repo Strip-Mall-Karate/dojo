@@ -24,7 +24,7 @@ use winapi::{shared::minwindef::DWORD,
 use crate::error::{Error,
                    Result};
 
-const COMPLEXITY: &'static [u8] = include_bytes!(concat!(env!("OUT_DIR"), "/hab-crypt"));
+const COMPLEXITY: &'static [u8] = include_bytes!(concat!(env!("OUT_DIR"), "/doj-crypt"));
 
 pub fn decrypt(secret: String) -> Result<String> {
     unsafe {
