@@ -27,6 +27,7 @@ another.
 | `components/pkg-export-docker`, `pkg-export-tar` | Exporters |
 | `support/vm` | The Dojo VM for Apple silicon Macs |
 | `vendor/ipc-channel` | Servo's ipc-channel with Windows support |
+| `vendor/traitobject` | traitobject 0.1.0, which current rustc otherwise rejects |
 
 ## Building
 

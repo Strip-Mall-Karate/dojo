@@ -42,7 +42,7 @@ caps = "*"
 ctrlc = "*"
 dojo_win_users = { path = "../win-users" }
 widestring = "*"
-winapi = { version = "*", features = ["dpapi", "ioapiset", "namedpipeapi", "userenv", "winbase", "wincrypt", "winerror"] }
+winapi = { version = "0.3", features = ["dpapi", "ioapiset", "namedpipeapi", "userenv", "winbase", "wincrypt", "winerror"] }
 windows-acl = "*"
 
 [dev-dependencies]

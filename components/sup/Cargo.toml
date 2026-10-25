@@ -75,7 +75,7 @@ jemalloc-ctl = "*"
 
 [target.'cfg(windows)'.dependencies]
 ctrlc = "*"
-winapi =  { version = "*", features = ["tlhelp32"] }
+winapi = { version = "0.3", features = ["tlhelp32"] }
 
 [dev-dependencies]
 # Pending upgrade activities

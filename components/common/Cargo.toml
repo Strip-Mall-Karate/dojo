@@ -50,7 +50,7 @@ path = "../core"
 path = "../builder-api-client"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "*", features = ["consoleapi", "processenv"] }
+winapi = { version = "0.3", features = ["consoleapi", "processenv"] }
 
 [features]
 default = []
