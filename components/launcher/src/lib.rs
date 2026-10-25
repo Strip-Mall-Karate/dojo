@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate habitat_core as core;
-use habitat_launcher_protocol as protocol;
+extern crate dojo_core as core;
+use dojo_launcher_protocol as protocol;
 #[macro_use]
 extern crate log;
 #[cfg(windows)]
@@ -24,5 +24,5 @@ pub mod server;
 pub mod service;
 mod sys;
 
-pub const SUP_CMD: &str = "hab-sup";
-pub const SUP_PACKAGE_IDENT: &str = "core/hab-sup";
+pub const SUP_CMD: &str = "doj-sup";
+pub const SUP_PACKAGE_IDENT: &str = "core/doj-sup";

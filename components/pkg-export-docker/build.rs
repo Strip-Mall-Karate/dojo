@@ -4,7 +4,7 @@ include!("../libbuild.rs");
 use std::env;
 
 fn main() {
-    habitat::common();
+    dojo::common();
     write_docker_pkg_ident();
 }
 

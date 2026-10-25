@@ -3,12 +3,12 @@
 Cloud Foundry is a Platform as a Service used to run 12 factor apps.
 
 ## Exporter
-To export a habitat package to run on Cloud Foundry you can run:
+To export a dojo package to run on Cloud Foundry you can run:
 ```
-$ hab pkg export cf <origin>/<package> <path/to/mapping.toml>
+$ doj pkg export cf <origin>/<package> <path/to/mapping.toml>
 ```
 
-This will create 2 docker images. First it will run the docker exporter and then it will create an image based off of that one with additional layers to handle mapping from the Cloud Foundry environment to the Habitat native configuration file. The CF version of the docker image will have `cf-` as a prefix to the image tag.
+This will create 2 docker images. First it will run the docker exporter and then it will create an image based off of that one with additional layers to handle mapping from the Cloud Foundry environment to the Dojo native configuration file. The CF version of the docker image will have `cf-` as a prefix to the image tag.
 
 ```
 $ docker images

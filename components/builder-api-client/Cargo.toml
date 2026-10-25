@@ -1,8 +1,8 @@
 [package]
-name = "habitat_api_client"
+name = "dojo_api_client"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
 workspace = "../../"
 
 [dependencies]
@@ -21,8 +21,8 @@ serde_json = "*"
 tee = "*"
 url = "*"
 
-[dependencies.habitat_core]
+[dependencies.dojo_core]
 git = "https://github.com/habitat-sh/core.git"
 
-[dependencies.habitat_http_client]
+[dependencies.dojo_http_client]
 git = "https://github.com/habitat-sh/core.git"

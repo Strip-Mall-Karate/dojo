@@ -28,7 +28,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-api-proxy",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828215018",
             "version": "7590"
           },
@@ -83,7 +83,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-api",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906202535",
             "version": "7602"
           },
@@ -134,7 +134,7 @@
           },
           "s3": {
             "backend": "aws",
-            "bucket_name": "habitat-builder-artifact-store.live",
+            "bucket_name": "dojo-builder-artifact-store.live",
             "endpoint": "us-west-2",
             "key_id": "justkidding",
             "secret_key": "password123"
@@ -200,7 +200,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-datastore",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828215240",
             "version": "7590"
           },
@@ -257,7 +257,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-jobsrv",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906201133",
             "version": "7602"
           },
@@ -310,7 +310,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-minio",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828222034",
             "version": "0.1.0"
           },
@@ -363,7 +363,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-originsrv",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906201133",
             "version": "7602"
           },
@@ -418,7 +418,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-router",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828220555",
             "version": "7590"
           },
@@ -471,7 +471,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-sessionsrv",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906201133",
             "version": "7602"
           },
@@ -524,7 +524,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-worker",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180905020415",
             "version": "7598"
           },

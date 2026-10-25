@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# Given the name of a Habitat package in this repository, consult Git
+# Given the name of a Dojo package in this repository, consult Git
 # to determine if any files that are used by that package have
 # changed. If so, exit with 0 (meaning that we should build), or with
 # 1 (meaning we should not build).
 
 set -u
 
-# e.g., "builder-api", "hab-pkg-export-docker", etc.
+# e.g., "builder-api", "doj-pkg-export-docker", etc.
 package_name="${1}"
 
 echo "======================================================="
@@ -28,7 +28,7 @@ CHANGED_FILES="$(support/ci/what_changed.sh)"
 
 # Given input TOML like this:
 #
-#    [hab-sup]
+#    [doj-sup]
 #    plan_path = "components/sup"
 #    paths = [
 #      "components/sup/*",

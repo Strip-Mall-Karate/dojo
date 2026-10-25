@@ -1,7 +1,7 @@
 info() {
   case "${TERM:-}" in
     *term | xterm-* | rxvt | screen | screen-*)
-      printf -- "   \033[1;36mHabitat devshell: \033[1;37m%s\033[0m\n" "$1"
+      printf -- "   \033[1;36mDojo devshell: \033[1;37m%s\033[0m\n" "$1"
       ;;
     *)
       printf -- "   devshell: %s\n" "$1"
@@ -13,11 +13,11 @@ info() {
 echo
 info 'Plan for success!'
 
-if [[ -n "$HAB_ORIGIN" ]]; then
-  info "Exported: HAB_ORIGIN=$HAB_ORIGIN"
+if [[ -n "$DOJ_ORIGIN" ]]; then
+  info "Exported: DOJ_ORIGIN=$DOJ_ORIGIN"
 fi
-if [[ -n "$HAB_BLDR_URL" ]]; then
-  info "Exported: HAB_BLDR_URL=$HAB_BLDR_URL"
+if [[ -n "$DOJ_BLDR_URL" ]]; then
+  info "Exported: DOJ_BLDR_URL=$DOJ_BLDR_URL"
 fi
 # shellcheck disable=2154
 if [[ -n "$http_proxy" ]]; then

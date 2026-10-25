@@ -1,6 +1,6 @@
 use env_logger;
-use habitat_common as common;
-use habitat_pkg_export_tar as export_tar;
+use dojo_common as common;
+use dojo_pkg_export_tar as export_tar;
 #[macro_use]
 extern crate log;
 
@@ -30,7 +30,7 @@ fn start(ui: &mut UI) -> Result<()> {
 
 fn cli<'a, 'b>() -> App<'a, 'b> {
     let name: &str = &*PROGRAM_NAME;
-    let about = "Creates a tar package from a Habitat package";
+    let about = "Creates a tar package from a Dojo package";
     Cli::new(name, about).add_base_packages_args()
                          .add_builder_args()
                          .add_pkg_ident_arg()

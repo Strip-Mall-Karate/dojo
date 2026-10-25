@@ -3,7 +3,7 @@
 .git
 .gitignore
 components
-!components/hab/install.sh
+!components/doj/install.sh
 images
 log
 plans

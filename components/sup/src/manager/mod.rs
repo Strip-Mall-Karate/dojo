@@ -59,15 +59,15 @@ use futures::{future,
               prelude::*,
               sync::{mpsc,
                      oneshot}};
-use habitat_butterfly::{member::Member,
+use dojo_butterfly::{member::Member,
                         server::{timing::Timing,
                                  ServerProxy,
                                  Suitability},
                         trace::Trace};
-use habitat_common::{outputln,
+use dojo_common::{outputln,
                      types::ListenCtlAddr,
                      FeatureFlag};
-use habitat_core::{crypto::SymKey,
+use dojo_core::{crypto::SymKey,
                    env::{self,
                          Config},
                    fs::FS_ROOT_PATH,
@@ -82,10 +82,10 @@ use habitat_core::{crypto::SymKey,
                    service::ServiceGroup,
                    util::ToI64,
                    ChannelIdent};
-use habitat_launcher_client::{LauncherCli,
+use dojo_launcher_client::{LauncherCli,
                               LAUNCHER_LOCK_CLEAN_ENV,
                               LAUNCHER_PID_ENV};
-use habitat_sup_protocol;
+use dojo_sup_protocol;
 use num_cpus;
 #[cfg(unix)]
 use proc_self;
@@ -140,18 +140,18 @@ static LOGKEY: &'static str = "MR";
 
 lazy_static! {
     static ref RUN_LOOP_DURATION: HistogramVec =
-        register_histogram_vec!("hab_sup_run_loop_duration_seconds",
+        register_histogram_vec!("doj_sup_run_loop_duration_seconds",
                                 "The time it takes for one tick of a run loop",
                                 &["loop"]).unwrap();
     static ref FILE_DESCRIPTORS: IntGauge = register_int_gauge!(
-        "hab_sup_open_file_descriptors_total",
+        "doj_sup_open_file_descriptors_total",
         "A count of the total number of open file descriptors. Unix only"
     ).unwrap();
     static ref MEMORY_STATS: IntGaugeVec =
-        register_int_gauge_vec!("hab_sup_memory_allocations_bytes",
+        register_int_gauge_vec!("doj_sup_memory_allocations_bytes",
                                 "Memory allocation statistics",
                                 &["category"]).unwrap();
-    static ref CPU_TIME: IntGauge = register_int_gauge!("hab_sup_cpu_time_nanoseconds",
+    static ref CPU_TIME: IntGauge = register_int_gauge!("doj_sup_cpu_time_nanoseconds",
                                                         "CPU time of the supervisor process in \
                                                          nanoseconds").unwrap();
 }
@@ -175,7 +175,7 @@ enum ShutdownMode {
     /// shutting down).
     Normal,
     /// When the Supervisor has been manually departed from the
-    /// Habitat network. All services should come down, as well.
+    /// Dojo network. All services should come down, as well.
     Departed,
     /// A Supervisor is updating itself, or is otherwise simply
     /// restarting. Services _do not_ get shut down.
@@ -238,7 +238,7 @@ pub struct TLSConfig {
 
 impl ManagerConfig {
     pub fn sup_root(&self) -> PathBuf {
-        habitat_sup_protocol::sup_root(self.custom_state_path.as_ref())
+        dojo_sup_protocol::sup_root(self.custom_state_path.as_ref())
     }
 }
 
@@ -258,7 +258,7 @@ impl FromStr for GatewayAuthToken {
 }
 
 impl env::Config for GatewayAuthToken {
-    const ENVVAR: &'static str = "HAB_SUP_GATEWAY_AUTH_TOKEN";
+    const ENVVAR: &'static str = "DOJ_SUP_GATEWAY_AUTH_TOKEN";
 }
 
 /// Once a formerly-busy service is no longer doing something
@@ -343,7 +343,7 @@ pub struct GatewayState {
 
 pub struct Manager {
     pub state:    Arc<ManagerState>,
-    butterfly:    habitat_butterfly::Server,
+    butterfly:    dojo_butterfly::Server,
     census_ring:  CensusRing,
     fs_cfg:       Arc<FsCfg>,
     launcher:     LauncherCli,
@@ -440,7 +440,7 @@ impl Manager {
         let mut gateway_state = GatewayState::default();
         gateway_state.auth_token = gateway_auth_token.0;
 
-        let server = habitat_butterfly::Server::new(sys.gossip_listen(),
+        let server = dojo_butterfly::Server::new(sys.gossip_listen(),
                                                     sys.gossip_listen(),
                                                     member,
                                                     Trace::default(),
@@ -607,8 +607,8 @@ impl Manager {
             if let Ok(package) =
                 PackageInstall::load(&service.pkg.ident, Some(Path::new(&*FS_ROOT_PATH)))
             {
-                if let Err(err) = habitat_common::command::package::install::check_install_hooks(
-                    &mut habitat_common::ui::UI::with_sinks(),
+                if let Err(err) = dojo_common::command::package::install::check_install_hooks(
+                    &mut dojo_common::ui::UI::with_sinks(),
                     &package,
                     Path::new(&*FS_ROOT_PATH),
                 ) {
@@ -666,7 +666,7 @@ impl Manager {
     // but changing it in the absence of other necessity seems like too much risk for the
     // expected reward.
     #[allow(clippy::cyclomatic_complexity)]
-    pub fn run(mut self, svc: Option<habitat_sup_protocol::ctl::SvcLoad>) -> Result<()> {
+    pub fn run(mut self, svc: Option<dojo_sup_protocol::ctl::SvcLoad>) -> Result<()> {
         let main_hist = RUN_LOOP_DURATION.with_label_values(&["sup"]);
         let service_hist = RUN_LOOP_DURATION.with_label_values(&["service"]);
         let mut next_cpu_measurement = SteadyTime::now();
@@ -804,7 +804,7 @@ impl Manager {
             track_memory_stats();
 
             if self.feature_flags.contains(FeatureFlag::TEST_EXIT) {
-                if let Ok(exit_file_path) = env::var("HAB_FEAT_TEST_EXIT") {
+                if let Ok(exit_file_path) = env::var("DOJ_FEAT_TEST_EXIT") {
                     if let Ok(mut exit_code_file) = File::open(&exit_file_path) {
                         let mut buffer = String::new();
                         exit_code_file.read_to_string(&mut buffer)
@@ -1206,7 +1206,7 @@ impl Manager {
     /// services until they're done with what they're doing.  (For
     /// example, consider stopping a service that takes 10 seconds to
     /// shut down (including post-stop hook execution), but then
-    /// executing `hab svc start SERVICE` 2 seconds into that 10
+    /// executing `doj svc start SERVICE` 2 seconds into that 10
     /// seconds.)
     ///
     /// As more service operations (e.g., hooks) become asynchronous,
@@ -1523,7 +1523,7 @@ impl FromStr for TokioThreadCount {
 }
 
 impl env::Config for TokioThreadCount {
-    const ENVVAR: &'static str = "HAB_TOKIO_THREAD_COUNT";
+    const ENVVAR: &'static str = "DOJ_TOKIO_THREAD_COUNT";
 }
 
 impl Into<usize> for TokioThreadCount {
@@ -1754,9 +1754,9 @@ impl Future for CtlHandler {
 #[cfg(test)]
 mod test {
     use super::*;
-    use habitat_common::cli::FS_ROOT;
-    use habitat_core::fs::cache_key_path;
-    use habitat_sup_protocol::STATE_PATH_PREFIX;
+    use dojo_common::cli::FS_ROOT;
+    use dojo_core::fs::cache_key_path;
+    use dojo_sup_protocol::STATE_PATH_PREFIX;
     use std::path::PathBuf;
 
     mod reconciliation_flag {
@@ -1827,9 +1827,9 @@ mod test {
 
     mod tokio_thread_count {
         use super::*;
-        use habitat_common::locked_env_var;
+        use dojo_common::locked_env_var;
 
-        locked_env_var!(HAB_TOKIO_THREAD_COUNT, lock_thread_count);
+        locked_env_var!(DOJ_TOKIO_THREAD_COUNT, lock_thread_count);
 
         #[test]
         fn default_is_number_of_cpus() {
@@ -1862,7 +1862,7 @@ mod test {
         //! what is currently running.
 
         use super::super::*;
-        use habitat_sup_protocol::types::UpdateStrategy;
+        use dojo_sup_protocol::types::UpdateStrategy;
 
         /// Helper function for generating a basic spec from an
         /// identifier string

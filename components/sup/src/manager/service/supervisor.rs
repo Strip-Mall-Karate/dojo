@@ -24,16 +24,16 @@ use crate::error::{Error,
                    SupError};
 use futures::{future,
               Future};
-use habitat_common::{outputln,
+use dojo_common::{outputln,
                      templating::package::Pkg,
                      types::UserInfo};
 #[cfg(unix)]
-use habitat_core::os::users;
-use habitat_core::{fs,
+use dojo_core::os::users;
+use dojo_core::{fs,
                    os::process::{self,
                                  Pid},
                    service::ServiceGroup};
-use habitat_launcher_client::LauncherCli;
+use dojo_launcher_client::LauncherCli;
 use serde::{ser::SerializeStruct,
             Serialize,
             Serializer};

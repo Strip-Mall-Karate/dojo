@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use habitat_core as hab_core;
-use habitat_http_client as hab_http;
+use dojo_core as doj_core;
+use dojo_http_client as doj_http;
 #[macro_use]
 extern crate hyper;
 
@@ -41,14 +41,14 @@ use std::{fmt,
                  PathBuf},
           string::ToString};
 
-use crate::{hab_core::{crypto::keys::box_key_pair::WrappedSealedBox,
+use crate::{doj_core::{crypto::keys::box_key_pair::WrappedSealedBox,
                        fs::AtomicWriter,
                        package::{Identifiable,
                                  PackageArchive,
                                  PackageIdent,
                                  PackageTarget},
                        ChannelIdent},
-            hab_http::{util::decoded_response,
+            doj_http::{util::decoded_response,
                        ApiClient}};
 use broadcast::BroadcastWriter;
 use chrono::DateTime;
@@ -275,7 +275,7 @@ impl Client {
         }
         Ok(Client(
             ApiClient::new(endpoint, product, version, fs_root_path)
-                .map_err(Error::HabitatHttpClient)?,
+                .map_err(Error::DojoHttpClient)?,
         ))
     }
 

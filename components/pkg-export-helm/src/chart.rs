@@ -186,7 +186,7 @@ impl<'a> Chart<'a> {
             .status(Status::Creating, format!("directory `{}`", path.display()))?;
         fs::create_dir_all(&path)?;
 
-        path.push("habitat.yaml");
+        path.push("dojo.yaml");
         self.ui
             .status(Status::Creating, format!("file `{}`", path.display()))?;
         let mut write = fs::File::create(path)?;

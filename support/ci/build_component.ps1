@@ -9,16 +9,16 @@ param (
 
 # Since we are only verifying we don't have build failures, make everything
 # temp!
-$env:HAB_ORIGIN="throwaway"
+$env:DOJ_ORIGIN="throwaway"
 # let's make a selfcontained tempdir for this job
 $job_temp_root = mkdir (Join-Path $env:TEMP ([System.IO.Path]::GetRandomFileName()))
-$env:HAB_CACHE_KEY_PATH="$job_temp_root/keys"
+$env:DOJ_CACHE_KEY_PATH="$job_temp_root/keys"
 
 Write-Host "--- :key: Generating fake origin key"
-hab origin key generate
-Write-Host "--- :hab: Running hab pkg build for $Component"
+doj origin key generate
+Write-Host "--- :doj: Running doj pkg build for $Component"
 # REMOVE -R AFTER 0.75.0
-hab pkg build -D -R components/$Component
+doj pkg build -D -R components/$Component
 
 
 if($LASTEXITCODE -ne 0) { Write-Error "Failed to build package!" }

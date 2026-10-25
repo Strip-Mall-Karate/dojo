@@ -1,14 +1,14 @@
 [package]
-name = "habitat-sup-client"
+name = "dojo-sup-client"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
 workspace = "../../"
 
 [dependencies]
 futures = "*"
-habitat-sup-protocol = { path = "../sup-protocol", default-features = false }
-habitat_common = { path = "../common" }
+dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
+dojo_common = { path = "../common" }
 log = "*"
 prost = "*"
 termcolor = "*"

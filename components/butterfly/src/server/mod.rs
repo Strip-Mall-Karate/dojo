@@ -51,7 +51,7 @@ use std::{collections::{HashMap,
           time::{Duration,
                  Instant}};
 
-use habitat_core::crypto::SymKey;
+use dojo_core::crypto::SymKey;
 use prometheus::{HistogramTimer,
                  HistogramVec,
                  IntGauge};
@@ -92,10 +92,10 @@ const SELF_DEPARTURE_RUMOR_FANOUT: usize = 10;
 
 lazy_static! {
     static ref INCARNATION: IntGauge =
-        register_int_gauge!(opts!("hab_butterfly_incarnation_number",
+        register_int_gauge!(opts!("doj_butterfly_incarnation_number",
                                   "Incarnation number of the supervisor")).unwrap();
     static ref ELECTION_DURATION: HistogramVec =
-        register_histogram_vec!("hab_butterfly_election_duration_seconds",
+        register_histogram_vec!("doj_butterfly_election_duration_seconds",
                                 "How long it takes to complete an election",
                                 &["service_group"]).unwrap();
 }
@@ -425,7 +425,7 @@ impl Server {
     /// * Returns `Error::SocketSetReadTimeout` if the socket read timeout cannot be set
     /// * Returns `Error::SocketSetWriteTimeout` if the socket write timeout cannot be set
     pub fn start(&mut self, timing: timing::Timing) -> Result<()> {
-        debug!("entering habitat_butterfly::server::Server::start");
+        debug!("entering dojo_butterfly::server::Server::start");
         let (tx_outbound, rx_inbound) = channel();
         if let Some(ref path) = *self.data_path {
             if let Some(err) = fs::create_dir_all(path).err() {
@@ -1220,7 +1220,7 @@ impl<'a> Serialize for ServerProxy<'a> {
 mod tests {
     use super::*;
     use crate::rumor::election::Term;
-    use habitat_core::service::ServiceGroup;
+    use dojo_core::service::ServiceGroup;
     use std::str::FromStr;
 
     fn check_quorum_returns(val: bool) -> impl Fn(&str) -> bool { move |_: &str| val }

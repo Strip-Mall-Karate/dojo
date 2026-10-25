@@ -28,8 +28,8 @@ use super::{hook_timer,
 use crate::error::SupError;
 use futures::{sync::oneshot,
               IntoFuture};
-use habitat_common::templating::hooks::Hook;
-use habitat_core::service::ServiceGroup;
+use dojo_common::templating::hooks::Hook;
+use dojo_core::service::ServiceGroup;
 use std::{sync::Arc,
           thread};
 

@@ -41,7 +41,7 @@
       },
       "s3": {
         "backend": "minio",
-        "bucket_name": "habitat-builder-artifact-store.default",
+        "bucket_name": "dojo-builder-artifact-store.default",
         "endpoint": "http://localhost:9000",
         "key_id": "depot",
         "secret_key": "haha"
@@ -70,20 +70,20 @@
       "reconfigure": null,
       "reload": null,
       "run": {
-        "render_pair": "/hab/svc/builder-api/hooks/run",
-        "stderr_log_path": "/hab/svc/builder-api/logs/run.stderr.log",
-        "stdout_log_path": "/hab/svc/builder-api/logs/run.stdout.log"
+        "render_pair": "/doj/svc/builder-api/hooks/run",
+        "stderr_log_path": "/doj/svc/builder-api/logs/run.stderr.log",
+        "stdout_log_path": "/doj/svc/builder-api/logs/run.stdout.log"
       },
       "suitability": null
     },
     "initialized": true,
     "last_election_status": "None",
     "manager_fs_cfg": {
-      "data_path": "/hab/sup/default/data",
-      "member_id_file": "/hab/sup/default/MEMBER_ID",
-      "proc_lock_file": "/hab/sup/default/LOCK",
-      "specs_path": "/hab/sup/default/specs",
-      "sup_root": "/hab/sup/default"
+      "data_path": "/doj/sup/default/data",
+      "member_id_file": "/doj/sup/default/MEMBER_ID",
+      "proc_lock_file": "/doj/sup/default/LOCK",
+      "specs_path": "/doj/sup/default/specs",
+      "sup_root": "/doj/sup/default"
     },
     "needs_reconfiguration": false,
     "needs_reload": false,
@@ -199,7 +199,7 @@
         }
       ],
       "env": {
-        "PATH": "/hab/pkgs/habitat/builder-api/7602/20180906202535/bin:/hab/pkgs/core/glibc/2.27/20180608041157/bin:/hab/pkgs/core/openssl/1.0.2n/20180608102213/bin:/hab/pkgs/core/coreutils/8.29/20180608092141/bin:/hab/pkgs/core/curl/7.54.1/20180906202233/bin:/hab/pkgs/core/acl/2.2.52/20180608091922/bin:/hab/pkgs/core/attr/2.4.47/20180608091914/bin:/hab/pkgs/core/libcap/2.25/20180608091936/bin:/hab/pkgs/core/bzip2/1.0.6/20180608091727/bin:/hab/pkgs/core/xz/5.2.3/20180608100110/bin:/hab/pkgs/core/busybox-static/1.28.1/20180608102729/bin:/bin"
+        "PATH": "/doj/pkgs/dojo/builder-api/7602/20180906202535/bin:/doj/pkgs/core/glibc/2.27/20180608041157/bin:/doj/pkgs/core/openssl/1.0.2n/20180608102213/bin:/doj/pkgs/core/coreutils/8.29/20180608092141/bin:/doj/pkgs/core/curl/7.54.1/20180906202233/bin:/doj/pkgs/core/acl/2.2.52/20180608091922/bin:/doj/pkgs/core/attr/2.4.47/20180608091914/bin:/doj/pkgs/core/libcap/2.25/20180608091936/bin:/doj/pkgs/core/bzip2/1.0.6/20180608091727/bin:/doj/pkgs/core/xz/5.2.3/20180608100110/bin:/doj/pkgs/core/busybox-static/1.28.1/20180608102729/bin:/bin"
       },
       "exports": {
         "port": "http.port"
@@ -207,21 +207,21 @@
       "exposes": [
         "9636"
       ],
-      "ident": "habitat/builder-api/7602/20180906202535",
+      "ident": "dojo/builder-api/7602/20180906202535",
       "name": "builder-api",
-      "origin": "habitat",
-      "path": "/hab/pkgs/habitat/builder-api/7602/20180906202535",
+      "origin": "dojo",
+      "path": "/doj/pkgs/dojo/builder-api/7602/20180906202535",
       "release": "20180906202535",
-      "svc_config_path": "/hab/svc/builder-api/config",
-      "svc_data_path": "/hab/svc/builder-api/data",
-      "svc_files_path": "/hab/svc/builder-api/files",
-      "svc_group": "hab",
-      "svc_path": "/hab/svc/builder-api",
-      "svc_pid_file": "/hab/svc/builder-api/PID",
-      "svc_run": "/hab/svc/builder-api/run",
-      "svc_static_path": "/hab/svc/builder-api/static",
-      "svc_user": "hab",
-      "svc_var_path": "/hab/svc/builder-api/var",
+      "svc_config_path": "/doj/svc/builder-api/config",
+      "svc_data_path": "/doj/svc/builder-api/data",
+      "svc_files_path": "/doj/svc/builder-api/files",
+      "svc_group": "doj",
+      "svc_path": "/doj/svc/builder-api",
+      "svc_pid_file": "/doj/svc/builder-api/PID",
+      "svc_run": "/doj/svc/builder-api/run",
+      "svc_static_path": "/doj/svc/builder-api/static",
+      "svc_user": "doj",
+      "svc_var_path": "/doj/svc/builder-api/var",
       "version": "7602"
     },
     "process": {
@@ -230,10 +230,10 @@
       "state_entered": 1536689926
     },
     "service_group": "builder-api.default",
-    "spec_file": "/hab/sup/default/specs/builder-api.spec",
+    "spec_file": "/doj/sup/default/specs/builder-api.spec",
     "spec_ident": {
       "name": "builder-api",
-      "origin": "habitat",
+      "origin": "dojo",
       "release": null,
       "version": null
     },

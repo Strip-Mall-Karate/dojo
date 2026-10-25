@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Script to auto-create habitat core plan projects in a specified depot
+# Script to auto-create dojo core plan projects in a specified depot
 #
 # Usage: ruby project_create.rb <core-plans-dir> <bldr-api-url> \
 #                               <installation-id> [<auth-token>]
@@ -12,7 +12,7 @@
 # http://localhost:9636
 #
 # If <auth-token> is not specified, the script will default to looking for
-# the HAB_AUTH_TOKEN environment variable.
+# the DOJ_AUTH_TOKEN environment variable.
 #
 #############################################################################
 
@@ -36,7 +36,7 @@ installation_id = ARGV[2]
 if ARGV.length > 3
   auth_token = ARGV[3]
 else
-  auth_token = ENV['HAB_AUTH_TOKEN']
+  auth_token = ENV['DOJ_AUTH_TOKEN']
 end
 
 template = File.read('project.erb')

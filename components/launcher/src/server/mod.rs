@@ -33,7 +33,7 @@ use crate::{core::{self,
             service::Service,
             SUP_CMD,
             SUP_PACKAGE_IDENT};
-use habitat_common::outputln;
+use dojo_common::outputln;
 use ipc_channel::ipc::{IpcOneShotServer,
                        IpcReceiver,
                        IpcSender};
@@ -59,12 +59,12 @@ use std::{collections::HashMap,
           thread,
           time::Duration};
 
-const IPC_CONNECT_TIMEOUT_SECS: &str = "HAB_LAUNCH_SUP_CONNECT_TIMEOUT_SECS";
+const IPC_CONNECT_TIMEOUT_SECS: &str = "DOJ_LAUNCH_SUP_CONNECT_TIMEOUT_SECS";
 const DEFAULT_IPC_CONNECT_TIMEOUT_SECS: u64 = 5;
-const SUP_CMD_ENVVAR: &str = "HAB_SUP_BINARY";
+const SUP_CMD_ENVVAR: &str = "DOJ_SUP_BINARY";
 static LOGKEY: &'static str = "SV";
 
-const SUP_VERSION_CHECK_DISABLE: &str = "HAB_LAUNCH_NO_SUP_VERSION_CHECK";
+const SUP_VERSION_CHECK_DISABLE: &str = "DOJ_LAUNCH_NO_SUP_VERSION_CHECK";
 // Version 0.56 is somewhat arbitrary. This functionality is for when we make
 // changes to the launcher that depend on supervisor behavior that hasn't
 // always existed such as https://github.com/habitat-sh/habitat/issues/5380
@@ -252,7 +252,7 @@ impl Server {
         // collapse in the future.
         //
         // `reap_services` is a cross-platform method to reap (and keep
-        // track of) processes that are Habitat
+        // track of) processes that are Dojo
         // services. `reap_zombie_orphans` is basically a Unix-only
         // method to take care of any orphan processes that get
         // re-parented to the Launcher, when it is running as PID 1,
@@ -529,13 +529,13 @@ fn setup_connection(server: IpcOneShotServer<Vec<u8>>) -> Result<(Receiver, Send
 /// Return whether the given version string matches SUP_VERSION_REQ parsed as
 /// a semver::VersionReq.
 ///
-/// Example inputs (that is `hab-sup --version` outputs):
-/// hab-sup 0.59.0/20180712161546
-/// hab-sup 0.62.0-dev
+/// Example inputs (that is `doj-sup --version` outputs):
+/// doj-sup 0.59.0/20180712161546
+/// doj-sup 0.62.0-dev
 fn is_supported_supervisor_version(version_output: &str) -> bool {
     if let Some(version_str) = version_output
-        .split(' ') //                      ["hab-sup", <version-number>]
-        .last() //                          drop "hab-sup", keep <version-number>
+        .split(' ') //                      ["doj-sup", <version-number>]
+        .last() //                          drop "doj-sup", keep <version-number>
         .unwrap() //                        split() always returns an 1+ element iterator
         .split(|c| c == '/' || c == '-') // strip "-dev" or "/build"
         .next()
@@ -553,7 +553,7 @@ fn is_supported_supervisor_version(version_output: &str) -> bool {
             }
         }
     } else {
-        error!("Expected 'hab-sup <semantic-version>', found '{}'",
+        error!("Expected 'doj-sup <semantic-version>', found '{}'",
                version_output);
         false
     }
@@ -574,12 +574,12 @@ fn spawn_supervisor(pipe: &str, args: &[String], clean: bool) -> Result<Child> {
         let version_check = Command::new(&binary).arg("--version").output()?;
         let sup_version = String::from_utf8_lossy(&version_check.stdout);
         if !is_supported_supervisor_version(&sup_version.trim()) {
-            error!("This Launcher requires Habitat version {}", SUP_VERSION_REQ);
+            error!("This Launcher requires Dojo version {}", SUP_VERSION_REQ);
             error!("This check can be disabled by setting the {} environment variable to a \
                     non-empty string when starting the supervisor",
                    SUP_VERSION_CHECK_DISABLE);
             error!("Disabling this check may result in undefined behavior; please update to a \
-                    newer Habitat version");
+                    newer Dojo version");
             error!("For more information see https://github.com/habitat-sh/habitat/pull/5484");
             return Err(Error::SupBinaryVersion);
         }
@@ -607,7 +607,7 @@ fn spawn_supervisor(pipe: &str, args: &[String], clean: bool) -> Result<Child> {
 
 /// Determines the most viable Supervisor binary to run and returns a `PathBuf` to it.
 ///
-/// Setting a filepath value to the `HAB_SUP_BINARY` env variable will force that binary to be used
+/// Setting a filepath value to the `DOJ_SUP_BINARY` env variable will force that binary to be used
 /// instead.
 fn supervisor_cmd() -> Result<PathBuf> {
     if let Ok(command) = core::env::var(SUP_CMD_ENVVAR) {

@@ -35,7 +35,7 @@ use crate::{env::EnvironmentVariable,
 /// Represents a Kubernetes manifest.
 #[derive(Debug, Clone)]
 pub struct Manifest {
-    /// The identifier of the Habitat package
+    /// The identifier of the Dojo package
     pub pkg_ident: PackageIdent,
     /// Name of the Kubernetes resource.
     pub metadata_name: String,
@@ -50,7 +50,7 @@ pub struct Manifest {
     /// The config file content (in base64 encoded format).
     pub config: Option<String>,
     /// The name of the Kubernetes secret that contains the ring key, which encrypts the
-    /// communication between Habitat supervisors.
+    /// communication between Dojo supervisors.
     pub ring_secret_name: Option<String>,
 
     /// Any binds, as `ServiceBind` instances.

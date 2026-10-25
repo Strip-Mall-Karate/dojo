@@ -15,7 +15,7 @@
 extern crate clap;
 extern crate env_logger;
 #[macro_use]
-extern crate habitat_sup as sup;
+extern crate dojo_sup as sup;
 #[cfg(unix)]
 extern crate jemalloc_ctl;
 #[cfg(unix)]
@@ -43,7 +43,7 @@ use crate::sup::{cli::cli,
                            PROC_LOCK_FILE},
                  util};
 use clap::ArgMatches;
-use habitat_common::{cli::{cache_key_path_from_matches,
+use dojo_common::{cli::{cache_key_path_from_matches,
                            GOSSIP_DEFAULT_PORT},
                      command::package::install::InstallSource,
                      output::{self,
@@ -54,15 +54,15 @@ use habitat_common::{cli::{cache_key_path_from_matches,
                           UI},
                      FeatureFlag};
 #[cfg(windows)]
-use habitat_core::crypto::dpapi::encrypt;
-use habitat_core::{crypto::{self,
+use dojo_core::crypto::dpapi::encrypt;
+use dojo_core::{crypto::{self,
                             SymKey},
                    url::{bldr_url_from_env,
                          default_bldr_url},
                    ChannelIdent};
-use habitat_launcher_client::{LauncherCli,
+use dojo_launcher_client::{LauncherCli,
                               ERR_NO_RETRY_EXCODE};
-use habitat_sup_protocol::{ctl::ServiceBindList,
+use dojo_sup_protocol::{ctl::ServiceBindList,
                            types::{ApplicationEnvironment,
                                    BindingMode,
                                    ServiceBind,
@@ -110,7 +110,7 @@ fn boot() -> Option<LauncherCli> {
         println!("Crypto initialization failed!");
         process::exit(1);
     }
-    match habitat_launcher_client::env_pipe() {
+    match dojo_launcher_client::env_pipe() {
         Some(pipe) => {
             match LauncherCli::connect(pipe) {
                 Ok(launcher) => Some(launcher),
@@ -171,7 +171,7 @@ fn sub_run(m: &ArgMatches, launcher: LauncherCli, feature_flags: FeatureFlag) ->
 
     // We need to determine if we have an initial service to start
     let svc = if let Some(pkg) = m.value_of("PKG_IDENT_OR_ARTIFACT") {
-        let mut msg = habitat_sup_protocol::ctl::SvcLoad::default();
+        let mut msg = dojo_sup_protocol::ctl::SvcLoad::default();
         update_svc_load_from_input(m, &mut msg)?;
         // Always force - running with a package ident is a "do what I mean" operation. You
         // don't care if a service was loaded previously or not and with what options. You
@@ -186,7 +186,7 @@ fn sub_run(m: &ArgMatches, launcher: LauncherCli, feature_flags: FeatureFlag) ->
                     util::pkg::install(&mut ui(),
                                        msg.bldr_url
                                           .as_ref()
-                                          .unwrap_or(&*habitat_sup_protocol::DEFAULT_BLDR_URL),
+                                          .unwrap_or(&*dojo_sup_protocol::DEFAULT_BLDR_URL),
                                        &source,
                                        &msg.bldr_channel
                                            .clone()
@@ -208,10 +208,10 @@ fn sub_run(m: &ArgMatches, launcher: LauncherCli, feature_flags: FeatureFlag) ->
 fn sub_sh() -> Result<()> { command::shell::sh() }
 
 fn sub_term() -> Result<()> {
-    // We were generating a ManagerConfig from matches here, but 'hab sup term' takes no options.
+    // We were generating a ManagerConfig from matches here, but 'doj sup term' takes no options.
     // This means that we were implicitly getting the default ManagerConfig here. Instead of calling
     // a function to generate said config, we can just explicitly pass the default.
-    let proc_lock_file = habitat_sup_protocol::sup_root(None).join(PROC_LOCK_FILE);
+    let proc_lock_file = dojo_sup_protocol::sup_root(None).join(PROC_LOCK_FILE);
     match Manager::term(&proc_lock_file) {
         Err(SupError { err: Error::ProcessLockIO(..),
                        .. }) => {
@@ -262,7 +262,7 @@ fn mgrcfg_from_sup_run_matches(m: &ArgMatches,
         },
         ctl_listen: m.value_of("LISTEN_CTL").map_or_else(
             || {
-                let default = habitat_common::types::ListenCtlAddr::default();
+                let default = dojo_common::types::ListenCtlAddr::default();
                 error!(
                     "Value for LISTEN_CTL has not been set. Using default: {}",
                     default
@@ -480,7 +480,7 @@ fn ui() -> UI {
 /// Set all fields for an `SvcLoad` message that we can from the given opts. This function
 /// populates all *shared* options between `run` and `load`.
 fn update_svc_load_from_input(m: &ArgMatches,
-                              msg: &mut habitat_sup_protocol::ctl::SvcLoad)
+                              msg: &mut dojo_sup_protocol::ctl::SvcLoad)
                               -> Result<()> {
     msg.bldr_url = Some(bldr_url(m));
     msg.bldr_channel = Some(channel(m).to_string());
@@ -503,7 +503,7 @@ mod test {
     use super::*;
     use crate::sup::{config::GossipListenAddr,
                      http_gateway};
-    use habitat_common::{locked_env_var,
+    use dojo_common::{locked_env_var,
                          types::ListenCtlAddr};
 
     fn no_feature_flags() -> FeatureFlag { FeatureFlag::empty() }
@@ -513,7 +513,7 @@ mod test {
         use super::*;
         use std::iter::FromIterator;
 
-        locked_env_var!(HAB_CACHE_KEY_PATH, lock_var);
+        locked_env_var!(DOJ_CACHE_KEY_PATH, lock_var);
 
         fn config_from_cmd_str(cmd: &str) -> ManagerConfig {
             let cmd_vec = cmd_vec_from_cmd_str(&cmd);
@@ -534,40 +534,40 @@ mod test {
 
         #[test]
         fn auto_update_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --auto-update");
+            let config = config_from_cmd_str("doj-sup run --auto-update");
             assert_eq!(config.auto_update, true);
 
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.auto_update, false);
         }
 
         #[test]
         fn update_url_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run -u http://fake.example.url");
+            let config = config_from_cmd_str("doj-sup run -u http://fake.example.url");
             assert_eq!(config.update_url, "http://fake.example.url");
         }
 
         #[test]
         fn update_url_is_set_to_default_when_not_specified() {
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.update_url, default_bldr_url());
         }
 
         #[test]
         fn update_channel_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --channel unstable");
+            let config = config_from_cmd_str("doj-sup run --channel unstable");
             assert_eq!(config.update_channel, ChannelIdent::unstable());
         }
 
         #[test]
         fn update_channel_is_set_to_default_when_not_specified() {
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.update_channel, ChannelIdent::stable());
         }
 
         #[test]
         fn gossip_listen_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --listen-gossip 1.1.1.1:1111");
+            let config = config_from_cmd_str("doj-sup run --listen-gossip 1.1.1.1:1111");
             let expected_addr =
                 GossipListenAddr::from_str("1.1.1.1:1111").expect("Could not create \
                                                                    GossipListenAddr");
@@ -576,14 +576,14 @@ mod test {
 
         #[test]
         fn gossip_listen_is_set_to_default_when_not_specified() {
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             let expected_addr = GossipListenAddr::default();
             assert_eq!(config.gossip_listen, expected_addr);
         }
 
         #[test]
         fn http_listen_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --listen-http 2.2.2.2:2222");
+            let config = config_from_cmd_str("doj-sup run --listen-http 2.2.2.2:2222");
             let expected_addr =
                 http_gateway::ListenAddr::from_str("2.2.2.2:2222").expect("Could not create http \
                                                                            listen addr");
@@ -592,53 +592,53 @@ mod test {
 
         #[test]
         fn http_listen_is_set_default_when_not_specified() {
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             let expected_addr = http_gateway::ListenAddr::default();
             assert_eq!(config.http_listen, expected_addr);
         }
 
         #[test]
         fn http_disable_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --http-disable");
+            let config = config_from_cmd_str("doj-sup run --http-disable");
             assert_eq!(config.http_disable, true);
 
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.http_disable, false);
         }
 
         #[test]
         fn ctl_listen_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --listen-ctl 3.3.3.3:3333");
+            let config = config_from_cmd_str("doj-sup run --listen-ctl 3.3.3.3:3333");
             let expected_addr =
                 ListenCtlAddr::from_str("3.3.3.3:3333").expect("Could not create ctl listen addr");
             assert_eq!(config.ctl_listen, expected_addr);
 
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             let expected_addr = ListenCtlAddr::default();
             assert_eq!(config.ctl_listen, expected_addr);
         }
 
         #[test]
         fn organization_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --org foobar");
+            let config = config_from_cmd_str("doj-sup run --org foobar");
             assert_eq!(config.organization, Some("foobar".to_string()));
 
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.organization, None);
         }
 
         #[test]
         fn gossip_permanent_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --permanent-peer");
+            let config = config_from_cmd_str("doj-sup run --permanent-peer");
             assert_eq!(config.gossip_permanent, true);
 
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.gossip_permanent, false);
         }
 
         #[test]
         fn peers_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --peer 1.1.1.1:1 2.2.2.2:1 3.3.3.3:1");
+            let config = config_from_cmd_str("doj-sup run --peer 1.1.1.1:1 2.2.2.2:1 3.3.3.3:1");
             let expected_peers: Vec<SocketAddr> =
                 vec!["1.1.1.1:1", "2.2.2.2:1", "3.3.3.3:1"].into_iter()
                                                            .flat_map(|peer| {
@@ -648,13 +648,13 @@ mod test {
                                                            .collect();
             assert_eq!(config.gossip_peers, expected_peers);
 
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.gossip_peers, Vec::new());
         }
 
         #[test]
         fn peers_should_have_a_default_port_set() {
-            let config = config_from_cmd_str("hab-sup run --peer 1.1.1.1 2.2.2.2 3.3.3.3");
+            let config = config_from_cmd_str("doj-sup run --peer 1.1.1.1 2.2.2.2 3.3.3.3");
             let expected_peers: Vec<SocketAddr> =
                 vec!["1.1.1.1", "2.2.2.2", "3.3.3.3"].into_iter()
                                                      .map(|peer| {
@@ -670,10 +670,10 @@ mod test {
 
         #[test]
         fn watch_peer_file_should_be_set() {
-            let config = config_from_cmd_str("hab-sup run --peer-watch-file foobar");
+            let config = config_from_cmd_str("doj-sup run --peer-watch-file foobar");
             assert_eq!(config.watch_peer_file, Some("foobar".to_string()));
 
-            let config = config_from_cmd_str("hab-sup run");
+            let config = config_from_cmd_str("doj-sup run");
             assert_eq!(config.watch_peer_file, None);
         }
 
@@ -687,7 +687,7 @@ mod test {
                 "SYM-SEC-1\nfoobar-20160504220722\n\nRCFaO84j41GmrzWddxMdsXpGdn3iuIy7Mw3xYrjPLsE=";
             let (pair, _) = SymKey::write_file_from_str(key_content, key_cache.path())
                 .expect("Could not write key pair");
-            let config = config_from_cmd_str("hab-sup run --ring foobar");
+            let config = config_from_cmd_str("doj-sup run --ring foobar");
 
             assert_eq!(config.ring_key
                              .expect("No ring key on manager config")
@@ -701,9 +701,9 @@ mod test {
             let lock = lock_var();
             lock.set(key_cache.path());
 
-            env::set_var("HAB_CACHE_KEY_PATH", key_cache.path());
+            env::set_var("DOJ_CACHE_KEY_PATH", key_cache.path());
             let cmd_vec = vec![
-                               "hab-sup",
+                               "doj-sup",
                                "run",
                                "--ring-key",
                                r#"SYM-SEC-1

@@ -25,7 +25,7 @@ use crate::{common::ui::{Status,
 
 pub const DEFAULT_OPERATOR_VERSION: &str = "0.6.1";
 pub const OPERATOR_REPO_URL: &str =
-    "https://habitat-sh.github.io/habitat-operator/helm/charts/stable/";
+    "https://dojo-sh.github.io/dojo-operator/helm/charts/stable/";
 
 pub struct Deps {
     _operator_version: String,
@@ -61,7 +61,7 @@ impl Deps {
 
         Command::new("helm").arg("repo")
                             .arg("add")
-                            .arg("habitat-operator")
+                            .arg("dojo-operator")
                             .arg(OPERATOR_REPO_URL)
                             .spawn()
                             .map_err(|_| Error::HelmLaunchFailed)

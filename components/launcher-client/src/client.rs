@@ -14,9 +14,9 @@
 
 use crate::error::{Error,
                    Result};
-use habitat_common::types::UserInfo;
-use habitat_core::os::process::Pid;
-use habitat_launcher_protocol::{self as protocol,
+use dojo_common::types::UserInfo;
+use dojo_core::os::process::Pid;
+use dojo_launcher_protocol::{self as protocol,
                                 Error as ProtocolError};
 use ipc_channel::ipc::{IpcOneShotServer,
                        IpcReceiver,

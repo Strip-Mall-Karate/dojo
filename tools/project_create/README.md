@@ -6,7 +6,7 @@ builder to recognize and be able to kick off automated builds.
 
 This tool is targeted to creating ```core``` origin projects. It takes as
 input parameters a local path to the core-plans repo, an API endpoint URL,
-an installation id (for an installed Habitat Builder app), and a Github auth
+an installation id (for an installed Dojo Builder app), and a Github auth
 token.
 
 ### Usage
@@ -25,7 +25,7 @@ For a development environment, the URL will be:
 http://localhost:9636
 
 If `<auth-token>` is not specified, the script will default to looking for
-the `HAB_AUTH_TOKEN` environment variable.
+the `DOJ_AUTH_TOKEN` environment variable.
 
 ### Extras
 
@@ -39,7 +39,7 @@ The tools are:
 * repos.js - gets a list of repo ids and repo names
 
 In order to use these tools, you need to know the Github app id, and have
-the PEM file available on the machine. For reference, the Habitat Builder
+the PEM file available on the machine. For reference, the Dojo Builder
 Dev app id is 5629.
 
 Example usage (assumes the pem file is in the current folder):

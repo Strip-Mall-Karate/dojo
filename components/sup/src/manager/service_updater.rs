@@ -18,10 +18,10 @@ use crate::{census::CensusRing,
                                 Topology,
                                 UpdateStrategy}},
             util};
-use habitat_butterfly;
-use habitat_common::{outputln,
+use dojo_butterfly;
+use dojo_common::{outputln,
                      ui::UI};
-use habitat_core::{env as henv,
+use dojo_core::{env as henv,
                    env::Config as EnvConfig,
                    package::{PackageIdent,
                              PackageInstall,
@@ -46,7 +46,7 @@ use time_crate::{Duration,
 static LOGKEY: &'static str = "SU";
 // TODO (CM): Yes, the variable value should be "period" and not
 // "frequency"... we need to fix that.
-const PERIOD_BYPASS_CHECK_ENVVAR: &str = "HAB_UPDATE_STRATEGY_FREQUENCY_BYPASS_CHECK";
+const PERIOD_BYPASS_CHECK_ENVVAR: &str = "DOJ_UPDATE_STRATEGY_FREQUENCY_BYPASS_CHECK";
 lazy_static! {
     static ref MIN_ALLOWED_PERIOD: Duration = Duration::seconds(60);
 }
@@ -85,11 +85,11 @@ enum FollowerState {
 pub struct ServiceUpdater {
     states: UpdaterStateList,
 
-    butterfly: habitat_butterfly::Server,
+    butterfly: dojo_butterfly::Server,
 }
 
 impl ServiceUpdater {
-    pub fn new(butterfly: habitat_butterfly::Server) -> Self {
+    pub fn new(butterfly: dojo_butterfly::Server) -> Self {
         ServiceUpdater { states: UpdaterStateList::default(),
                          butterfly }
     }
@@ -394,7 +394,7 @@ impl PartialEq<Duration> for ServiceUpdatePeriod {
 impl EnvConfig for ServiceUpdatePeriod {
     // TODO (CM): Yes, the variable value should be "period" and not
     // "frequency"... we need to fix that.
-    const ENVVAR: &'static str = "HAB_UPDATE_STRATEGY_FREQUENCY_MS";
+    const ENVVAR: &'static str = "DOJ_UPDATE_STRATEGY_FREQUENCY_MS";
 }
 
 struct Worker {
@@ -569,15 +569,15 @@ impl Worker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use habitat_common::locked_env_var;
+    use dojo_common::locked_env_var;
 
     #[test]
     fn default_update_period_is_equal_to_minimum_allowed_value() {
         assert_eq!(ServiceUpdatePeriod::default().0, *MIN_ALLOWED_PERIOD);
     }
 
-    locked_env_var!(HAB_UPDATE_STRATEGY_FREQUENCY_MS, lock_period_var);
-    locked_env_var!(HAB_UPDATE_STRATEGY_FREQUENCY_BYPASS_CHECK, lock_bypass_var);
+    locked_env_var!(DOJ_UPDATE_STRATEGY_FREQUENCY_MS, lock_period_var);
+    locked_env_var!(DOJ_UPDATE_STRATEGY_FREQUENCY_BYPASS_CHECK, lock_bypass_var);
 
     fn worker() -> Worker {
         Worker { current:     "core/testing/1.0.0/20181109125930".parse()

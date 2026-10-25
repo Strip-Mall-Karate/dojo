@@ -32,8 +32,8 @@ use crate::{error::{Error,
                     Result},
             util::path};
 
-const DEFAULT_USER: &str = "hab";
-const DEFAULT_GROUP: &str = "hab";
+const DEFAULT_USER: &str = "doj";
+const DEFAULT_GROUP: &str = "doj";
 
 const PATH_KEY: &str = "PATH";
 
@@ -183,8 +183,8 @@ impl<'a> Serialize for PkgProxy<'a> {
 }
 
 /// check and see if a user/group is specified in package metadata.
-/// if not, we'll try and use hab/hab.
-/// If hab/hab doesn't exist, try to use (current username, current group).
+/// if not, we'll try and use doj/doj.
+/// If doj/doj doesn't exist, try to use (current username, current group).
 /// If that doesn't work, then give up.
 #[cfg(unix)]
 fn get_user_and_group(pkg_install: &PackageInstall) -> Result<(String, String)> {
@@ -197,13 +197,13 @@ fn get_user_and_group(pkg_install: &PackageInstall) -> Result<(String, String)> 
 }
 
 /// check and see if a user/group is specified in package metadata.
-/// if not, we'll try and use hab/hab.
-/// If hab/hab doesn't exist, try to use (current username, current group).
+/// if not, we'll try and use doj/doj.
+/// If doj/doj doesn't exist, try to use (current username, current group).
 /// If that doesn't work, then give up.
-/// Windows will also check if hab exists if it was the given user name
+/// Windows will also check if doj exists if it was the given user name
 /// If it does not exist then fall back to the current username
 /// This is because historically windows plans defaulted to
-/// the hab pkg_svc_user even if not explicitly provided
+/// the doj pkg_svc_user even if not explicitly provided
 #[cfg(windows)]
 fn get_user_and_group(pkg_install: &PackageInstall) -> Result<(String, String)> {
     match get_pkg_user_and_group(&pkg_install)? {
@@ -228,7 +228,7 @@ fn get_pkg_user_and_group(pkg_install: &PackageInstall) -> Result<Option<(String
     }
 }
 
-/// checks to see if hab/hab exists, if not, fall back to
+/// checks to see if doj/doj exists, if not, fall back to
 /// current user/group. If that fails, then return an error.
 fn default_user_and_group() -> Result<(String, String)> {
     let uid = users::get_uid_by_name(DEFAULT_USER);
@@ -236,7 +236,7 @@ fn default_user_and_group() -> Result<(String, String)> {
     match (uid, gid) {
         (Some(_), Some(_)) => Ok((DEFAULT_USER.to_string(), DEFAULT_GROUP.to_string())),
         _ => {
-            debug!("hab:hab does NOT exist");
+            debug!("doj:doj does NOT exist");
             let user = users::get_current_username();
             let group = users::get_current_groupname();
             match (user, group) {

@@ -10,7 +10,7 @@ function Get-RepoRoot {
 }
 
 $versionStamp = "$Version-$Release"
-$choco_install = "$(Get-RepoRoot)/components/hab/win/chocolateyinstall.ps1"
+$choco_install = "$(Get-RepoRoot)/components/doj/win/chocolateyinstall.ps1"
 
 (Get-Content $choco_install) |
     % {$_.Replace('$version$', $versionStamp) } |
@@ -20,5 +20,5 @@ $choco_install = "$(Get-RepoRoot)/components/hab/win/chocolateyinstall.ps1"
     % {$_.Replace('$checksum$', $Checksum) } |
     Set-Content $choco_install
 
-choco pack "$(Get-RepoRoot)/components/hab/win/habitat.nuspec" --version $Version 
-choco push habitat.$Version.nupkg -k $ApiKey --timeout 600
+choco pack "$(Get-RepoRoot)/components/doj/win/dojo.nuspec" --version $Version 
+choco push dojo.$Version.nupkg -k $ApiKey --timeout 600

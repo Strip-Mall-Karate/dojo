@@ -17,14 +17,14 @@ use crate::{error::{Error,
                     SupError},
             PRODUCT,
             VERSION};
-use habitat_common::{self,
+use dojo_common::{self,
                      command::package::install::{InstallHookMode,
                                                  InstallMode,
                                                  InstallSource,
                                                  LocalPackageUsage},
                      outputln,
                      ui::UIWriter};
-use habitat_core::{env as henv,
+use dojo_core::{env as henv,
                    fs::{self,
                         FS_ROOT_PATH},
                    package::{PackageIdent,
@@ -50,7 +50,7 @@ pub fn install<T>(ui: &mut T,
         Err(_) => None,
     };
 
-    habitat_common::command::package::install::start(ui,
+    dojo_common::command::package::install::start(ui,
                                              url,
                                              // We currently need this to be an option due to how
                                              // the depot

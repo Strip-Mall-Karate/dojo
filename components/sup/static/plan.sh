@@ -1,8 +1,8 @@
 # shellcheck disable=2034
 PLAN_CONTEXT=$(dirname "$PLAN_CONTEXT") source ../plan.sh
 
-pkg_name=hab-sup-static
-pkg_maintainer="The Habitat Maintainers <humans@habitat.sh>"
+pkg_name=doj-sup-static
+pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
 pkg_deps=(core/busybox-static)
 pkg_build_deps=(
   core/musl core/zlib-musl core/xz-musl core/bzip2-musl core/libarchive-musl

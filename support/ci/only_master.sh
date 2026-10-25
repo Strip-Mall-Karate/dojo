@@ -14,7 +14,7 @@
 # can still take advantage of Travis to do builds on master following
 # PR merges.
 
-echo "Habitat VERSION File Contents: $(cat VERSION)"
+echo "Dojo VERSION File Contents: $(cat VERSION)"
 echo "TRAVIS_TAG: ${TRAVIS_TAG}"
 echo "TRAVIS_BRANCH: ${TRAVIS_BRANCH}"
 echo "TRAVIS_PULL_REQUEST_BRANCH: ${TRAVIS_PULL_REQUEST_BRANCH}"

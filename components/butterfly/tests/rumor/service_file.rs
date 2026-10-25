@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use crate::btest;
-use habitat_butterfly::client::Client;
-use habitat_core::service::ServiceGroup;
+use dojo_butterfly::client::Client;
+use dojo_core::service::ServiceGroup;
 
 #[test]
 fn two_members_share_service_files() {

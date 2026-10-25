@@ -25,16 +25,16 @@ use crate::{ctl_gateway::CtlRequest,
                       ManagerConfig,
                       ManagerState},
             util};
-use habitat_butterfly as butterfly;
-use habitat_common::{command::package::install::InstallSource,
+use dojo_butterfly as butterfly;
+use dojo_common::{command::package::install::InstallSource,
                      outputln,
                      ui::UIWriter};
-use habitat_core::{package::{Identifiable,
+use dojo_core::{package::{Identifiable,
                              PackageIdent,
                              PackageTarget},
                    service::ServiceGroup,
                    ChannelIdent};
-use habitat_sup_protocol::{self as protocol,
+use dojo_sup_protocol::{self as protocol,
                            net::{self,
                                  ErrCode,
                                  NetResult}};

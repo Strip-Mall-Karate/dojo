@@ -17,7 +17,7 @@
 //! # Examples
 //!
 //! ```bash
-//! $ hab pkg binds core/redis
+//! $ doj pkg binds core/redis
 //! ```
 //!
 //! Will show all available binds.

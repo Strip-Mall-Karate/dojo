@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use clap;
-use habitat_common as common;
-use habitat_core as hcore;
-use habitat_pkg_export_docker as export_docker;
+use dojo_common as common;
+use dojo_core as hcore;
+use dojo_pkg_export_docker as export_docker;
 
 #[macro_use]
 extern crate serde_json;
@@ -51,7 +51,7 @@ pub use crate::{cli::Cli,
                 manifestjson::ManifestJson,
                 storage::PersistentStorage};
 
-// Synced with the version of the Habitat operator.
+// Synced with the version of the Dojo operator.
 pub const VERSION: &str = "0.1.0";
 
 /// Convenient do-it-all function. You give it the CLI arguments from the user and it generates the

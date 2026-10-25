@@ -1,23 +1,23 @@
-# Habitat CLI UX Principles
+# Dojo CLI UX Principles
 
 ## Commands
 
 ### Make it Readable
-- Keep commands human readable and memorizable by using a sentence like structure `hab <noun> <verb>`.
+- Keep commands human readable and memorizable by using a sentence like structure `doj <noun> <verb>`.
 - The consistent noun/verb format becomes rhythmic and builds a mental model if used properly.
 - Use terms (nouns and verbs) that fit with a real-world analogy.
-- Be precise with meaning and pay attention to expectations when choosing words. For example, if you use a command like `hab pkg create` then the expectation should match the result (i.e. an actual package should be created, not simply a directory or scaffold).
+- Be precise with meaning and pay attention to expectations when choosing words. For example, if you use a command like `doj pkg create` then the expectation should match the result (i.e. an actual package should be created, not simply a directory or scaffold).
 - Don’t make up words. Consider using a different term or add a dash instead of jamming words together or using words that don’t exist in the dictionary. People won’t remember how to spell it which in turn generates unnecessary confusion. Clarity is king.
 - Be careful with abbreviations - keep things speakable - imagine you are telling somebody else to run a command verbally, can they understand/interpret what you say without misspelling it? (this probably means it’s also easier for you to recall on your own as well).
-- Look out for flags that contain boolean wording. For example, try to avoid flags like `thing_disabled` or `thing_enabled`, or even worse, a boolean-ish flag that also takes a boolean value such as hab foo thing_disabled=false or hab foo thing_enabled=true.
-  - Instead, take out boolean wording and just use the setting name like hab foo some_option=enabled or hab foo some_option=false.
+- Look out for flags that contain boolean wording. For example, try to avoid flags like `thing_disabled` or `thing_enabled`, or even worse, a boolean-ish flag that also takes a boolean value such as doj foo thing_disabled=false or doj foo thing_enabled=true.
+  - Instead, take out boolean wording and just use the setting name like doj foo some_option=enabled or doj foo some_option=false.
 
 ### Be Judicious
 - Be judicious with the number of available commands.
 - Limit the number of nouns - keeps the cognitive load small; users can memorize the core commands (keep them writing plans, not fumbling and looking up commands).
 
 ### Build Consistency
-- Using the noun before the verb fosters consistency; you also get help at the noun level (imagine your command set as a tree hierarchy branching out from the root); if you can remember the nouns then you can quickly get the list of verbs for that noun (e.g. hab package -help).
+- Using the noun before the verb fosters consistency; you also get help at the noun level (imagine your command set as a tree hierarchy branching out from the root); if you can remember the nouns then you can quickly get the list of verbs for that noun (e.g. doj package -help).
 - Use shortcuts sparingly - they’re certainly useful but obstruct understanding and meaning.
 - Don’t treat flags as 2nd class citizens. Be aware of existing flags and consider how they can/will be used across multiple commands and subcommands.
 
@@ -56,7 +56,7 @@
 ### Generate Humane Output
 - Make output human readable and concise by default. Offer more/less verbose output as an option via a flag.
 - Examine the current state of the system and make output contextual.
-- Identify for analogs and antilogs. Do repeat CLI experiences that you’ve enjoyed elsewhere; Don’t repeat mistakes others have made. (e.g. In Habitat, building a package follows a format like bundle install).
+- Identify for analogs and antilogs. Do repeat CLI experiences that you’ve enjoyed elsewhere; Don’t repeat mistakes others have made. (e.g. In Dojo, building a package follows a format like bundle install).
 - Write output with a clear message that a) sets the stage with “what we’re about to do”, b) shows progress on “what is happening now”, and c) wrap-up with “did it fail or succeed?”. If it fails, then explain why and provide a recommended next step. If it succeeds, then consider celebrating with a playful message.
 
 ### Expose Your Personality
@@ -84,7 +84,7 @@
    - Avoid creating delays or failures in the core experience. It goes without saying, but your users are here to accomplish a task and that is paramount to your data needs. Don’t degrade or break the UX to serve yourself and your analytical desires.
     - For example, piggyback other activities that require internet calls and note in the output of that command that you’re sending analytics data.
     - Batch data and send it in chunks.
-   - Make opting in and out both simple and clear. User should be confident that when they opt out, all tracking remnants have been removed. Add a simple command (e.g. hab analytics off) along with manual instructions if they want to nuke the possibility on their own (e.g. delete the /analtyics/directory).
+   - Make opting in and out both simple and clear. User should be confident that when they opt out, all tracking remnants have been removed. Add a simple command (e.g. doj analytics off) along with manual instructions if they want to nuke the possibility on their own (e.g. delete the /analtyics/directory).
 - Do track things that will help you improve the CLI UX.
   - Which commands are most used? 
   - Which would be good indicators of usage trends?

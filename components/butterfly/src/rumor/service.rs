@@ -26,7 +26,7 @@ use serde::{ser::SerializeStruct,
             Serializer};
 use toml;
 
-use habitat_core::{package::Identifiable,
+use dojo_core::{package::Identifiable,
                    service::ServiceGroup};
 
 use crate::{error::{Error,
@@ -231,7 +231,7 @@ mod tests {
     use std::{cmp::Ordering,
               str::FromStr};
 
-    use habitat_core::{package::{Identifiable,
+    use dojo_core::{package::{Identifiable,
                                  PackageIdent},
                        service::ServiceGroup};
 

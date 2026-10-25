@@ -14,10 +14,10 @@
 
 use clap;
 use env_logger;
-use habitat_common as common;
-use habitat_core as hcore;
-use habitat_pkg_export_docker as export_docker;
-use habitat_pkg_export_kubernetes as export_k8s;
+use dojo_common as common;
+use dojo_core as hcore;
+use dojo_pkg_export_docker as export_docker;
+use dojo_pkg_export_kubernetes as export_k8s;
 
 #[macro_use]
 extern crate lazy_static;
@@ -77,7 +77,7 @@ lazy_static! {
 fn cli<'a, 'b>() -> clap::App<'a, 'b> {
     let name: &str = &*PROGRAM_NAME;
     let about =
-        "Creates a Docker image and generates a Helm chart for the specified Habitat package.";
+        "Creates a Docker image and generates a Helm chart for the specified Dojo package.";
 
     Cli::new(name, about)
         .add_docker_args()
@@ -156,7 +156,7 @@ fn cli<'a, 'b>() -> clap::App<'a, 'b> {
                 .value_name("OPERATOR_VERSION")
                 .long("operator-version")
                 .validator(valid_version)
-                .help("Version of the Habitat operator to set as dependency")
+                .help("Version of the Dojo operator to set as dependency")
                 .default_value(deps::DEFAULT_OPERATOR_VERSION),
         )
         .arg(
@@ -170,7 +170,7 @@ fn cli<'a, 'b>() -> clap::App<'a, 'b> {
                 ),
         )
         .arg(Arg::with_name("DOWNLOAD_DEPS").long("download-deps").help(
-            "Whether to download dependencies. The Kubernetes Habitat Operator is the only \
+            "Whether to download dependencies. The Kubernetes Dojo Operator is the only \
              dependency currently. (default: no)",
         ))
 }

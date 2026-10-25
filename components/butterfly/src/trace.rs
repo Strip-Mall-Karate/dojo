@@ -146,7 +146,7 @@ pub struct Trace {
 
 impl Default for Trace {
     fn default() -> Trace {
-        Trace { directory: PathBuf::from("/tmp/habitat-swim-trace"),
+        Trace { directory: PathBuf::from("/tmp/dojo-swim-trace"),
                 file:      None,
                 on:        false, }
     }
@@ -209,7 +209,7 @@ macro_rules! trace_it {
     (TEST: $server:expr, $payload:expr) => {{
         let trace_on = $server.trace.read().expect("Trace lock is poisoned").on();
         if trace_on {
-            use habitat_butterfly::trace::{TraceKind,
+            use dojo_butterfly::trace::{TraceKind,
                                            TraceWrite};
             use std::thread;
             let mut trace = $server.trace.write().expect("Trace lock is poisoned");
@@ -232,7 +232,7 @@ macro_rules! trace_it {
         for x in $net.members.iter() {
             let trace_on = x.trace.read().expect("Trace lock is poisoned").on();
             if trace_on {
-                use habitat_butterfly::trace::{TraceKind,
+                use dojo_butterfly::trace::{TraceKind,
                                                TraceWrite};
                 use std::thread;
                 let mut trace = x.trace.write().expect("Trace lock is poisoned");
@@ -404,7 +404,7 @@ mod tests {
         #[test]
         fn default() {
             let trace = Trace::default();
-            assert_eq!(trace.directory, Path::new("/tmp/habitat-swim-trace"));
+            assert_eq!(trace.directory, Path::new("/tmp/dojo-swim-trace"));
         }
     }
 }

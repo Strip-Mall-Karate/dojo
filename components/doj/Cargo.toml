@@ -1,0 +1,72 @@
+[package]
+name = "doj"
+version = "0.0.0"
+edition = "2018"
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+build = "../build-dojo.rs"
+workspace = "../../"
+
+[[bin]]
+name = "doj"
+doc = false
+
+[dependencies]
+base64 = "*"
+dirs = "*"
+env_logger = "*"
+futures = "*"
+# Pending upgrade activities in https://github.com/habitat-sh/core/issues/72
+hyper = "0.10"
+dojo-sup-client = { path = "../sup-client" }
+dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
+# We need to lock here since v0.30.0 bumps to a version of pest that fails to build on Windows.
+handlebars = { version = "0.29.1", default-features = false }
+lazy_static = "*"
+libc = "*"
+log = "*"
+pbr = "*"
+protobuf = "1.5.1"
+retry = "*"
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+tabwriter = "*"
+termcolor = "*"
+toml = { version = "*", default-features = false }
+url = "*"
+walkdir = "*"
+tar = "*"
+flate2 = "*"
+chrono = "*"
+
+[dependencies.clap]
+version = "*"
+features = [ "suggestions", "color", "unstable" ]
+
+[dependencies.dojo_core]
+git = "https://github.com/habitat-sh/core.git"
+
+[dependencies.dojo_common]
+path = "../common"
+
+[dependencies.dojo_api_client]
+path = "../builder-api-client"
+
+[dependencies.dojo_http_client]
+git = "https://github.com/habitat-sh/core.git"
+
+[dependencies.uuid]
+version = "*"
+features = ["v4"]
+
+[target.'cfg(windows)'.dependencies]
+widestring = "*"
+winapi = { version = "*", features = ["winuser", "windef"] }
+winreg = "*"
+
+[dev-dependencies]
+tempfile = "*"
+
+[features]
+default = []
+functional = []

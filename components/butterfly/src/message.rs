@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use bytes::BytesMut;
-use habitat_core::crypto::SymKey;
+use dojo_core::crypto::SymKey;
 use prost::Message;
 
 use crate::{error::{Error,

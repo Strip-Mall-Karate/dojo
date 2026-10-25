@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #[macro_use]
-extern crate habitat_butterfly;
+extern crate dojo_butterfly;
 
 #[macro_use]
 extern crate lazy_static;
 
-use habitat_butterfly::{member::{Health,
+use dojo_butterfly::{member::{Health,
                                  Member},
                         rumor::{departure::Departure,
                                 election::ElectionStatus,
@@ -30,7 +30,7 @@ use habitat_butterfly::{member::{Health,
                                  Server,
                                  Suitability},
                         trace::Trace};
-use habitat_core::{crypto::keys::sym_key::SymKey,
+use dojo_core::{crypto::keys::sym_key::SymKey,
                    package::{Identifiable,
                              PackageIdent},
                    service::ServiceGroup};

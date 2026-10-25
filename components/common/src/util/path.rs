@@ -20,7 +20,7 @@ use crate::{command::package::install::{self,
                     Result},
             ui,
             PROGRAM_NAME};
-use habitat_core::{fs::{cache_artifact_path,
+use dojo_core::{fs::{cache_artifact_path,
                         find_command,
                         FS_ROOT_PATH},
                    package::{PackageIdent,

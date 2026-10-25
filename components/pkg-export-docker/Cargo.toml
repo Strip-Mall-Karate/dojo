@@ -1,16 +1,16 @@
 [package]
-name = "habitat_pkg_export_docker"
+name = "dojo_pkg_export_docker"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
 build = "build.rs"
 workspace = "../../"
 
 [lib]
-name = "habitat_pkg_export_docker"
+name = "dojo_pkg_export_docker"
 
 [[bin]]
-name = "hab-pkg-export-docker"
+name = "doj-pkg-export-docker"
 path = "src/main.rs"
 doc = false
 
@@ -19,9 +19,9 @@ base64 = "*"
 clap = { version = "*", features = ["suggestions", "color", "unstable"] }
 chrono = "*"
 env_logger = "*"
-hab = { path = "../hab" }
-habitat_common = { path = "../common" }
-habitat_core = { git = "https://github.com/habitat-sh/core.git" }
+doj = { path = "../doj" }
+dojo_common = { path = "../common" }
+dojo_core = { git = "https://github.com/habitat-sh/core.git" }
 # We need to lock here since v0.30.0 bumps to a version of pest that fails to build on Windows.
 handlebars = { version = "0.29.1", default-features = false }
 lazy_static = "*"

@@ -1,12 +1,12 @@
-# Contributing to Habitat
+# Contributing to Dojo
 
-Thank you for your interest in contributing to Habitat! There are many ways to contribute, and we appreciate all of them.
+Thank you for your interest in contributing to Dojo! There are many ways to contribute, and we appreciate all of them.
 
-You are currently in the core Habitat repo, which is primarily written in Rust code and holds the core functionality of the Core Habitat, Habitat Builder Web Application, Habitat Builder, and Documentation. If you are interested in contributing a new plan to core plans (which is a great way to get started as a new contributor!), check out the [core-plans repo](https://github.com/habitat-sh/core-plans) instead.
+You are currently in the core Dojo repo, which is primarily written in Rust code and holds the core functionality of the Core Dojo, Dojo Builder Web Application, Dojo Builder, and Documentation. If you are interested in contributing a new plan to core plans (which is a great way to get started as a new contributor!), check out the [core-plans repo](https://github.com/habitat-sh/core-plans) instead.
 
-If you have questions, join the [Habitat Slack Channel](http://slack.habitat.sh) to talk directly to the community and core maintainers. All experience levels of questions are welcome in the general channel.
+If you have questions, join the [Dojo Slack Channel](http://slack.habitat.sh) to talk directly to the community and core maintainers. All experience levels of questions are welcome in the general channel.
 
-As a reminder, all participants are expected to follow the [Code of Conduct](https://github.com/habitat-sh/habitat/blob/master/CODE_OF_CONDUCT.md).
+As a reminder, all participants are expected to follow the [Code of Conduct](https://github.com/reset/dojo/blob/master/CODE_OF_CONDUCT.md).
 
 * [Support Channels](#support-channels)
 * [Feature Requests](#feature-requests)
@@ -16,7 +16,7 @@ As a reminder, all participants are expected to follow the [Code of Conduct](htt
 * [Writing Documentation and blogs](#writing-documentation-and-blogs)
 * [Issue Triage](#issue-triage)
 * [Related Articles](#related-articles)
-* [Development priniciples for working on Habitat](#development-principles-for-working-on-habitat)
+* [Development priniciples for working on Dojo](#development-principles-for-working-on-dojo)
 * [Workstation Setup](#workstation-setup)
 * [Writing new features](#writing-new-features)
 * [Signing Your Commits](#signing-your-commits)
@@ -36,13 +36,13 @@ Before opening a new issue or submitting a new pull request, it's helpful to sea
 
 # Feature Requests
 
-To request a change to the way that Habitat works, please [open an issue](https://github.com/habitat-sh/habitat/issues).
+To request a change to the way that Dojo works, please [open an issue](https://github.com/habitat-sh/habitat/issues).
 
 # Bug Reports
 
 Bugs are a reality in software. We can't fix what we don't know about, so please report liberally. If you're not sure if something's a bug or not, feel free to file a bug anyway.
 
-If you believe your bug represents a security issue for Habitat users, please follow our instructions for [reporting a security vulnerability.](#report-a-security-vulnerability)
+If you believe your bug represents a security issue for Dojo users, please follow our instructions for [reporting a security vulnerability.](#report-a-security-vulnerability)
 
 If you have the chance, before reporting a bug please [search existing issues](https://github.com/habitat-sh/habitat/issues), as it's possible someone has already reported your error.
 
@@ -50,7 +50,7 @@ Opening an issue is as easy as following [this link](https://github.com/habitat-
 
 # Report a security vulnerability
 
-Safety is one of the core principles of Habitat, and to that end, we would like to ensure that Habitat has a secure implementation. Thank you for taking the time to responsibly disclose any issues you find.
+Safety is one of the core principles of Dojo, and to that end, we would like to ensure that Dojo has a secure implementation. Thank you for taking the time to responsibly disclose any issues you find.
 
 All security bugs in the distribution should be reported by email to security@habitat.sh. This list is delivered to a small security team. Your email will be acknowledged within 24 hours, and you'll receive a more detailed response to your email within 48 hours indicating the next steps in handling your report.
 
@@ -66,7 +66,7 @@ Please note that the discussion forums and slack channel are public areas. When 
 
 # Pull Requests
 
-Pull requests are the primary mechanism we use to write Habitat. GitHub itself has some great documentation on using [the Pull Request feature](https://help.github.com/articles/about-pull-requests/). We use the "fork and pull" model [described here](https://help.github.com/articles/about-collaborative-development-models/), where contributors push changes to their personal fork and create pull requests to bring those changes into the source repository.
+Pull requests are the primary mechanism we use to write Dojo. GitHub itself has some great documentation on using [the Pull Request feature](https://help.github.com/articles/about-pull-requests/). We use the "fork and pull" model [described here](https://help.github.com/articles/about-collaborative-development-models/), where contributors push changes to their personal fork and create pull requests to bring those changes into the source repository.
 
 Please make pull requests against the `master` branch.
 
@@ -76,13 +76,13 @@ Documentation improvements are very welcome.
 
 To find documentation-related issues, [search by the A-Documentation label](https://github.com/habitat-sh/habitat/issues?q=is%3Aissue+is%3Aopen+label%3AA-documentation).
 
-Blogs from community members are also very welcome. You can open a pull request to submit a blog for the website by [following these instructions](https://github.com/habitat-sh/habitat/tree/master/www/source/blog).
+Blogs from community members are also very welcome. You can open a pull request to submit a blog for the website by [following these instructions](https://github.com/reset/dojo/tree/master/www/source/blog).
 
 # Issue Triage
 
-The Habitat core team does issue triage every Tuesday, at 10am Pacific time. A link to a public video is made available in the #general channel of Slack when triage occurs, and a recording is shared afterwards on the [Habitat youtube channel](https://www.youtube.com/channel/UC0wJZeP2dfPZaDUPgvpVpSg).
+The Dojo core team does issue triage every Tuesday, at 10am Pacific time. A link to a public video is made available in the #general channel of Slack when triage occurs, and a recording is shared afterwards on the [Dojo youtube channel](https://www.youtube.com/channel/UC0wJZeP2dfPZaDUPgvpVpSg).
 
-You can also help triage by using the following labeling system adopted by the Habitat core team:
+You can also help triage by using the following labeling system adopted by the Dojo core team:
 
 | *TAGS Groups*                     |               Meaning                             |
 |:----------------------------------|:--------------------------------------------------|
@@ -96,18 +96,18 @@ You can also help triage by using the following labeling system adopted by the H
 [Read more about issue triage here.](https://www.habitat.sh/blog/community/)
 
 # Related Articles
-* [Current Habitat Maintainers](https://github.com/habitat-sh/habitat/blob/master/MAINTAINERS.md)
-* [Maintainers Policy, how to become a Maintainers](https://github.com/habitat-sh/habitat/blob/master/maintenance-policy.md)
-* [ReadMe](https://github.com/habitat-sh/habitat/blob/master/README.md)
-* [CLI UX Principes](https://github.com/habitat-sh/habitat/blob/master/UX_PRINCIPLES.md)
-* [Habitat Main Website: Browse docs, do a tutorial, check out Builder](https://www.habitat.sh/)
+* [Current Dojo Maintainers](https://github.com/reset/dojo/blob/master/MAINTAINERS.md)
+* [Maintainers Policy, how to become a Maintainers](https://github.com/reset/dojo/blob/master/maintenance-policy.md)
+* [ReadMe](https://github.com/reset/dojo/blob/master/README.md)
+* [CLI UX Principes](https://github.com/reset/dojo/blob/master/UX_PRINCIPLES.md)
+* [Dojo Main Website: Browse docs, do a tutorial, check out Builder](https://www.habitat.sh/)
 
-## Development principles for working on Habitat
+## Development principles for working on Dojo
 
 1. The principle of least abstraction. When possible, we use the tooling that is closest to the native
 tooling for the platform, and provide as little abstraction as necessary. When we do choose an abstraction,
 we choose one - and we make it the one that is most user-serviceable.
-1. Keep it light. The runtime component of Habitat is used as a process Supervisor - it needs to stay lean. No run-times.
+1. Keep it light. The runtime component of Dojo is used as a process Supervisor - it needs to stay lean. No run-times.
 1. Convention over configuration, with reasonable defaults. Where possible, we remove the need to configure things
 by having a convention cover it. When we do need to configure things, we set reasonable defaults.
 1. Call things what they are.
@@ -186,13 +186,13 @@ the end of the commit message.
 
 ## Pull Request Review and Merge Automation
 
-Habitat uses several bots to automate the review and merging of pull requests. Messages to and from the bots are brokered via the account @thesentinel. First, we use Facebook's [mention bot](https://github.com/facebook/mention-bot) to identify potential reviewers for a pull request based on the `blame` information in the relevant diff. @thesentinels can also receive
+Dojo uses several bots to automate the review and merging of pull requests. Messages to and from the bots are brokered via the account @thesentinel. First, we use Facebook's [mention bot](https://github.com/facebook/mention-bot) to identify potential reviewers for a pull request based on the `blame` information in the relevant diff. @thesentinels can also receive
 incoming commands from reviewers to approve PRs. These commands are routed to a [homu](https://github.com/barosl/homu) bot that will automatically merge a PR when sufficient reviewers have provided a +1 (or r+ in homu terminology).
 
 
 ## Delegating pull request merge access
 
-A Habitat core maintainer can delegate pull request merge access to a contributor via
+A Dojo core maintainer can delegate pull request merge access to a contributor via
 
 	@thesentinels delegate=username
 

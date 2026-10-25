@@ -53,11 +53,11 @@ use crate::{census::{CensusGroup,
                      ElectionStatus,
                      MemberId},
             manager::Sys};
-use habitat_butterfly::rumor::service::SysInfo;
-use habitat_common::templating::{config::Cfg,
+use dojo_butterfly::rumor::service::SysInfo;
+use dojo_common::templating::{config::Cfg,
                                  package::{Env,
                                            Pkg}};
-use habitat_core::{package::PackageIdent,
+use dojo_core::{package::PackageIdent,
                    service::{ServiceBind,
                              ServiceGroup}};
 use serde::{ser::SerializeMap,
@@ -570,10 +570,10 @@ mod tests {
     use serde_json;
     use tempfile::TempDir;
 
-    use habitat_butterfly::rumor::service::SysInfo;
-    use habitat_common::templating::{config::PackageConfigPaths,
+    use dojo_butterfly::rumor::service::SysInfo;
+    use dojo_common::templating::{config::PackageConfigPaths,
                                      TemplateRenderer};
-    use habitat_core::package::PackageIdent;
+    use dojo_core::package::PackageIdent;
 
     use crate::{manager::service::Cfg,
                 test_helpers::*};
@@ -669,7 +669,7 @@ two = 2
     /// things on a mutable reference.
     fn default_render_context<'a>() -> RenderContext<'a> {
         let system_info =
-            SystemInfo { version:           Cow::Owned("I AM A HABITAT VERSION".into()),
+            SystemInfo { version:           Cow::Owned("I AM A DOJO VERSION".into()),
                          member_id:         Cow::Owned("MEMBER_ID".into()),
                          ip:                Cow::Owned(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                          hostname:          Cow::Owned("MY_HOSTNAME".into()),
@@ -719,8 +719,8 @@ two = 2
                             svc_var_path:    Cow::Owned("var_path".into()),
                             svc_pid_file:    Cow::Owned("pid_file".into()),
                             svc_run:         Cow::Owned("svc_run".into()),
-                            svc_user:        Cow::Owned("hab".into()),
-                            svc_group:       Cow::Owned("hab".into()), };
+                            svc_user:        Cow::Owned("doj".into()),
+                            svc_group:       Cow::Owned("doj".into()), };
 
         let group: ServiceGroup = "foo.default".parse().unwrap();
 

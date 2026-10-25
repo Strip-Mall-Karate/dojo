@@ -19,7 +19,7 @@
 use std::{thread,
           time::Duration};
 
-use habitat_core::util::ToI64;
+use dojo_core::util::ToI64;
 use prometheus::{IntCounterVec,
                  IntGaugeVec};
 use zmq;
@@ -32,11 +32,11 @@ use crate::{rumor::{RumorEnvelope,
 
 lazy_static! {
     static ref GOSSIP_MESSAGES_RECEIVED: IntCounterVec =
-        register_int_counter_vec!("hab_butterfly_gossip_messages_received_total",
+        register_int_counter_vec!("doj_butterfly_gossip_messages_received_total",
                                   "Total number of gossip messages received",
                                   &["type", "mode", "blocked"]).unwrap();
     static ref GOSSIP_BYTES_RECEIVED: IntGaugeVec =
-        register_int_gauge_vec!("hab_butterfly_gossip_received_bytes",
+        register_int_gauge_vec!("doj_butterfly_gossip_received_bytes",
                                 "Gossip message size received in bytes",
                                 &["type", "mode", "blocked"]).unwrap();
 }

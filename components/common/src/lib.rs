@@ -14,8 +14,8 @@
 
 use crate::ui::{UIWriter,
                 UI};
-use habitat_api_client as api_client;
-use habitat_core as hcore;
+use dojo_api_client as api_client;
+use dojo_core as hcore;
 use lazy_static::lazy_static;
 use std::{collections::HashMap,
           env,
@@ -54,7 +54,7 @@ lazy_static::lazy_static! {
             Ok(path) => path.file_stem().and_then(|p| p.to_str()).unwrap().to_string(),
             Err(e) => {
                 error!("Error getting path of current_exe: {}", e);
-                String::from("hab-?")
+                String::from("doj-?")
             }
         }
     };
@@ -76,7 +76,7 @@ lazy_static::lazy_static! {
 // concern. We can have any number of bitflags-generated structs.
 
 bitflags::bitflags! {
-    /// All the feature flags that are recogized by Habitat.
+    /// All the feature flags that are recogized by Dojo.
     ///
     /// In general, feature flags are enabled by setting the corresponding
     /// environment variable.
@@ -103,15 +103,15 @@ bitflags::bitflags! {
 
 lazy_static! {
     static ref ENV_VARS: HashMap<FeatureFlag, &'static str> = {
-        let mapping = vec![(FeatureFlag::LIST, "HAB_FEAT_LIST"),
-                           (FeatureFlag::TEST_EXIT, "HAB_FEAT_TEST_EXIT"),
-                           (FeatureFlag::TEST_BOOT_FAIL, "HAB_FEAT_BOOT_FAIL"),
-                           (FeatureFlag::REDACT_HTTP, "HAB_FEAT_REDACT_HTTP"),
-                           (FeatureFlag::IGNORE_SIGNALS, "HAB_FEAT_IGNORE_SIGNALS"),
-                           (FeatureFlag::INSTALL_HOOK, "HAB_FEAT_INSTALL_HOOK"),
-                           (FeatureFlag::OFFLINE_INSTALL, "HAB_FEAT_OFFLINE_INSTALL"),
-                           (FeatureFlag::IGNORE_LOCAL, "HAB_FEAT_IGNORE_LOCAL"),
-                           (FeatureFlag::EVENT_STREAM, "HAB_FEAT_EVENT_STREAM")];
+        let mapping = vec![(FeatureFlag::LIST, "DOJ_FEAT_LIST"),
+                           (FeatureFlag::TEST_EXIT, "DOJ_FEAT_TEST_EXIT"),
+                           (FeatureFlag::TEST_BOOT_FAIL, "DOJ_FEAT_BOOT_FAIL"),
+                           (FeatureFlag::REDACT_HTTP, "DOJ_FEAT_REDACT_HTTP"),
+                           (FeatureFlag::IGNORE_SIGNALS, "DOJ_FEAT_IGNORE_SIGNALS"),
+                           (FeatureFlag::INSTALL_HOOK, "DOJ_FEAT_INSTALL_HOOK"),
+                           (FeatureFlag::OFFLINE_INSTALL, "DOJ_FEAT_OFFLINE_INSTALL"),
+                           (FeatureFlag::IGNORE_LOCAL, "DOJ_FEAT_IGNORE_LOCAL"),
+                           (FeatureFlag::EVENT_STREAM, "DOJ_FEAT_EVENT_STREAM")];
         HashMap::from_iter(mapping)
     };
 }

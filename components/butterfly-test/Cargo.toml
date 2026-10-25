@@ -1,18 +1,18 @@
 [package]
-name = "habitat_butterfly_test"
+name = "dojo_butterfly_test"
 version = "0.1.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
 workspace = "../../"
 
 [dependencies]
 lazy_static = "*"
 time = "*"
 
-[dependencies.habitat_butterfly]
+[dependencies.dojo_butterfly]
 path = "../butterfly"
 
-[dependencies.habitat_core]
+[dependencies.dojo_core]
 git = "https://github.com/habitat-sh/core.git"
 
 [features]

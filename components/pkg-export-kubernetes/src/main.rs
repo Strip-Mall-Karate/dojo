@@ -14,10 +14,10 @@
 
 use clap;
 use env_logger;
-use habitat_common::{ui::{UIWriter,
+use dojo_common::{ui::{UIWriter,
                           UI},
                      PROGRAM_NAME};
-use habitat_pkg_export_kubernetes as export_k8s;
+use dojo_pkg_export_kubernetes as export_k8s;
 use log::debug;
 
 fn main() {
@@ -34,7 +34,7 @@ fn main() {
 
 fn cli<'a, 'b>() -> clap::App<'a, 'b> {
     let name: &str = &*PROGRAM_NAME;
-    let about = "Creates a Docker image and Kubernetes manifest for a Habitat package. Habitat \
+    let about = "Creates a Docker image and Kubernetes manifest for a Dojo package. Dojo \
                  operator must be deployed within the Kubernetes cluster before the generated \
                  manifest can be applied to this cluster.";
 

@@ -1,18 +1,18 @@
-<img src="https://github.com/habitat-sh/habitat/blob/master/www/source/images/habitat-logo.png" width="200">
+<img src="https://github.com/reset/dojo/blob/master/www/source/images/dojo-logo.png" width="200">
 
-[![Build Status](https://badge.buildkite.com/f527cd3d7851756ed1a5f6ec463dd41e7145f7941fd932672a.svg)](https://buildkite.com/chef/habitat-sh-habitat-master-verify?branch=master)
+[![Build Status](https://badge.buildkite.com/f527cd3d7851756ed1a5f6ec463dd41e7145f7941fd932672a.svg)](https://buildkite.com/chef/dojo-sh-dojo-master-verify?branch=master)
 [![Slack](http://slack.habitat.sh/badge.svg)](http://slack.habitat.sh/)
 [![Discourse status](https://img.shields.io/discourse/https/meta.discourse.org/status.svg?style=flat)](https://forums.habitat.sh)
-[![Open Source Helpers](https://www.codetriage.com/habitat-sh/habitat/badges/users.svg)](https://www.codetriage.com/habitat-sh/habitat)
+[![Open Source Helpers](https://www.codetriage.com/reset/dojo/badges/users.svg)](https://www.codetriage.com/reset/dojo)
 
 
-[Habitat](http://habitat.sh) is open source software that creates platform-independent build artifacts and provides built-in deployment and management capabilities.
+[Dojo](http://habitat.sh) is open source software that creates platform-independent build artifacts and provides built-in deployment and management capabilities.
 
-The goal of Habitat is to allow you to automate your application behavior when you create your application, and then bundle your application with the automation it needs to behave with the correct run time behavior, update strategies, failure handling strategies, and scaling behavior, wherever you choose to deploy it.
+The goal of Dojo is to allow you to automate your application behavior when you create your application, and then bundle your application with the automation it needs to behave with the correct run time behavior, update strategies, failure handling strategies, and scaling behavior, wherever you choose to deploy it.
 
-See a quick demo of how to build, deploy and manage an application with Habitat:
+See a quick demo of how to build, deploy and manage an application with Dojo:
 
-[![Build, Deploy and Manage with Habitat (5:33)](images/overview-youtube-image.jpg)](http://www.youtube.com/watch?v=VW1DwDezlqM)
+[![Build, Deploy and Manage with Dojo (5:33)](images/overview-youtube-image.jpg)](http://www.youtube.com/watch?v=VW1DwDezlqM)
 
 # Table of Contents
 * [Diagrams](#diagrams)
@@ -29,32 +29,32 @@ See a quick demo of how to build, deploy and manage an application with Habitat:
 * [License](#license)
 
 ## Diagrams
-Graphics that will help you and your team better understand the concepts and how they fit together into the larger Habitat ecosystem.
-### Where Habitat Fits
+Graphics that will help you and your team better understand the concepts and how they fit together into the larger Dojo ecosystem.
+### Where Dojo Fits
 
-[![Habitat Flow Infographic](images/habitat-flow-infographic.png)](http://habitat.sh#reference-diagram)
+[![Dojo Flow Infographic](images/dojo-flow-infographic.png)](http://habitat.sh#reference-diagram)
 
 Try the interactive infographics on the [website](http://habitat.sh#reference-diagram)!
 
-### How Habitat Works
-* [Architecture Overview](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-architecture-overview.png)
-* [Initial Package Build Flow](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-initial-package-build-flow.png)
-* [Application Rebuild Flow](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-application-rebuild-flow.png)
-* [Dependency Update Flow](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-dependency-update-flow.png)
-* [Promote Packages Through Channels](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-promote-packages-through-channels.png)
+### How Dojo Works
+* [Architecture Overview](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-architecture-overview.png)
+* [Initial Package Build Flow](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-initial-package-build-flow.png)
+* [Application Rebuild Flow](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-application-rebuild-flow.png)
+* [Dependency Update Flow](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-dependency-update-flow.png)
+* [Promote Packages Through Channels](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-promote-packages-through-channels.png)
 
-### Habitat and **Docker**
-* [Initial Docker Container Publishing Flow](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-initial-docker-container-publishing-flow.png)
-* [Automated Docker Container Publishing Flow](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-automated-docker-container-publishing-flow.png)
+### Dojo and **Docker**
+* [Initial Docker Container Publishing Flow](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-initial-docker-container-publishing-flow.png)
+* [Automated Docker Container Publishing Flow](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-automated-docker-container-publishing-flow.png)
 
-### Habitat and **Kubernetes**
-* [Three Tiers of Service Deployment](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/habitat-and-kubernetes-three-tiers-of-service-deployment.png)
-* [Deploy Services to Kubernetes with Habitat](https://github.com/habitat-sh/habitat/raw/master/www/source/images/infographics/deploy-services-to-kubernetes-with-habitat-flow.png)
+### Dojo and **Kubernetes**
+* [Three Tiers of Service Deployment](https://github.com/reset/dojo/raw/master/www/source/images/infographics/dojo-and-kubernetes-three-tiers-of-service-deployment.png)
+* [Deploy Services to Kubernetes with Dojo](https://github.com/reset/dojo/raw/master/www/source/images/infographics/deploy-services-to-kubernetes-with-dojo-flow.png)
 
 *View all diagrams in [Docs](https://www.habitat.sh/docs/diagrams/)*
 
 ## Hands-on Demos
-Choose any topic to begin learning how Habitat can help your team build, deploy, and manage all of your applications - both new and legacy - in a cloud-native way:
+Choose any topic to begin learning how Dojo can help your team build, deploy, and manage all of your applications - both new and legacy - in a cloud-native way:
 * [Package a sample application (15 mins)](https://www.habitat.sh/demo/packaging-system/steps/1/)
 * [Set up automated deployments (20 mins)](https://www.habitat.sh/demo/build-system/steps/1/)
 * [Auto-update a running application (15 mins)](https://www.habitat.sh/demo/process-supervisor/steps/1/)
@@ -64,26 +64,26 @@ Choose any topic to begin learning how Habitat can help your team build, deploy,
 
 ## Install
 
-You can download Habitat from the [Habitat downloads page](https://www.habitat.sh/docs/install-habitat/).
+You can download Dojo from the [Dojo downloads page](https://www.habitat.sh/docs/install-dojo/).
 
 Once you have downloaded it, follow the instructions on the page for your specific operating system.
 
 If you are running macOS and use [Homebrew](https://brew.sh), you can use our official [Homebrew tap](https://github.com/habitat-sh/homebrew-habitat).
 ```
-$ brew tap habitat-sh/habitat
-$ brew install hab
+$ brew tap reset/dojo
+$ brew install doj
 ```
 
-If you are running Windows and use [Chocolatey](https://chocolatey.org), you can install our [chocolatey package](https://chocolatey.org/packages/habitat)
+If you are running Windows and use [Chocolatey](https://chocolatey.org), you can install our [chocolatey package](https://chocolatey.org/packages/dojo)
 ```
-C:\> choco install habitat
+C:\> choco install dojo
 ```
 
-If you do _not_ run Homebrew or Chocolatey, or if you use Linux, you can use the [Habitat install
-script](https://github.com/habitat-sh/habitat/blob/master/components/hab/install.sh) from a bash shell.
+If you do _not_ run Homebrew or Chocolatey, or if you use Linux, you can use the [Dojo install
+script](https://github.com/reset/dojo/blob/master/components/doj/install.sh) from a bash shell.
 
 ```
-$ curl https://raw.githubusercontent.com/habitat-sh/habitat/master/components/hab/install.sh | sudo bash
+$ curl https://raw.githubusercontent.com/reset/dojo/master/components/doj/install.sh | sudo bash
 ```
 
 ## Contribute
@@ -92,36 +92,36 @@ We are always looking for more opportunities for community involvement. Interest
 
 ## Documentation
 
-Get started with the [Habitat tutorials](https://www.habitat.sh/learn/) or plunge into the [complete documentation](https://www.habitat.sh/docs/).
+Get started with the [Dojo tutorials](https://www.habitat.sh/learn/) or plunge into the [complete documentation](https://www.habitat.sh/docs/).
 
 ## Code Organization
 
 ### Core Plans
 
-The Habitat plans that are built and maintained by Habitat's Core Team are in [their own repo.](https://github.com/habitat-sh/core-plans)
+The Dojo plans that are built and maintained by Dojo's Core Team are in [their own repo.](https://github.com/habitat-sh/core-plans)
 
-### Habitat Supervisor and other core components
+### Dojo Supervisor and other core components
 
-The code for the Habitat Supervisor and other core components are in the [components directory](https://github.com/habitat-sh/habitat/tree/master/components).
+The code for the Dojo Supervisor and other core components are in the [components directory](https://github.com/reset/dojo/tree/master/components).
 
 ### Docs
 
-Habitat's website and documentation source is located in the `www` directory of the Habitat source code. See [its README](www/README.md) for more information.
+Dojo's website and documentation source is located in the `www` directory of the Dojo source code. See [its README](www/README.md) for more information.
 
 ## Roadmap
 
-The Habitat project's roadmap is public and is on our [community page](https://www.habitat.sh/community/).
+The Dojo project's roadmap is public and is on our [community page](https://www.habitat.sh/community/).
 
-The Habitat core team's project tracker is also public and on [Github.](https://github.com/habitat-sh/habitat/projects/1)
+The Dojo core team's project tracker is also public and on [Github.](https://github.com/reset/dojo/projects/1)
 
 ## Community and support
 
-* [Habitat Slack](http://slack.habitat.sh)
+* [Dojo Slack](http://slack.habitat.sh)
 * [Forums](https://forums.habitat.sh)
-* Community triage is every Tuesday at 10am Pacific. The link to participate is shared in the [Habitat Slack channel](http://slack.habitat.sh), and videos are posted on the [Habitat YouTube channel](https://youtube.com/channel/UC0wJZeP2dfPZaDUPgvpVpSg).
+* Community triage is every Tuesday at 10am Pacific. The link to participate is shared in the [Dojo Slack channel](http://slack.habitat.sh), and videos are posted on the [Dojo YouTube channel](https://youtube.com/channel/UC0wJZeP2dfPZaDUPgvpVpSg).
 
 ## Building
-See [BUILDING.md](BUILDING.md) for platform specific info on building Habitat from source.
+See [BUILDING.md](BUILDING.md) for platform specific info on building Dojo from source.
 
 ## Further reference material
 
@@ -136,7 +136,7 @@ See [BUILDING.md](BUILDING.md) for platform specific info on building Habitat fr
 * [POSIX Shell Command Language](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html)
 
 ## Code of Conduct
-Participation in the Habitat community is governed by the [code of conduct](https://github.com/habitat-sh/habitat/blob/master/CODE_OF_CONDUCT.md).
+Participation in the Dojo community is governed by the [code of conduct](https://github.com/reset/dojo/blob/master/CODE_OF_CONDUCT.md).
 
 ## License
 

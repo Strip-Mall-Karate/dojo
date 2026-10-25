@@ -1,6 +1,6 @@
 FROM alpine
 MAINTAINER Elliott Davis <elliott@excellent.io>
-ARG HAB_VERSION=
+ARG DOJ_VERSION=
 ARG PACKAGE_TARGET
 RUN set -ex \
   && apk add --no-cache --virtual .build-deps \
@@ -11,7 +11,7 @@ RUN set -ex \
     bash \
   \
   && cd /tmp \
-  && wget https://raw.githubusercontent.com/habitat-sh/habitat/master/components/hab/install.sh \
+  && wget https://raw.githubusercontent.com/reset/dojo/master/components/doj/install.sh \
   && bash install.sh -t ${PACKAGE_TARGET} \
-  && rm -rf install.sh /hab/cache /root/.wget-hsts /root/.gnupg \
+  && rm -rf install.sh /doj/cache /root/.wget-hsts /root/.gnupg \
   && apk del .build-deps

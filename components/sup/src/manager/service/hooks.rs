@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::health;
-use habitat_common::{outputln,
+use dojo_common::{outputln,
                      templating::{hooks::{self,
                                           ExitCode,
                                           Hook,
@@ -22,7 +22,7 @@ use habitat_common::{outputln,
                                   package::Pkg,
                                   TemplateRenderer}};
 #[cfg(windows)]
-use habitat_core::os::process::windows_child::ExitStatus;
+use dojo_core::os::process::windows_child::ExitStatus;
 use serde::Serialize;
 #[cfg(not(windows))]
 use std::process::ExitStatus;
@@ -537,7 +537,7 @@ mod tests {
                 config::GossipListenAddr,
                 http_gateway,
                 manager::sys::Sys};
-    use habitat_butterfly::{member::MemberList,
+    use dojo_butterfly::{member::MemberList,
                             rumor::{election::{self,
                                                Election as ElectionRumor,
                                                ElectionUpdate as ElectionUpdateRumor},
@@ -546,12 +546,12 @@ mod tests {
                                     service_config::ServiceConfig as ServiceConfigRumor,
                                     service_file::ServiceFile as ServiceFileRumor,
                                     RumorStore}};
-    use habitat_common::{cli::FS_ROOT,
+    use dojo_common::{cli::FS_ROOT,
                          templating::{config::Cfg,
                                       package::Pkg,
                                       test_helpers::*},
                          types::ListenCtlAddr};
-    use habitat_core::{fs::cache_key_path,
+    use dojo_core::{fs::cache_key_path,
                        package::{PackageIdent,
                                  PackageInstall},
                        service::{ServiceBind,

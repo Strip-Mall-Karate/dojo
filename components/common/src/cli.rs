@@ -19,7 +19,7 @@
 
 use crate::types::ListenCtlAddr;
 use clap::ArgMatches;
-use habitat_core::{env as henv,
+use dojo_core::{env as henv,
                    fs::{cache_key_path,
                         CACHE_KEY_PATH}};
 use std::path::PathBuf;
@@ -30,9 +30,9 @@ lazy_static! {
     pub static ref GOSSIP_DEFAULT_ADDR: String =
         { format!("{}:{}", GOSSIP_DEFAULT_IP, GOSSIP_DEFAULT_PORT) };
 }
-pub const GOSSIP_LISTEN_ADDRESS_ENVVAR: &str = "HAB_LISTEN_GOSSIP";
-pub const RING_ENVVAR: &str = "HAB_RING";
-pub const RING_KEY_ENVVAR: &str = "HAB_RING_KEY";
+pub const GOSSIP_LISTEN_ADDRESS_ENVVAR: &str = "DOJ_LISTEN_GOSSIP";
+pub const RING_ENVVAR: &str = "DOJ_RING";
+pub const RING_KEY_ENVVAR: &str = "DOJ_RING_KEY";
 
 pub const LISTEN_HTTP_DEFAULT_PORT: u16 = 9631;
 pub const LISTEN_HTTP_DEFAULT_IP: &str = "0.0.0.0";
@@ -40,9 +40,9 @@ lazy_static! {
     pub static ref LISTEN_HTTP_DEFAULT_ADDR: String =
         { format!("{}:{}", LISTEN_HTTP_DEFAULT_IP, LISTEN_HTTP_DEFAULT_PORT) };
 }
-pub const LISTEN_HTTP_ADDRESS_ENVVAR: &str = "HAB_LISTEN_HTTP";
+pub const LISTEN_HTTP_ADDRESS_ENVVAR: &str = "DOJ_LISTEN_HTTP";
 
-pub const PACKAGE_TARGET_ENVVAR: &str = "HAB_PACKAGE_TARGET";
+pub const PACKAGE_TARGET_ENVVAR: &str = "DOJ_PACKAGE_TARGET";
 
 const SYSTEMDRIVE_ENVVAR: &str = "SYSTEMDRIVE";
 
@@ -73,11 +73,11 @@ lazy_static! {
     };
 }
 
-pub const BINLINK_DIR_ENVVAR: &str = "HAB_BINLINK_DIR";
+pub const BINLINK_DIR_ENVVAR: &str = "DOJ_BINLINK_DIR";
 
 /// Default Binlink Dir
 #[cfg(target_os = "windows")]
-pub const DEFAULT_BINLINK_DIR: &str = "/hab/bin";
+pub const DEFAULT_BINLINK_DIR: &str = "/doj/bin";
 #[cfg(target_os = "linux")]
 pub const DEFAULT_BINLINK_DIR: &str = "/bin";
 #[cfg(target_os = "macos")]

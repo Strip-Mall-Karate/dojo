@@ -1,6 +1,6 @@
 #!/bin/bash
 # 4 env vars are required for this script
-# HAB_ORIGIN_KEY
+# DOJ_ORIGIN_KEY
 # BINTRAY_USER
 # BINTRAY_PASSPHRASE
 # BINTRAY_KEY
@@ -18,22 +18,22 @@ else
   echo "This script will likely abort shortly."
 fi
 
-hab_src_dir="$HOME/code/$TRAVIS_BUILD_NUMBER/habitat"
+doj_src_dir="$HOME/code/$TRAVIS_BUILD_NUMBER/dojo"
 function cleanup {
   echo "--> Removing origin secret keys from cache"
-  rm -f /hab/cache/keys/*-*.sig.key
-  echo "--> Purging directory '$hab_src_dir'"
-  rm -rf "$hab_src_dir"
+  rm -f /doj/cache/keys/*-*.sig.key
+  echo "--> Purging directory '$doj_src_dir'"
+  rm -rf "$doj_src_dir"
 }
 trap cleanup EXIT
 
 bootstrap_dir="$HOME/mac_unstable/$TRAVIS_BUILD_NUMBER"
-mac_dir="${hab_src_dir}/components/hab/mac/travis"
-mac_hab="${bootstrap_dir}/hab"
+mac_dir="${doj_src_dir}/components/doj/mac/travis"
+mac_doj="${bootstrap_dir}/doj"
 gnu_tar=/usr/local/bin/tar
-hab_download_url="https://api.bintray.com/content/habitat/stable/darwin/x86_64/hab-%24latest-x86_64-darwin.zip?bt_package=hab-x86_64-darwin"
+doj_download_url="https://api.bintray.com/content/dojo/stable/darwin/x86_64/doj-%24latest-x86_64-darwin.zip?bt_package=doj-x86_64-darwin"
 our_path="${HOME}/.cargo/bin:/usr/local/bin:${PATH}"
-export HAB_ORIGIN=core
+export DOJ_ORIGIN=core
 export PATH="${our_path}"
 
 # start fresh
@@ -47,33 +47,33 @@ if [[ -h $gnu_tar ]]; then
   rm /usr/local/bin/tar
 fi
 
-# download a hab binary to get us started
-wget -O hab.tar.gz "${hab_download_url}"
+# download a doj binary to get us started
+wget -O doj.tar.gz "${doj_download_url}"
 
 # install it in a custom location
-tar xvzf ./hab.tar.gz --strip 1 -C "${bootstrap_dir}"
+tar xvzf ./doj.tar.gz --strip 1 -C "${bootstrap_dir}"
 
 # create our origin key
 cat << EOF > core.sig.key
 SIG-SEC-1
 core-20160810182414
 
-${HAB_ORIGIN_KEY}
+${DOJ_ORIGIN_KEY}
 EOF
 
 echo "--> Clearing any pre-exisiting origin secret keys from cache"
-rm -f /hab/cache/keys/*-*.sig.key
+rm -f /doj/cache/keys/*-*.sig.key
 echo "--> Importing origin secret key into cache"
-${mac_hab} origin key import < ./core.sig.key
+${mac_doj} origin key import < ./core.sig.key
 rm -f ./core.sig.key
 
 # since this is running on a headless mac, we can't use docker/studio,
 # so we need to resort to this hackery
 echo "Customizing bintray-publish"
-cp -v "$hab_src_dir"/components/bintray-publish/bin/publish-hab.sh "$bootstrap_dir"
-program=$bootstrap_dir/publish-hab.sh
-pkg_maintainer="The Habitat Maintainers <humans@habitat.sh>"
-our_version=$($mac_hab --version | cut -d ' ' -f 2)
+cp -v "$doj_src_dir"/components/bintray-publish/bin/publish-doj.sh "$bootstrap_dir"
+program=$bootstrap_dir/publish-doj.sh
+pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+our_version=$($mac_doj --version | cut -d ' ' -f 2)
 
 sed \
   -e "s,#!/bin/bash$,#!$(brew --prefix bash)/bin/bash," \
@@ -84,21 +84,21 @@ sed \
   -e "s,sha256sum ,shasum -a 256 ,g" \
   -i "" "$program"
 
-echo "Building hab"
+echo "Building doj"
 cd "$mac_dir"
 ./mac-build.sh
-echo "Built new version of hab"
+echo "Built new version of doj"
 
 # link the brew installed gnu-tar to "tar" otherwise it won't get used
-# when publish-hab.sh runs and publish-hab.sh will abort
+# when publish-doj.sh runs and publish-doj.sh will abort
 ln -sf /usr/local/bin/gtar /usr/local/bin/tar
 hash -r
 
 cd "${bootstrap_dir}"
 
-echo "Publishing hab to unstable"
+echo "Publishing doj to unstable"
 # shellcheck disable=2061
-release=$(find "$mac_dir"/results -name "core-hab-0*.hart" | sort -n | tail -n 1)
+release=$(find "$mac_dir"/results -name "core-doj-0*.hart" | sort -n | tail -n 1)
 $program -r unstable "$release"
 rm "$release"
 rm -rf "$bootstrap_dir"

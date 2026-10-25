@@ -14,7 +14,7 @@
 
 use crate::error::{Error,
                    SupError};
-use habitat_butterfly::{member::{Health,
+use dojo_butterfly::{member::{Health,
                                  Member,
                                  MemberList},
                         rumor::{election::{Election as ElectionRumor,
@@ -25,8 +25,8 @@ use habitat_butterfly::{member::{Health,
                                 service_config::ServiceConfig as ServiceConfigRumor,
                                 service_file::ServiceFile as ServiceFileRumor,
                                 RumorStore}};
-use habitat_common::outputln;
-use habitat_core::{self,
+use dojo_common::outputln;
+use dojo_core::{self,
                    package::PackageIdent,
                    service::ServiceGroup};
 use serde::{ser::SerializeStruct,
@@ -723,7 +723,7 @@ impl<'a> Serialize for CensusMemberProxy<'a> {
     }
 }
 
-fn service_group_from_str(sg: &str) -> Result<ServiceGroup, habitat_core::Error> {
+fn service_group_from_str(sg: &str) -> Result<ServiceGroup, dojo_core::Error> {
     ServiceGroup::from_str(sg).map_err(|e| {
                                   outputln!("Malformed service group; cannot populate \
                                              configuration data. Aborting.: {}",
@@ -736,7 +736,7 @@ fn service_group_from_str(sg: &str) -> Result<ServiceGroup, habitat_core::Error>
 mod tests {
     use super::*;
     use crate::test_helpers::*;
-    use habitat_butterfly::{member::{Health,
+    use dojo_butterfly::{member::{Health,
                                      MemberList},
                             rumor::{election::{self,
                                                Election as ElectionRumor,
@@ -746,8 +746,8 @@ mod tests {
                                     service_config::ServiceConfig as ServiceConfigRumor,
                                     service_file::ServiceFile as ServiceFileRumor,
                                     RumorStore}};
-    use habitat_common::cli::FS_ROOT;
-    use habitat_core::{fs::cache_key_path,
+    use dojo_common::cli::FS_ROOT;
+    use dojo_core::{fs::cache_key_path,
                        package::ident::PackageIdent,
                        service::ServiceGroup};
     use serde_json;

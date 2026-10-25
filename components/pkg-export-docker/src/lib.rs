@@ -14,8 +14,8 @@
 
 #[macro_use]
 extern crate clap;
-use habitat_common as common;
-use habitat_core as hcore;
+use dojo_common as common;
+use dojo_core as hcore;
 
 #[macro_use]
 extern crate lazy_static;
@@ -68,9 +68,9 @@ use std::{env,
 /// The version of this library and program when built.
 pub const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 
-/// The Habitat Package Identifier string for a Busybox package.
+/// The Dojo Package Identifier string for a Busybox package.
 const BUSYBOX_IDENT: &str = "core/busybox-static";
-/// The Habitat Package Identifier string for SSL certificate authorities (CA) certificates package.
+/// The Dojo Package Identifier string for SSL certificate authorities (CA) certificates package.
 const CACERTS_IDENT: &str = "core/cacerts";
 
 /// An image naming policy.
@@ -258,7 +258,7 @@ pub fn export_for_cli_matches(ui: &mut UI,
 /// Create the Clap CLI for the Docker exporter
 pub fn cli<'a, 'b>() -> App<'a, 'b> {
     let name: &str = &*PROGRAM_NAME;
-    let about = "Creates (and optionally pushes) a Docker image from a set of Habitat packages";
+    let about = "Creates (and optionally pushes) a Docker image from a set of Dojo packages";
 
     Cli::new(name, about).add_base_packages_args()
                          .add_builder_args()

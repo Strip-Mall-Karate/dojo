@@ -14,7 +14,7 @@
 
 use crate::error::{Error,
                    Result};
-use habitat_core::env;
+use dojo_core::env;
 use std::{fmt,
           net::{IpAddr,
                 Ipv4Addr,
@@ -45,7 +45,7 @@ impl Default for ListenCtlAddr {
 }
 
 impl env::Config for ListenCtlAddr {
-    const ENVVAR: &'static str = "HAB_LISTEN_CTL";
+    const ENVVAR: &'static str = "DOJ_LISTEN_CTL";
 }
 
 impl FromStr for ListenCtlAddr {

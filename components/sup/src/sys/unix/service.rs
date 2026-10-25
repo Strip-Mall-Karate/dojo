@@ -18,7 +18,7 @@
 // perhaps refactoring some of this a bit.
 
 use crate::sys::ShutdownMethod;
-use habitat_core::os::process::{is_alive,
+use dojo_core::os::process::{is_alive,
                                 signal,
                                 Pid,
                                 Signal};

@@ -17,10 +17,10 @@ use crate::{config::GossipListenAddr,
                     Result},
             http_gateway,
             VERSION};
-use habitat_butterfly::rumor::service::SysInfo;
-use habitat_common::{outputln,
+use dojo_butterfly::rumor::service::SysInfo;
+use dojo_common::{outputln,
                      types::ListenCtlAddr};
-use habitat_core;
+use dojo_core;
 use std::{net::{IpAddr,
                 Ipv4Addr,
                 SocketAddr},
@@ -103,14 +103,14 @@ impl Sys {
 }
 
 pub fn lookup_ip() -> Result<IpAddr> {
-    match habitat_core::util::sys::ip() {
+    match dojo_core::util::sys::ip() {
         Ok(s) => Ok(s),
-        Err(e) => Err(sup_error!(Error::HabitatCore(e))),
+        Err(e) => Err(sup_error!(Error::DojoCore(e))),
     }
 }
 
 pub fn lookup_hostname() -> Result<String> {
-    match habitat_core::os::net::hostname() {
+    match dojo_core::os::net::hostname() {
         Ok(hostname) => Ok(hostname),
         Err(_) => Err(sup_error!(Error::IPFailed)),
     }

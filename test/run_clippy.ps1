@@ -51,26 +51,26 @@ rustup component add clippy
 
 # TODO: these should be in a shared script?
 Write-Host "--- Installing required prerequisites"
-hab pkg install core/cacerts
-hab pkg install core/libarchive
-hab pkg install core/libsodium
-hab pkg install core/openssl
-hab pkg install core/protobuf
-hab pkg install core/xz
-hab pkg install core/zeromq
-hab pkg install core/zlib
-hab pkg install core/visual-cpp-build-tools-2015
+doj pkg install core/cacerts
+doj pkg install core/libarchive
+doj pkg install core/libsodium
+doj pkg install core/openssl
+doj pkg install core/protobuf
+doj pkg install core/xz
+doj pkg install core/zeromq
+doj pkg install core/zlib
+doj pkg install core/visual-cpp-build-tools-2015
 
 # Set up some path variables for ease of use later
-$cacertsDir     = & hab pkg path core/cacerts
-$libarchiveDir  = & hab pkg path core/libarchive
-$libsodiumDir   = & hab pkg path core/libsodium
-$opensslDir     = & hab pkg path core/openssl
-$protobufDir    = & hab pkg path core/protobuf
-$xzDir          = & hab pkg path core/xz
-$zeromqDir      = & hab pkg path core/zeromq
-$zlibDir        = & hab pkg path core/zlib
-$vsDir          = & hab pkg path core/visual-cpp-build-tools-2015
+$cacertsDir     = & doj pkg path core/cacerts
+$libarchiveDir  = & doj pkg path core/libarchive
+$libsodiumDir   = & doj pkg path core/libsodium
+$opensslDir     = & doj pkg path core/openssl
+$protobufDir    = & doj pkg path core/protobuf
+$xzDir          = & doj pkg path core/xz
+$zeromqDir      = & doj pkg path core/zeromq
+$zlibDir        = & doj pkg path core/zlib
+$vsDir          = & doj pkg path core/visual-cpp-build-tools-2015
 
 # Set some required variables
 $env:SODIUM_LIB_DIR             = "$libsodiumDir\lib"

@@ -16,7 +16,7 @@
 
 /// Integration tests for exercising the hook and config recompilation
 /// behavior of the Supervisor
-extern crate habitat_core as hcore;
+extern crate dojo_core as hcore;
 
 #[macro_use]
 extern crate lazy_static;
@@ -32,7 +32,7 @@ lazy_static! {
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn config_only_packages_restart_on_config_application() {
-    let hab_root = utils::HabRoot::new("config_only_packages_restart_on_config_application");
+    let doj_root = utils::DojRoot::new("config_only_packages_restart_on_config_application");
 
     let origin_name = "sup-integration-test";
     let package_name = "config-only";
@@ -42,9 +42,9 @@ fn config_only_packages_restart_on_config_application() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -52,14 +52,14 @@ fn config_only_packages_restart_on_config_application() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let pid_before_apply = hab_root.pid_of(package_name);
-    let config_before_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_before_apply = doj_root.pid_of(package_name);
+    let config_before_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     test_sup.apply_config(r#"config_value = "something new and different""#);
     utils::sleep_seconds(2);
 
-    let pid_after_apply = hab_root.pid_of(package_name);
-    let config_after_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_after_apply = doj_root.pid_of(package_name);
+    let config_after_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     assert_ne!(config_before_apply, config_after_apply);
     assert_ne!(pid_before_apply, pid_after_apply);
@@ -68,7 +68,7 @@ fn config_only_packages_restart_on_config_application() {
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn hook_only_packages_restart_on_config_application() {
-    let hab_root = utils::HabRoot::new("hook_only_packages_restart_on_config_application");
+    let doj_root = utils::DojRoot::new("hook_only_packages_restart_on_config_application");
 
     let origin_name = "sup-integration-test";
     let package_name = "no-configs-only-hooks";
@@ -78,9 +78,9 @@ fn hook_only_packages_restart_on_config_application() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -88,14 +88,14 @@ fn hook_only_packages_restart_on_config_application() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let pid_before_apply = hab_root.pid_of(package_name);
-    let hook_before_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
+    let pid_before_apply = doj_root.pid_of(package_name);
+    let hook_before_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
 
     test_sup.apply_config(r#"hook_value = "something new and different""#);
     utils::sleep_seconds(2);
 
-    let pid_after_apply = hab_root.pid_of(package_name);
-    let hook_after_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
+    let pid_after_apply = doj_root.pid_of(package_name);
+    let hook_after_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
 
     assert_ne!(hook_before_apply, hook_after_apply);
     assert_ne!(pid_before_apply, pid_after_apply);
@@ -104,7 +104,7 @@ fn hook_only_packages_restart_on_config_application() {
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn config_files_change_but_hooks_do_not_still_restarts() {
-    let hab_root = utils::HabRoot::new("config_files_change_but_hooks_do_not_still_restarts");
+    let doj_root = utils::DojRoot::new("config_files_change_but_hooks_do_not_still_restarts");
 
     let origin_name = "sup-integration-test";
     let package_name = "config-changes-hooks-do-not";
@@ -114,9 +114,9 @@ fn config_files_change_but_hooks_do_not_still_restarts() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -124,9 +124,9 @@ fn config_files_change_but_hooks_do_not_still_restarts() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let pid_before_apply = hab_root.pid_of(package_name);
-    let hook_before_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
-    let config_before_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_before_apply = doj_root.pid_of(package_name);
+    let hook_before_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
+    let config_before_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     test_sup.apply_config(
                           r#"
@@ -136,9 +136,9 @@ hook_value = "default"
     );
     utils::sleep_seconds(2);
 
-    let pid_after_apply = hab_root.pid_of(package_name);
-    let hook_after_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
-    let config_after_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_after_apply = doj_root.pid_of(package_name);
+    let hook_after_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
+    let config_after_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     assert_ne!(config_before_apply, config_after_apply);
     assert_eq!(hook_before_apply, hook_after_apply);
@@ -148,7 +148,7 @@ hook_value = "default"
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn hooks_change_but_config_files_do_not_still_restarts() {
-    let hab_root = utils::HabRoot::new("hooks_change_but_config_files_do_not_still_restarts");
+    let doj_root = utils::DojRoot::new("hooks_change_but_config_files_do_not_still_restarts");
 
     let origin_name = "sup-integration-test";
     let package_name = "hook-changes-config-does-not";
@@ -158,9 +158,9 @@ fn hooks_change_but_config_files_do_not_still_restarts() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -168,9 +168,9 @@ fn hooks_change_but_config_files_do_not_still_restarts() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let pid_before_apply = hab_root.pid_of(package_name);
-    let hook_before_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
-    let config_before_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_before_apply = doj_root.pid_of(package_name);
+    let hook_before_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
+    let config_before_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     test_sup.apply_config(
                           r#"
@@ -180,9 +180,9 @@ hook_value = "applied"
     );
     utils::sleep_seconds(2);
 
-    let pid_after_apply = hab_root.pid_of(package_name);
-    let hook_after_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
-    let config_after_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_after_apply = doj_root.pid_of(package_name);
+    let hook_after_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
+    let config_after_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     assert_eq!(config_before_apply, config_after_apply);
     assert_ne!(hook_before_apply, hook_after_apply);
@@ -192,7 +192,7 @@ hook_value = "applied"
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn applying_identical_configuration_results_in_no_changes_and_no_restart() {
-    let hab_root = utils::HabRoot::new(
+    let doj_root = utils::DojRoot::new(
         "applying_identical_configuration_results_in_no_changes_and_no_restart",
     );
 
@@ -204,9 +204,9 @@ fn applying_identical_configuration_results_in_no_changes_and_no_restart() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -214,9 +214,9 @@ fn applying_identical_configuration_results_in_no_changes_and_no_restart() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let pid_before_apply = hab_root.pid_of(package_name);
-    let hook_before_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
-    let config_before_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_before_apply = doj_root.pid_of(package_name);
+    let hook_before_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
+    let config_before_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     test_sup.apply_config(
                           r#"
@@ -226,9 +226,9 @@ hook_value = "default"
     );
     utils::sleep_seconds(2);
 
-    let pid_after_apply = hab_root.pid_of(package_name);
-    let hook_after_apply = hab_root.compiled_hook_contents(&package_name, "health-check");
-    let config_after_apply = hab_root.compiled_config_contents(&package_name, "config.toml");
+    let pid_after_apply = doj_root.pid_of(package_name);
+    let hook_after_apply = doj_root.compiled_hook_contents(&package_name, "health-check");
+    let config_after_apply = doj_root.compiled_config_contents(&package_name, "config.toml");
 
     assert_eq!(config_before_apply, config_after_apply);
     assert_eq!(hook_before_apply, hook_after_apply);
@@ -238,7 +238,7 @@ hook_value = "default"
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn install_hook_success() {
-    let hab_root = utils::HabRoot::new("install_hook_success");
+    let doj_root = utils::DojRoot::new("install_hook_success");
 
     let origin_name = "sup-integration-test";
     let package_name = "install-hook-succeeds";
@@ -248,9 +248,9 @@ fn install_hook_success() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -258,17 +258,17 @@ fn install_hook_success() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_before = hab_root.install_status_created(origin_name, package_name);
+    let status_created_before = doj_root.install_status_created(origin_name, package_name);
 
-    assert_eq!(hab_root.install_status_of(origin_name, package_name), 0);
-    assert!(hab_root.pid_of(package_name) > 0);
+    assert_eq!(doj_root.install_status_of(origin_name, package_name), 0);
+    assert!(doj_root.pid_of(package_name) > 0);
 
     test_sup.stop();
     utils::sleep_seconds(3);
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_after = hab_root.install_status_created(origin_name, package_name);
+    let status_created_after = doj_root.install_status_created(origin_name, package_name);
 
     assert_eq!(status_created_before, status_created_after);
 }
@@ -276,8 +276,8 @@ fn install_hook_success() {
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn package_with_successful_install_hook_in_dependency_is_loaded() {
-    let hab_root =
-        utils::HabRoot::new("package_with_successful_install_hook_in_dependency_is_loaded");
+    let doj_root =
+        utils::DojRoot::new("package_with_successful_install_hook_in_dependency_is_loaded");
 
     let origin_name = "sup-integration-test";
     let package_name = "install-hook-succeeds-with-dependency";
@@ -288,9 +288,9 @@ fn package_with_successful_install_hook_in_dependency_is_loaded() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -298,17 +298,17 @@ fn package_with_successful_install_hook_in_dependency_is_loaded() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_before = hab_root.install_status_created(origin_name, dep);
+    let status_created_before = doj_root.install_status_created(origin_name, dep);
 
-    assert_eq!(hab_root.install_status_of(origin_name, dep), 0);
-    assert!(hab_root.pid_of(package_name) > 0);
+    assert_eq!(doj_root.install_status_of(origin_name, dep), 0);
+    assert!(doj_root.pid_of(package_name) > 0);
 
     test_sup.stop();
     utils::sleep_seconds(3);
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_after = hab_root.install_status_created(origin_name, dep);
+    let status_created_after = doj_root.install_status_created(origin_name, dep);
 
     assert_eq!(status_created_before, status_created_after);
 }
@@ -316,7 +316,7 @@ fn package_with_successful_install_hook_in_dependency_is_loaded() {
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn install_hook_fails() {
-    let hab_root = utils::HabRoot::new("install_hook_fails");
+    let doj_root = utils::DojRoot::new("install_hook_fails");
 
     let origin_name = "sup-integration-test";
     let package_name = "install-hook-fails";
@@ -326,9 +326,9 @@ fn install_hook_fails() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -336,10 +336,10 @@ fn install_hook_fails() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_before = hab_root.install_status_created(origin_name, package_name);
-    let result = std::panic::catch_unwind(|| hab_root.pid_of(package_name));
+    let status_created_before = doj_root.install_status_created(origin_name, package_name);
+    let result = std::panic::catch_unwind(|| doj_root.pid_of(package_name));
 
-    assert_eq!(hab_root.install_status_of(origin_name, package_name), 1);
+    assert_eq!(doj_root.install_status_of(origin_name, package_name), 1);
     assert!(result.is_err());
 
     test_sup.stop();
@@ -347,7 +347,7 @@ fn install_hook_fails() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_after = hab_root.install_status_created(origin_name, package_name);
+    let status_created_after = doj_root.install_status_created(origin_name, package_name);
 
     assert_ne!(status_created_before, status_created_after);
 }
@@ -355,8 +355,8 @@ fn install_hook_fails() {
 #[test]
 #[cfg_attr(feature = "ignore_integration_tests", ignore)]
 fn package_with_failing_install_hook_in_dependency_is_not_loaded() {
-    let hab_root =
-        utils::HabRoot::new("package_with_failing_install_hook_in_dependency_is_not_loaded");
+    let doj_root =
+        utils::DojRoot::new("package_with_failing_install_hook_in_dependency_is_not_loaded");
 
     let origin_name = "sup-integration-test";
     let package_name = "install-hook-fails-with-dependency";
@@ -367,9 +367,9 @@ fn package_with_failing_install_hook_in_dependency_is_not_loaded() {
                                &package_name,
                                &service_group,
                                &FIXTURE_ROOT,
-                               &hab_root);
+                               &doj_root);
 
-    let mut test_sup = utils::TestSup::new_with_random_ports(&hab_root,
+    let mut test_sup = utils::TestSup::new_with_random_ports(&doj_root,
                                                              &origin_name,
                                                              &package_name,
                                                              &service_group);
@@ -377,10 +377,10 @@ fn package_with_failing_install_hook_in_dependency_is_not_loaded() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_before = hab_root.install_status_created(origin_name, dep);
-    let result = std::panic::catch_unwind(|| hab_root.pid_of(package_name));
+    let status_created_before = doj_root.install_status_created(origin_name, dep);
+    let result = std::panic::catch_unwind(|| doj_root.pid_of(package_name));
 
-    assert_eq!(hab_root.install_status_of(origin_name, dep), 1);
+    assert_eq!(doj_root.install_status_of(origin_name, dep), 1);
     assert!(result.is_err());
 
     test_sup.stop();
@@ -388,7 +388,7 @@ fn package_with_failing_install_hook_in_dependency_is_not_loaded() {
     test_sup.start();
     utils::sleep_seconds(3);
 
-    let status_created_after = hab_root.install_status_created(origin_name, dep);
+    let status_created_after = doj_root.install_status_created(origin_name, dep);
 
     assert_ne!(status_created_before, status_created_after);
 }

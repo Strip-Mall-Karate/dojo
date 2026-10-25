@@ -7,7 +7,7 @@ members = [
   "components/butterfly",
   "components/butterfly-test",
   "components/common",
-  "components/hab",
+  "components/doj",
   "components/launcher",
   "components/launcher-client",
   "components/launcher-protocol",
@@ -22,8 +22,8 @@ members = [
 
 # To test local changes to the core crate, uncomment the following and then
 # run `cargo update`. If the core repo isn't in the same directory as the
-# habitat repo, you may need to adjust the paths.
+# dojo repo, you may need to adjust the paths.
 # [patch."https://github.com/habitat-sh/core.git"]
-# habitat_core = {path = "../core/components/core"}
-# habitat_http_client = {path = "../core/components/http-client"}
-# habitat_win_users = {path = "../core/components/win-users"}
+# dojo_core = {path = "../core/components/core"}
+# dojo_http_client = {path = "../core/components/http-client"}
+# dojo_win_users = {path = "../core/components/win-users"}

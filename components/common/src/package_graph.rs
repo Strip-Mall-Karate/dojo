@@ -38,7 +38,7 @@ impl PackageGraph {
                        graph: StableGraph::new(), }
     }
 
-    /// Construct a `PackageGraph` from all the packages stored in in the habitat `pkgs`
+    /// Construct a `PackageGraph` from all the packages stored in in the dojo `pkgs`
     /// directory
     pub fn from_root_path(fs_root_path: &Path) -> Result<Self> {
         let mut pg = Self::empty();
@@ -46,7 +46,7 @@ impl PackageGraph {
         Ok(pg)
     }
 
-    /// Load a set of packages that are stored in a package_path under a habitat
+    /// Load a set of packages that are stored in a package_path under a dojo
     /// root directory
     fn load(&mut self, fs_root_path: &Path) -> Result<()> {
         let package_path = hfs::pkg_root_path(Some(&fs_root_path));

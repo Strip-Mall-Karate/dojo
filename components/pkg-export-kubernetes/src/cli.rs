@@ -78,7 +78,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                                                                Pass '-' for stdout (default: -)")), }
     }
 
-    /// Add Habitat (operator) runtime arguments to the CLI.
+    /// Add Dojo (operator) runtime arguments to the CLI.
     pub fn add_runtime_args(self) -> Self {
         Cli {
             app: self
@@ -107,7 +107,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                         .possible_values(&["standalone", "leader"])
                         .help(
                             "A topology describes the intended relationship between peers within \
-                             a Habitat service group. Specify either standalone or leader \
+                             a Dojo service group. Specify either standalone or leader \
                              topology (default: standalone)",
                         ),
                 )
@@ -127,7 +127,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                         .long("config")
                         .short("n")
                         .help(
-                            "The path to Habitat configuration file in user.toml format. Habitat \
+                            "The path to Dojo configuration file in user.toml format. Dojo \
                              will use it for initial configuration of the service running in a \
                              Kubernetes cluster",
                         ),
@@ -166,7 +166,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                                                                      Secret that contains the \
                                                                      ring key, which encrypts the \
                                                                      communication between \
-                                                                     Habitat supervisors")), }
+                                                                     Dojo supervisors")), }
     }
 
     pub fn add_bind_args(self) -> Self {

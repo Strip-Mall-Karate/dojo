@@ -20,10 +20,10 @@
 //!
 //! See the [Config](struct.Config.html) struct for the specific options available.
 
-use habitat_common::cli::{GOSSIP_DEFAULT_IP,
+use dojo_common::cli::{GOSSIP_DEFAULT_IP,
                           GOSSIP_DEFAULT_PORT,
                           GOSSIP_LISTEN_ADDRESS_ENVVAR};
-use habitat_core::env::Config as EnvConfig;
+use dojo_core::env::Config as EnvConfig;
 use std::{fmt,
           io,
           net::{IpAddr,
@@ -134,7 +134,7 @@ mod tests {
 
     mod env_config {
         use super::*;
-        use habitat_common::locked_env_var;
+        use dojo_common::locked_env_var;
         use std::{env,
                   num::ParseIntError,
                   result,
@@ -156,23 +156,23 @@ mod tests {
             }
         }
 
-        locked_env_var!(HAB_TESTING_THINGIE, lock_hab_testing_thingie);
+        locked_env_var!(DOJ_TESTING_THINGIE, lock_doj_testing_thingie);
 
         impl EnvConfig for Thingie {
-            const ENVVAR: &'static str = "HAB_TESTING_THINGIE";
+            const ENVVAR: &'static str = "DOJ_TESTING_THINGIE";
         }
 
         #[test]
         fn no_env_var_yields_default() {
-            let _envvar = lock_hab_testing_thingie();
-            assert!(env::var("HAB_TESTING_THINGIE").is_err()); // it's not set
+            let _envvar = lock_doj_testing_thingie();
+            assert!(env::var("DOJ_TESTING_THINGIE").is_err()); // it's not set
             assert_eq!(Thingie::configured_value(), Thingie(2112));
             assert_eq!(Thingie::configured_value(), Thingie::default());
         }
 
         #[test]
         fn parsable_env_var_yields_parsed_value() {
-            let envvar = lock_hab_testing_thingie();
+            let envvar = lock_doj_testing_thingie();
             envvar.set("123");
             assert_eq!(Thingie::configured_value(), Thingie(123));
             assert_ne!(Thingie::configured_value(), Thingie::default());
@@ -180,7 +180,7 @@ mod tests {
 
         #[test]
         fn unparsable_env_var_yields_default() {
-            let envvar = lock_hab_testing_thingie();
+            let envvar = lock_doj_testing_thingie();
             envvar.set("I'm not a number");
             assert_eq!(Thingie::configured_value(), Thingie::default());
         }

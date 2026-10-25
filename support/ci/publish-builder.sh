@@ -10,14 +10,14 @@
 set -eu
 src_root=$(cd "$(dirname "$0")/../../"; pwd)
 
-if [ -z "${HAB_AUTH_TOKEN+x}" ]; then
-  echo "HAB_AUTH_TOKEN var is unset"
+if [ -z "${DOJ_AUTH_TOKEN+x}" ]; then
+  echo "DOJ_AUTH_TOKEN var is unset"
   exit 1
 fi
 
 for crate in $(find components/builder-* | grep plan.sh | xargs dirname); do
-  hab pkg build -k core -s "$src_root" -R "$crate"
+  doj pkg build -k core -s "$src_root" -R "$crate"
   source "$src_root"/results/last_build.env
   # shellcheck disable=2154
-  hab pkg upload "$src_root"/results/"$pkg_artifact" -z "$HAB_AUTH_TOKEN"
+  doj pkg upload "$src_root"/results/"$pkg_artifact" -z "$DOJ_AUTH_TOKEN"
 done

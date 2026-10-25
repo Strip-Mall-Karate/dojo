@@ -1,9 +1,9 @@
 [package]
-name = "habitat_common"
+name = "dojo_common"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
-build = "../build-habitat.rs"
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+build = "../build-dojo.rs"
 workspace = "../../"
 
 [dependencies]
@@ -43,10 +43,10 @@ toml = { version = "*", default-features = false }
 uuid = { version = "*", features = ["v4"] }
 valico = "*"
 
-[dependencies.habitat_core]
+[dependencies.dojo_core]
 git = "https://github.com/habitat-sh/core.git"
 
-[dependencies.habitat_api_client]
+[dependencies.dojo_api_client]
 path = "../builder-api-client"
 
 [target.'cfg(windows)'.dependencies]

@@ -26,7 +26,7 @@ use std::{collections::{hash_map,
                           Ordering},
                  RwLock}};
 
-use habitat_core::util::ToI64;
+use dojo_core::util::ToI64;
 use prometheus::IntGaugeVec;
 use rand::{seq::{IteratorRandom,
                  SliceRandom},
@@ -58,7 +58,7 @@ const PINGREQ_TARGETS: usize = 5;
 
 lazy_static! {
     static ref PEER_HEALTH_COUNT: IntGaugeVec =
-        register_int_gauge_vec!("hab_butterfly_peer_health_total",
+        register_int_gauge_vec!("doj_butterfly_peer_health_total",
                                 "Number of butterfly peers",
                                 &["health"]).unwrap();
 }

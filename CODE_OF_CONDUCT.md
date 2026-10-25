@@ -8,7 +8,7 @@ In the interest of fostering an open, welcoming, and encouraging environment, we
 
 ## Our Standards
 
-The Habitat community contains a diverse group of professionals and volunteers who come from all over the world to make Habitat better. Community members may fulfill many roles including mentoring, teaching, and connecting with other members of the community.
+The Dojo community contains a diverse group of professionals and volunteers who come from all over the world to make Dojo better. Community members may fulfill many roles including mentoring, teaching, and connecting with other members of the community.
 
 Be careful in the words that you choose. Be kind to others. Practice empathy. Don't insult or put down others. Remember that sexist, racist, ableist and other exclusionary jokes can be offensive to those around you. If you think your conversation is making another community member uncomfortable _or_ if they tell you so, stop immediately, make amends, and move forward.
 
@@ -73,7 +73,7 @@ Unacceptable behavior from any community member, including sponsors and those wi
 
 Anyone asked to stop unacceptable behavior is expected to comply immediately.
 
-If a community member engages in unacceptable behavior, the community organizers may take action they deem appropriate, up to and including a temporary ban or permanent expulsion from the community _without warning_ (and without refund in the case of a paid event). If you have been involved in unacceptable behavior with current Habitat community members outside the boundaries of the Habitat Community, the Community Organizers retain the right to treat those external incidents in the same manner as internal incidents.
+If a community member engages in unacceptable behavior, the community organizers may take action they deem appropriate, up to and including a temporary ban or permanent expulsion from the community _without warning_ (and without refund in the case of a paid event). If you have been involved in unacceptable behavior with current Dojo community members outside the boundaries of the Dojo Community, the Community Organizers retain the right to treat those external incidents in the same manner as internal incidents.
 
 Any physical violence _or_ intimidation, threatened or acted on, is a serious offense and will result in immediate exclusion from the community and appropriate follow up with law enforcement (no, we're not kidding).
 
@@ -81,7 +81,7 @@ Any physical violence _or_ intimidation, threatened or acted on, is a serious of
 
 Disagreements are inherent to a group of impassioned people. When they occur, we seek to resolve disagreements and differing views constructively and with the help of the community and community processes. When disagreements escalate, we ask our community advocates to step in to moderate, mediate, and help resolve tense situations.
 
-The Habitat Community advocates are well informed on how to deal with incidents. Report the incident (preferably in writing) to one of the community advocates listed above. See the [Roles](#roles) section for details on each role.
+The Dojo Community advocates are well informed on how to deal with incidents. Report the incident (preferably in writing) to one of the community advocates listed above. See the [Roles](#roles) section for details on each role.
 
 ### Handling Incidents
 

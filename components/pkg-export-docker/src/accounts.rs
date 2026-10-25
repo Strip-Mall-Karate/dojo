@@ -14,7 +14,7 @@
 
 //! Types and functions for representing the contents of Linux account files
 //! (`/etc/passwd` and `/etc/group`) that need to be manipulated in
-//! the process of creating a Docker export of a Habitat package.
+//! the process of creating a Docker export of a Dojo package.
 
 use std::fmt;
 

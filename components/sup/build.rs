@@ -11,7 +11,7 @@ use std::{env,
                     ExitStatus}};
 
 fn main() {
-    habitat::common();
+    dojo::common();
     generate_apidocs();
 }
 

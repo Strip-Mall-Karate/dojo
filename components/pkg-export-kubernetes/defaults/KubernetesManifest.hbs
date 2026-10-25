@@ -12,14 +12,14 @@ data:
 {{/if ~}}
 ---
 apiVersion: habitat.sh/v1beta1
-kind: Habitat
+kind: Dojo
 customVersion: v1beta2
 metadata:
   ## Name of the Kubernetes resource.
   name: {{metadata_name}}
 spec:
   v1beta2:
-    ## Name of the Habitat service package exported as a Docker image.
+    ## Name of the Dojo service package exported as a Docker image.
     image: {{image}}
     ## Number of desired instances.
     count: {{count}}
@@ -43,15 +43,15 @@ spec:
       ## A location under which the volume will be mounted.
       mountPath: {{persistent_storage.path}}
 {{~ /if}}
-    ## An object containing parameters that affects how the Habitat service
+    ## An object containing parameters that affects how the Dojo service
     ## is executed.
     service:
-      ## Name of the Habitat service.
+      ## Name of the Dojo service.
       name: {{service_name}}
-      ## Habitat topology of the service.
+      ## Dojo topology of the service.
       topology: {{service_topology}}
 {{~ #if service_group}}
-      ## Habitat service group name, a logical grouping of services
+      ## Dojo service group name, a logical grouping of services
       ## with the same package.
       group: {{service_group}}
 {{~ /if ~}}
@@ -61,13 +61,13 @@ spec:
 {{~ /if ~}}
 {{~ #if ring_secret_name}}
       ## The name of the Kubernetes Secret that contains the ring key, which
-      ## encrypts the communication between Habitat supervisors.
+      ## encrypts the communication between Dojo supervisors.
       ringSecretName: {{ring_secret_name}}
 {{~ /if ~}}
 {{~ #if binds}}
       bind:
 {{~ #each binds}}
-        # Name is the name of the bind specified in the Habitat configuration files.
+        # Name is the name of the bind specified in the Dojo configuration files.
         - name: {{this.name}}
           # Service is the name of the service this bind refers to.
           service: {{this.service}}

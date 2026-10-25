@@ -15,9 +15,9 @@
 use super::file_watcher::{default_file_watcher_with_no_initial_event,
                           Callbacks};
 use crate::manager::service::Service;
-use habitat_common::{outputln,
+use dojo_common::{outputln,
                      templating::config::UserConfigPath};
-use habitat_core::{fs::USER_CONFIG_FILE,
+use dojo_core::{fs::USER_CONFIG_FILE,
                    service::ServiceGroup};
 use std::{collections::HashMap,
           io,

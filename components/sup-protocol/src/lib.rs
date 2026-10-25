@@ -40,7 +40,7 @@
 //! *not* by a build server intentionally. This is to ensure we have the source available for
 //! all protocol files.
 
-use habitat_core as core;
+use dojo_core as core;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -78,7 +78,7 @@ const CTL_SECRET_LEN: usize = 64;
 lazy_static! {
     /// The root path containing all runtime service directories and files
     pub static ref STATE_PATH_PREFIX: PathBuf = {
-        Path::new(&*core::fs::FS_ROOT_PATH).join("hab/sup")
+        Path::new(&*core::fs::FS_ROOT_PATH).join("doj/sup")
     };
 
     pub static ref DEFAULT_BLDR_URL: String = {
@@ -133,10 +133,10 @@ pub fn secret_key_path<T>(sup_root: T) -> PathBuf
 pub fn sup_root(custom_state_path: Option<&PathBuf>) -> PathBuf {
     match custom_state_path {
         Some(custom) => custom.to_path_buf(),
-        // TODO: /hab/sup/default is legacy from when we allowed multiple
+        // TODO: /doj/sup/default is legacy from when we allowed multiple
         // supervisors on the same host with --override-name. The sup dir
-        // should really be /hab/sup now, but it would be an awkward change
-        // since the assumption of /hab/sup/default is pervasive.
+        // should really be /doj/sup now, but it would be an awkward change
+        // since the assumption of /doj/sup/default is pervasive.
         // See https://github.com/habitat-sh/habitat/issues/5266
         None => STATE_PATH_PREFIX.join("default"),
     }

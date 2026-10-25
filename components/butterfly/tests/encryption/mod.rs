@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use habitat_butterfly::member::Health;
-use habitat_core::crypto::keys::sym_key::SymKey;
+use dojo_butterfly::member::Health;
+use dojo_core::crypto::keys::sym_key::SymKey;
 
 use crate::btest;
 

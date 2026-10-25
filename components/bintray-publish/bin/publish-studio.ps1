@@ -20,7 +20,7 @@ function Push-Image {
 
   try {
     info "Logging in to Bintray Docker repo"
-    docker login -u="$env:BINTRAY_USER" -p="$env:BINTRAY_KEY" habitat-docker-registry.bintray.io
+    docker login -u="$env:BINTRAY_USER" -p="$env:BINTRAY_KEY" dojo-docker-registry.bintray.io
     info "Pushing ${docker_image}:$docker_image_version"
     docker push "${docker_image}:$docker_image_version"
     info "Pushing ${docker_image}:$docker_image_short_version tag for $docker_image_version"
