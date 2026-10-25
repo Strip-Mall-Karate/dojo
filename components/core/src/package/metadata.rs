@@ -379,7 +379,7 @@ port=front-end.port
 
     #[test]
     fn can_parse_a_valid_bind_mapping() {
-        let input = "my_bind:core/test";
+        let input = "my_bind:karate/test";
 
         let output: BindMapping = input.parse().unwrap();
 
@@ -400,7 +400,7 @@ port=front-end.port
         let pkg_root = Builder::new().prefix("pkg-root").tempdir().unwrap();
         let install_dir = pkg_root.path();
 
-        let expected = "karate/foo=db:core/database";
+        let expected = "karate/foo=db:karate/database";
         write_metafile(install_dir, MetaFile::Binds, expected);
 
         let bind_map = read_metafile(install_dir, MetaFile::Binds).unwrap();

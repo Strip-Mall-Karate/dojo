@@ -754,8 +754,8 @@ mod test {
 
         // Create a BIND_MAP file for that package
         let bind_map_contents = r#"
-karate/foo=db:core/database fe:core/front-end be:core/back-end
-karate/bar=pub:core/publish sub:core/subscribe
+karate/foo=db:karate/database fe:karate/front-end be:karate/back-end
+karate/bar=pub:karate/publish sub:karate/subscribe
         "#;
         write_metafile(&package_install, MetaFile::BindMap, bind_map_contents);
 
@@ -765,12 +765,12 @@ karate/bar=pub:core/publish sub:core/subscribe
         // Assert that it was interpreted correctly
         let mut expected: HashMap<PackageIdent, Vec<BindMapping>> = HashMap::new();
         expected.insert("karate/foo".parse().unwrap(),
-                        vec!["db:core/database".parse().unwrap(),
-                             "fe:core/front-end".parse().unwrap(),
-                             "be:core/back-end".parse().unwrap(),]);
+                        vec!["db:karate/database".parse().unwrap(),
+                             "fe:karate/front-end".parse().unwrap(),
+                             "be:karate/back-end".parse().unwrap(),]);
         expected.insert("karate/bar".parse().unwrap(),
-                        vec!["pub:core/publish".parse().unwrap(),
-                             "sub:core/subscribe".parse().unwrap(),]);
+                        vec!["pub:karate/publish".parse().unwrap(),
+                             "sub:karate/subscribe".parse().unwrap(),]);
 
         assert_eq!(expected, bind_map);
     }
