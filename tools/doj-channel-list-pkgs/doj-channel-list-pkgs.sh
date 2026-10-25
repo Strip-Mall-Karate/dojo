@@ -12,7 +12,7 @@ main() {
   need_cmd jq
 
   # Set the default Builder URL
-  : "${DOJ_BLDR_URL:=https://bldr.dojo.invalid}"
+  : "${DOJ_BLDR_URL:=https://bldr.karate.company}"
   # Origin name is required
   origin="${1:-}"
   if [[ -z "$origin" ]]; then

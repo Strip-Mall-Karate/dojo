@@ -43,7 +43,7 @@ mod inner {
 
     const LAUNCH_CMD: &str = "doj-launch";
     const LAUNCH_CMD_ENVVAR: &str = "DOJ_LAUNCH_BINARY";
-    const LAUNCH_PKG_IDENT: &str = "core/doj-launcher";
+    const LAUNCH_PKG_IDENT: &str = "karate/doj-launcher";
 
     pub fn start(ui: &mut UI, args: &[OsString]) -> Result<()> {
         init();

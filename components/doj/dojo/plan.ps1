@@ -1,21 +1,21 @@
 $pkg_name = "doj"
-$pkg_origin = "core"
+$pkg_origin = "karate"
 $pkg_version = "$(Get-Content $PLAN_CONTEXT/../../../VERSION)"
-$pkg_maintainer = "Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_maintainer = "Strip Mall Karate Company"
 $pkg_license = @("Apache-2.0")
 $pkg_deps=@(
-    "core/openssl",
-    "core/zlib",
-    "core/libarchive",
-    "core/libsodium",
-    "core/visual-cpp-redist-2015",
-    "core/xz"
+    "karate/openssl",
+    "karate/zlib",
+    "karate/libarchive",
+    "karate/libsodium",
+    "karate/visual-cpp-redist-2015",
+    "karate/xz"
 )
 $pkg_bin_dirs = @("bin")
 $pkg_build_deps = @(
-    "core/visual-cpp-build-tools-2015",
-    "core/rust",
-    "core/cacerts"
+    "karate/visual-cpp-build-tools-2015",
+    "karate/rust",
+    "karate/cacerts"
 )
 
 function Invoke-Prepare {

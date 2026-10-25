@@ -22,10 +22,10 @@ sup_restarted() {
 @test "supervisor: restart does not chown directories" {
     start_supervisor
 
-    ${doj} pkg install core/runit --binlink
+    ${doj} pkg install karate/runit --binlink
 
     # start up nginx
-    ${doj} svc load core/nginx
+    ${doj} svc load karate/nginx
     wait_for_service_to_run nginx
 
     # create an index.html so there is a page to fetch

@@ -34,7 +34,7 @@ pub use crate::build::BuildSpec;
 /// The version of this library and program when built.
 pub const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 /// The Dojo Package Identifier string for a Busybox package.
-const BUSYBOX_IDENT: &str = "core/busybox-static";
+const BUSYBOX_IDENT: &str = "karate/busybox-static";
 
 pub fn export_for_cli_matches(ui: &mut UI, matches: &clap::ArgMatches<'_>) -> Result<()> {
     let default_url = hurl::default_bldr_url();

@@ -4,13 +4,14 @@ Dojo builds software into signed, self-describing packages and runs them under a
 Supervisor that owns their configuration, updates and clustering. It is being
 built into an init system (PID 1) and an installer that bootstraps a whole machine.
 
-Dojo is created and maintained by Jamie Stormbreaker.
+Dojo is a Strip Mall Karate Company project, created by Jamie Stormbreaker.
 
 ## Status
 
 Early. This tree builds with Rust 1.33.0, pinned in `rust-toolchain`, and is
-being modernized. Dojo runs no public Builder: set `DOJ_BLDR_URL` to your own.
-The built-in default, `https://bldr.dojo.invalid`, never resolves.
+being modernized. Packages live in the `karate` origin. The default Builder is
+`https://bldr.karate.company`, which is not running yet; set `DOJ_BLDR_URL` to use
+another.
 
 ## Layout
 

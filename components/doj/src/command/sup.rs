@@ -20,7 +20,7 @@ use crate::error::Result;
 
 pub const SUP_CMD: &str = "doj-sup";
 pub const SUP_CMD_ENVVAR: &str = "DOJ_SUP_BINARY";
-pub const SUP_PKG_IDENT: &str = "core/doj-sup";
+pub const SUP_PKG_IDENT: &str = "karate/doj-sup";
 
 pub fn start(ui: &mut UI, args: &[OsString]) -> Result<()> { inner::start(ui, args) }
 

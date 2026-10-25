@@ -11,7 +11,7 @@ RUN set -ex \
     bash \
   \
   && cd /tmp \
-  && wget https://raw.githubusercontent.com/reset/dojo/master/components/doj/install.sh \
+  && wget https://raw.githubusercontent.com/Strip-Mall-Karate/dojo/master/components/doj/install.sh \
   && bash install.sh -t ${PACKAGE_TARGET} \
   && rm -rf install.sh /doj/cache /root/.wget-hsts /root/.gnupg \
   && apk del .build-deps

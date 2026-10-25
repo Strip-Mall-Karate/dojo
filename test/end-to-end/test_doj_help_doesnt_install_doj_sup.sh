@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # A simple test assertion that running `doj sup --help` will not
-# attempt to install `core/doj-sup` if that pkg is not present.
+# attempt to install `karate/doj-sup` if that pkg is not present.
 
 set -ou pipefail
 
@@ -14,7 +14,7 @@ print_help() {
   program=$(basename "$0")
   echo "$program
 
-Test \`doj sup --help\` will not install core/doj-sup.
+Test \`doj sup --help\` will not install karate/doj-sup.
 
 USAGE:
   $program <path-to-doj-binary>
@@ -34,15 +34,15 @@ else
   DOJ_BINARY="$1"
 fi
 
-echo "Running \`$DOJ_BINARY sup --help\` - which should NOT attempt an install of core/doj-sup"
+echo "Running \`$DOJ_BINARY sup --help\` - which should NOT attempt an install of karate/doj-sup"
 
 if [ -z "$($DOJ_BINARY sup --help)" ]; then
   echo
   echo "ERROR: $DOJ_BINARY was not the proper executable doj binary!"
   exit 1
-elif [ -d "$TESTING_FS_ROOT/doj/pkgs/core/doj-sup" ]; then
+elif [ -d "$TESTING_FS_ROOT/doj/pkgs/karate/doj-sup" ]; then
   echo
-  echo "ERROR: detected an installation of core/doj-sup"
+  echo "ERROR: detected an installation of karate/doj-sup"
   exit 1
 fi
 

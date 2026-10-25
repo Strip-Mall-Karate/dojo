@@ -73,14 +73,14 @@ expect {
 }
 
 # Load up Redis on that Supervisor
-spawn doj svc load core/redis
+spawn doj svc load karate/redis
 expect {
-    "The core/redis service was successfully loaded" {}
-    "Service already loaded, unload 'core/redis' and try again" {
+    "The karate/redis service was successfully loaded" {}
+    "Service already loaded, unload 'karate/redis' and try again" {
         error "Service was already loaded; leftover state?"
     }
     timeout {
-        error "Timed out waiting for core/redis to load";
+        error "Timed out waiting for karate/redis to load";
     }
 }
 expect eof wait

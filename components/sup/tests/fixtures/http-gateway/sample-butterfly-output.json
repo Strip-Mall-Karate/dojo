@@ -163,7 +163,7 @@
           "cfg": {
             "port": 80,
             "ssl-port": 443,
-            "url": "https://bldr.dojo.invalid"
+            "url": "https://bldr.karate.company"
           },
           "incarnation": 1,
           "initialized": false,

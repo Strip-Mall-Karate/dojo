@@ -34,7 +34,7 @@ pub struct ServiceStarted<'a> {
     // TODO (CM): I *really* want a FullyQualifiedIdentifier type now
     pub ident: &'a PackageIdent,
     /// The identifier the service was loaded as. This could be (and
-    /// often is) an abbreviated identifier, like "core/redis".
+    /// often is) an abbreviated identifier, like "karate/redis".
     pub spec_ident: &'a PackageIdent,
     /// The service group of the running service
     pub service_group: &'a ServiceGroup,

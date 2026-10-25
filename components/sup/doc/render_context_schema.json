@@ -158,7 +158,7 @@
                     "type": "boolean"
                 },
                 "service": {
-                    "description": "The name of the service. If the service is running from the package `core/redis`, the value will be `redis`.",
+                    "description": "The name of the service. If the service is running from the package `karate/redis`, the value will be `redis`.",
                     "type": "string"
                 },
                 "group": {
@@ -224,7 +224,7 @@
             "type": "object",
             "properties": {
                 "ident": {
-                    "description": "The fully-qualified identifier of the running package, e.g., `core/redis/3.2.4/20170514150022`",
+                    "description": "The fully-qualified identifier of the running package, e.g., `karate/redis/3.2.4/20170514150022`",
                     "type": "string"
                 },
                 "origin": {
@@ -268,7 +268,7 @@
                     "additionalProperties": { "type": "string" }
                 },
                 "path" : {
-                    "description": "The location where the package is installed locally, e.g., `/doj/pkgs/core/redis/3.2.4/20170514150022`. Note that this is _not_ a `PATH` environment variable; for that, please see the `env` key above.",
+                    "description": "The location where the package is installed locally, e.g., `/doj/pkgs/karate/redis/3.2.4/20170514150022`. Note that this is _not_ a `PATH` environment variable; for that, please see the `env` key above.",
                     "type": "string"
                 },
                 "svc_path" : {
@@ -345,7 +345,7 @@
             "type": "object",
             "properties": {
                 "service": {
-                    "description": "The name of the service. If the service is running from the package `core/redis`, the value will be `redis`.",
+                    "description": "The name of the service. If the service is running from the package `karate/redis`, the value will be `redis`.",
                     "type": "string"
                 },
                 "group": {

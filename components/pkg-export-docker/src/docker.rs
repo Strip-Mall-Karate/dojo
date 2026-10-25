@@ -435,7 +435,7 @@ impl DockerBuildRoot {
                 .as_ref(),
             "path": ctx.env_path(),
             "doj_path": util::pkg_path_for(
-                &PackageIdent::from_str("core/doj")?,
+                &PackageIdent::from_str("karate/doj")?,
                 ctx.rootfs())?.join("bin/doj")
                 .to_string_lossy()
                 .replace("\\", "/"),

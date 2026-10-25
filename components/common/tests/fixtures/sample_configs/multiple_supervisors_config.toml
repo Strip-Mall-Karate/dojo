@@ -7,10 +7,10 @@ version = "0.0.0"
 
 [pkg]
 exposes = []
-ident = "core/testplan/0.1.0/20170208180805"
+ident = "karate/testplan/0.1.0/20170208180805"
 name = "testplan"
 origin = "core"
-path = "/doj/pkgs/core/testplan/0.1.0/20170208180805"
+path = "/doj/pkgs/karate/testplan/0.1.0/20170208180805"
 release = "20170208180805"
 svc_config_path = "/doj/svc/testplan/config"
 svc_data_path = "/doj/svc/testplan/data"

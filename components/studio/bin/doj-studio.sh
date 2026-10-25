@@ -36,7 +36,7 @@
 # TESTING CHANGES
 # Documentation on testing local changes to this file and its friends in
 # ../libexec lives here:
-# https://github.com/reset/dojo/blob/master/BUILDING.md#testing-changes
+# https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
 
 # # Internals
 
@@ -1147,7 +1147,7 @@ set_libexec_path() {
 
   if [ -n "${DOJ_STUDIO_BINARY:-}" ]; then
     version="$(unset DOJ_STUDIO_BINARY; doj studio version | $bb cut -d ' ' -f 2)"
-    libexec_path="$(unset DOJ_STUDIO_BINARY; doj pkg path core/doj-studio)/libexec"
+    libexec_path="$(unset DOJ_STUDIO_BINARY; doj pkg path karate/doj-studio)/libexec"
     studio_binary_libexec_path="$($bb dirname "$DOJ_STUDIO_BINARY")/../libexec"
   else
     p=$($bb dirname "$0")

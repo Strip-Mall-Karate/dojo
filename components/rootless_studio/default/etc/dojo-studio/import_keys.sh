@@ -9,7 +9,7 @@ if [ -n "$DOJ_ORIGIN_KEYS" ]; then
   # will use the outside cache key path, whereas the `doj` function has
   # the `$FS_ROOT` set for the inside of the Studio. We're copying from
   # the outside in, using `doj` twice. I love my job.
-  for key in $(echo "$DOJ_ORIGIN_KEYS" | doj pkg exec core/doj-backline tr ',' ' '); do
+  for key in $(echo "$DOJ_ORIGIN_KEYS" | doj pkg exec karate/doj-backline tr ',' ' '); do
     key_text=""
     # Import the secret origin key, required for signing packages
     info "Importing '$key' secret origin key"

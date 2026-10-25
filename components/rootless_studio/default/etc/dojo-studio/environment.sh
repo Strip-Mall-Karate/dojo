@@ -14,7 +14,7 @@ sanitize_secrets() {
 # to pass into the studio
 load_secrets() {
   sanitize_secrets
-  doj pkg exec core/doj-backline env | doj pkg exec core/doj-backline awk -F '=' '/^DOJ_STUDIO_SECRET_/ {gsub(/DOJ_STUDIO_SECRET_/, ""); print}'
+  doj pkg exec karate/doj-backline env | doj pkg exec karate/doj-backline awk -F '=' '/^DOJ_STUDIO_SECRET_/ {gsub(/DOJ_STUDIO_SECRET_/, ""); print}'
 }
 
 if [ -n "${DOJ_CONFIG_EXCLUDE:-}" ]; then
@@ -57,6 +57,6 @@ if [ -n "${no_proxy:-}" ]; then
 info "Exported: no_proxy=$no_proxy"
 fi
 
-for secret_name in $(load_secrets | doj pkg exec core/coreutils cut -d = -f 1); do
+for secret_name in $(load_secrets | doj pkg exec karate/coreutils cut -d = -f 1); do
 info "Exported: $secret_name=[redacted]"
 done

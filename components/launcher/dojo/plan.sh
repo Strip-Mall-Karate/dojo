@@ -1,19 +1,19 @@
 # shellcheck disable=2154
 source "$SRC_PATH/../../support/ci/builder-base-plan.sh"
 pkg_name=doj-launcher
-pkg_origin=core
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_origin=karate
+pkg_maintainer="Strip Mall Karate Company"
 pkg_license=('Apache-2.0')
-pkg_deps=(core/glibc
-          core/gcc-libs
-          core/libarchive
-          core/libsodium
-          core/openssl)
-pkg_build_deps=(core/coreutils
-                core/rust
-                core/gcc
-                core/git
-                core/protobuf)
+pkg_deps=(karate/glibc
+          karate/gcc-libs
+          karate/libarchive
+          karate/libsodium
+          karate/openssl)
+pkg_build_deps=(karate/coreutils
+                karate/rust
+                karate/gcc
+                karate/git
+                karate/protobuf)
 pkg_bin_dirs=(bin)
 bin="doj-launch"
 

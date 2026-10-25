@@ -42,7 +42,7 @@ mod inner {
                 VERSION};
 
     const EXPORT_CMD_ENVVAR: &str = "DOJ_PKG_EXPORT_TAR_BINARY";
-    const EXPORT_PKG_IDENT: &str = "core/doj-pkg-export-tar";
+    const EXPORT_PKG_IDENT: &str = "karate/doj-pkg-export-tar";
     const EXPORT_PKG_IDENT_ENVVAR: &str = "DOJ_PKG_EXPORT_TAR_PKG_IDENT";
 
     pub fn start(ui: &mut UI, args: &[OsString]) -> Result<()> {

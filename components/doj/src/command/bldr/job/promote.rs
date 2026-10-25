@@ -171,12 +171,12 @@ mod test {
 
     fn sample_project_list() -> Vec<Project> {
         let project1 = Project { name:   "Project1".to_string(),
-                                 ident:  "core/project1/1.0.0/20180101000000".to_string(),
+                                 ident:  "karate/project1/1.0.0/20180101000000".to_string(),
                                  state:  "Success".to_string(),
                                  job_id: "12345678".to_string(),
                                  target: "x86_64-linux".to_string(), };
         let project2 = Project { name:   "Project2".to_string(),
-                                 ident:  "core/project2/1.0.0/20180101000000".to_string(),
+                                 ident:  "karate/project2/1.0.0/20180101000000".to_string(),
                                  state:  "Success".to_string(),
                                  job_id: "12345678".to_string(),
                                  target: "x86_64-linux".to_string(), };
@@ -236,12 +236,12 @@ mod test {
                                                target:       "x86_64-linux".to_string(), };
 
         let ident_list =
-            get_ident_list(&mut ui, &group_status, Some("core"), false).expect("Error fetching \
+            get_ident_list(&mut ui, &group_status, Some("karate"), false).expect("Error fetching \
                                                                                 ident list");
 
         assert_eq!(ident_list,
-                   ["core/project1/1.0.0/20180101000000",
-                    "core/project2/1.0.0/20180101000000",])
+                   ["karate/project1/1.0.0/20180101000000",
+                    "karate/project2/1.0.0/20180101000000",])
     }
 
     #[test]
@@ -257,11 +257,11 @@ mod test {
         env::set_var("EDITOR", "cat");
 
         let ident_list =
-            get_ident_list(&mut ui, &group_status, Some("core"), true).expect("Error fetching \
+            get_ident_list(&mut ui, &group_status, Some("karate"), true).expect("Error fetching \
                                                                                ident list");
 
         assert_eq!(ident_list,
-                   ["core/project1/1.0.0/20180101000000",
-                    "core/project2/1.0.0/20180101000000",])
+                   ["karate/project1/1.0.0/20180101000000",
+                    "karate/project2/1.0.0/20180101000000",])
     }
 }

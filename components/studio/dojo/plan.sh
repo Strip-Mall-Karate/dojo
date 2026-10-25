@@ -1,16 +1,16 @@
 # shellcheck disable=2034
 pkg_name=doj-studio
-pkg_origin=core
+pkg_origin=karate
 pkg_version=$(cat "$SRC_PATH/../../VERSION")
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 pkg_license=('Apache-2.0')
 pkg_deps=()
-pkg_build_deps=(core/coreutils
-                core/tar
-                core/xz
-                core/wget
-                core/busybox-static
-                core/doj)
+pkg_build_deps=(karate/coreutils
+                karate/tar
+                karate/xz
+                karate/wget
+                karate/busybox-static
+                karate/doj)
 pkg_bin_dirs=(bin)
 
 do_build() {

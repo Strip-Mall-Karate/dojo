@@ -25,4 +25,4 @@ pub mod service;
 mod sys;
 
 pub const SUP_CMD: &str = "doj-sup";
-pub const SUP_PACKAGE_IDENT: &str = "core/doj-sup";
+pub const SUP_PACKAGE_IDENT: &str = "karate/doj-sup";

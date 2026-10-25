@@ -1,7 +1,7 @@
 $pkg_name = "doj-plan-build-ps1"
-$pkg_origin = "core"
+$pkg_origin = "karate"
 $pkg_version = "$(Get-Content $PLAN_CONTEXT/../../../VERSION)"
-$pkg_maintainer = "Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_maintainer = "Strip Mall Karate Company"
 $pkg_license = @("Apache-2.0")
 $pkg_source = "nosuchfile.tar.gz"
 $pkg_bin_dirs = @("bin")

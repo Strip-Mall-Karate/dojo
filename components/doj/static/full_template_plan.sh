@@ -25,7 +25,7 @@ pkg_version="0.1.0"
 {{#if pkg_maintainer ~}}
 pkg_maintainer="{{ pkg_maintainer }}"
 {{else ~}}
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 {{/if}}
 
 # Optional.
@@ -76,7 +76,7 @@ pkg_shasum="TODO"
 {{#if pkg_deps ~}}
 pkg_deps={{ pkg_deps }}
 {{else ~}}
-pkg_deps=(core/glibc)
+pkg_deps=(karate/glibc)
 {{/if}}
 
 # Optional.
@@ -84,7 +84,7 @@ pkg_deps=(core/glibc)
 {{#if pkg_build_deps ~}}
 pkg_build_deps={{ pkg_build_deps }}
 {{else ~}}
-pkg_build_deps=(core/make core/gcc)
+pkg_build_deps=(karate/make karate/gcc)
 {{/if}}
 
 # Optional.
@@ -250,7 +250,7 @@ pkg_upstream_url="{{ pkg_upstream_url }}"
 #
 # The default implementations (the do_default_* functions) are defined in the
 # plan build script:
-# https://github.com/reset/dojo/tree/master/components/plan-build/bin/doj-plan-build.sh
+# https://github.com/Strip-Mall-Karate/dojo/tree/master/components/plan-build/bin/doj-plan-build.sh
 
 # There is no default implementation of this callback. You can use it to execute
 # any arbitrary commands before anything else happens.
@@ -361,7 +361,7 @@ pkg_version="0.1.0"
 {{#if pkg_maintainer ~}}
 pkg_maintainer="{{ pkg_maintainer }}"
 {{else ~}}
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 {{/if~}}
 {{#if pkg_license ~}}
 pkg_license={{ pkg_license }}
@@ -389,12 +389,12 @@ pkg_shasum="{{ pkg_shasum }}"
 {{#if pkg_deps ~}}
 pkg_deps={{ pkg_deps }}
 {{else ~}}
-# pkg_deps=(core/glibc)
+# pkg_deps=(karate/glibc)
 {{/if ~}}
 {{#if pkg_build_deps ~}}
 pkg_build_deps={{ pkg_build_deps }}
 {{else ~}}
-# pkg_build_deps=(core/make core/gcc)
+# pkg_build_deps=(karate/make karate/gcc)
 {{/if ~}}
 {{#if pkg_lib_dirs ~}}
 pkg_lib_dirs={{ pkg_lib_dirs }}

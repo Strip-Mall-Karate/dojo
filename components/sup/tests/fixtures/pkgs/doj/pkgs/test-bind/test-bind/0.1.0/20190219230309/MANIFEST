@@ -1,7 +1,7 @@
 # test-bind / test-bind
 
 
-* __Maintainer__: Jamie Stormbreaker <jamie@reset.dev>
+* __Maintainer__: Strip Mall Karate Company
 * __Version__: 0.1.0
 * __Release__: 20190219230309
 * __Target__: x86_64-linux
@@ -32,7 +32,7 @@ LD_RUN_PATH: no LD_RUN_PATH
 pkg_name=test-bind
 pkg_origin=test-bind
 pkg_version="0.1.0"
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 pkg_license=("Apache-2.0")
 
 pkg_binds=(

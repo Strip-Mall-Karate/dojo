@@ -1,17 +1,17 @@
 ﻿function Install-DojService {
 	if((Get-Service Dojo -ErrorAction SilentlyContinue) -ne $null) {
-		Write-Error "The Dojo service is already installed. Please run 'doj exec core/windows-service uninstall' first if you wish to reinstall."
+		Write-Error "The Dojo service is already installed. Please run 'doj exec karate/windows-service uninstall' first if you wish to reinstall."
 		return
 	}
 
 	if(!(Test-Path (Join-Path $env:SystemDrive "doj\pkgs\core\doj-sup"))) {
 		$dojProc = Get-Process doj -ErrorAction SilentlyContinue
 		if(!$dojProc) {
-			Write-Error "Could not locate the Dojo CLI. Make sure you are running this via 'doj pkg exec core/windows-service install'."
+			Write-Error "Could not locate the Dojo CLI. Make sure you are running this via 'doj pkg exec karate/windows-service install'."
 			return
 		}
 		$dojExe = $dojProc[0].Path
-		& $dojExe pkg install core/doj-sup
+		& $dojExe pkg install karate/doj-sup
 	}
 
 	$svcPath = Join-Path $env:SystemDrive "doj\svc\windows-service"

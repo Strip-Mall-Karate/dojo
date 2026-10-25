@@ -781,8 +781,8 @@ impl Client {
     ///
     /// By the time this function is called, the ident must be fully qualified. The download URL in
     /// the depot requires a fully qualified ident to work. If you want the latest version of
-    /// a package, e.g. core/redis, you can display package details for that via a different URL,
-    /// e.g. /pkgs/core/redis/latest but that only _shows_ you the details - it doesn't download
+    /// a package, e.g. karate/redis, you can display package details for that via a different URL,
+    /// e.g. /pkgs/karate/redis/latest but that only _shows_ you the details - it doesn't download
     /// the package.
     ///
     /// # Failures
@@ -1306,7 +1306,7 @@ mod tests {
     fn json_round_trip_u64_fields() {
         let pre = OriginPrivateSigningKey { id:        705_705_315_793_903_646,
                                             origin_id: 705_705_305_031_319_582,
-                                            name:      "core".to_string(),
+                                            name:      "karate".to_string(),
                                             revision:  "20160810182414".to_string(),
                                             body:      vec![1, 2, 3],
                                             owner_id:  0, };
@@ -1315,7 +1315,7 @@ mod tests {
         let expected = json!({
             "id": "705705315793903646",
             "origin_id": "705705305031319582",
-            "name": "core",
+            "name": "karate",
             "revision": "20160810182414",
             "body": [
                 1,

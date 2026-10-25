@@ -2,7 +2,7 @@
 PLAN_CONTEXT=$(dirname "$PLAN_CONTEXT") source ../../plan.sh
 
 pkg_name=doj
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 # There is no true equivalent here (yet), so dependency arrays will be empty.
 pkg_deps=()
 pkg_build_deps=()

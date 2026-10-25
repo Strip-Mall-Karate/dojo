@@ -60,9 +60,9 @@ use tempfile::TempDir;
 // in the tar exporter. This needs to be abstacted out in
 // the future for use with further exporters.
 
-const DEFAULT_DOJ_IDENT: &str = "core/doj";
-const DEFAULT_LAUNCHER_IDENT: &str = "core/doj-launcher";
-const DEFAULT_SUP_IDENT: &str = "core/doj-sup";
+const DEFAULT_DOJ_IDENT: &str = "karate/doj";
+const DEFAULT_LAUNCHER_IDENT: &str = "karate/doj-launcher";
+const DEFAULT_SUP_IDENT: &str = "karate/doj-sup";
 const DEFAULT_USER_AND_GROUP_ID: u32 = 42;
 
 const DEFAULT_DOJ_UID: u32 = 84;
@@ -528,8 +528,8 @@ impl BuildRootContext {
                             .unwrap_or_default()
                             .unwrap_or_else(|| String::from("doj"));
 
-        // TODO: In some cases, packages based on core/nginx and
-        // core/httpd (and possibly others) will not work, because
+        // TODO: In some cases, packages based on karate/nginx and
+        // karate/httpd (and possibly others) will not work, because
         // they specify a SVC_USER of `root`, but implicitly rely on a
         // `doj` user being present for running lower-privileged
         // worker processes. Dojo currently doesn't have a way to
@@ -1034,7 +1034,7 @@ mod test {
                                                                         .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.dojo.invalid");
+            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 
@@ -1056,7 +1056,7 @@ mod test {
                                                           .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.dojo.invalid");
+            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 

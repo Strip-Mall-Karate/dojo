@@ -48,11 +48,11 @@ pub fn start(filename: &str,
 
                 let segments = if full_releases {
                     // take all 4 segments of the path
-                    // ex: core/busybox-static/1.24.2/20160708162350
+                    // ex: karate/busybox-static/1.24.2/20160708162350
                     comps.take(4)
                 } else {
                     // only take 2 segments of the path
-                    // ex: core/busybox-static
+                    // ex: karate/busybox-static
                     comps.take(2)
                 };
 

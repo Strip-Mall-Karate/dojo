@@ -22,7 +22,7 @@ impl<'a, 'b> Cli<'a, 'b> {
               (name) =>
               (about: about)
               (version: VERSION)
-              (author: "\nMaintainer: Jamie Stormbreaker <jamie@reset.dev>\n\n")
+              (author: "\nMaintainer: Strip Mall Karate Company\n\n")
               ), }
     }
 
@@ -37,7 +37,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                     .help(
                         "Dojo CLI package identifier (ex: acme/redis) or filepath to a Dojo \
                          artifact (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart) \
-                         to install (default: core/doj)",
+                         to install (default: karate/doj)",
                     ),
             )
             .arg(
@@ -46,10 +46,10 @@ impl<'a, 'b> Cli<'a, 'b> {
                     .value_name("DOJ_LAUNCHER_PKG")
                     .validator(valid_ident_or_hart)
                     .help(
-                        "Launcher package identifier (ex: core/doj-launcher) or filepath to a \
+                        "Launcher package identifier (ex: karate/doj-launcher) or filepath to a \
                          Dojo artifact (ex: \
                          /home/core-doj-launcher-6083-20171101045646-x86_64-linux.hart) to \
-                         install (default: core/doj-launcher)",
+                         install (default: karate/doj-launcher)",
                     ),
             )
             .arg(
@@ -58,10 +58,10 @@ impl<'a, 'b> Cli<'a, 'b> {
                     .value_name("DOJ_SUP_PKG")
                     .validator(valid_ident_or_hart)
                     .help(
-                        "Supervisor package identifier (ex: core/doj-sup) or filepath to a \
+                        "Supervisor package identifier (ex: karate/doj-sup) or filepath to a \
                          Dojo artifact (ex: \
                          /home/ore-doj-sup-0.39.1-20171118011657-x86_64-linux.hart) to install \
-                         (default: core/doj-sup)",
+                         (default: karate/doj-sup)",
                     ),
             );
 
@@ -79,7 +79,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                     .validator(valid_url)
                     .help(
                         "Install packages from Builder at the specified URL \
-                         (default: https://bldr.dojo.invalid)",
+                         (default: https://bldr.karate.company)",
                     ),
             )
             .arg(
@@ -96,7 +96,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                     .validator(valid_url)
                     .help(
                         "Install base packages from Builder at the specified URL \
-                         (default: https://bldr.dojo.invalid)",
+                         (default: https://bldr.karate.company)",
                     ),
             )
             .arg(

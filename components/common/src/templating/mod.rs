@@ -284,14 +284,14 @@ test: something"#
 
     #[test]
     fn pkg_path_for_helper() {
-        let content = "{{pkgPathFor \"core/acl\"}}".to_string();
+        let content = "{{pkgPathFor \"karate/acl\"}}".to_string();
         let mut renderer = TemplateRenderer::new();
         renderer.register_template_string("t", content).unwrap();
 
         let data = service_config_json_from_toml_file("complex_config.toml");
         let rendered = renderer.render("t", &data).unwrap();
         assert_eq!(PathBuf::from(rendered),
-                   pkg_root_path(Some(&*FS_ROOT_PATH)).join("core/acl/2.2.52/20161208223311",));
+                   pkg_root_path(Some(&*FS_ROOT_PATH)).join("karate/acl/2.2.52/20161208223311",));
     }
 
     #[test]

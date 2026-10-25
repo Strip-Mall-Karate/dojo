@@ -1,28 +1,28 @@
 # shellcheck disable=2034
 pkg_name=doj-plan-build
-pkg_origin=core
+pkg_origin=karate
 pkg_version=$(cat "$SRC_PATH/../../VERSION")
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 pkg_license=('Apache-2.0')
 pkg_bin_dirs=(bin)
 
-pkg_deps=(core/bash
-          core/binutils
-          core/bzip2
-          core/coreutils
-          core/file
-          core/findutils
-          core/gawk
-          core/grep
-          core/gzip
-          core/doj
-          core/rq
-          core/sed
-          core/tar
-          core/unzip
-          core/wget
-          core/xz)
-pkg_build_deps=(core/bats)
+pkg_deps=(karate/bash
+          karate/binutils
+          karate/bzip2
+          karate/coreutils
+          karate/file
+          karate/findutils
+          karate/gawk
+          karate/grep
+          karate/gzip
+          karate/doj
+          karate/rq
+          karate/sed
+          karate/tar
+          karate/unzip
+          karate/wget
+          karate/xz)
+pkg_build_deps=(karate/bats)
 
 program=$pkg_name
 

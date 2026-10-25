@@ -24,10 +24,10 @@ use crate::{common::ui::{Status,
             hcore::{crypto::init,
                     package::PackageIdent}};
 
-const SCAFFOLDING_GO_IDENT: &str = "core/scaffolding-go";
-const SCAFFOLDING_GRADLE_IDENT: &str = "core/scaffolding-gradle";
-const SCAFFOLDING_NODE_IDENT: &str = "core/scaffolding-node";
-const SCAFFOLDING_RUBY_IDENT: &str = "core/scaffolding-ruby";
+const SCAFFOLDING_GO_IDENT: &str = "karate/scaffolding-go";
+const SCAFFOLDING_GRADLE_IDENT: &str = "karate/scaffolding-gradle";
+const SCAFFOLDING_NODE_IDENT: &str = "karate/scaffolding-node";
+const SCAFFOLDING_RUBY_IDENT: &str = "karate/scaffolding-ruby";
 
 // Check to see if the --scaffolding passed matches available core scaffolding
 // If not check if we've been given a pkg ident for a custom scaffolding

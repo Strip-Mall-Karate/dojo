@@ -1,6 +1,6 @@
 # TESTING CHANGES
 # Documentation on testing local changes to this lives here:
-# https://github.com/reset/dojo/blob/master/BUILDING.md#testing-changes
+# https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
 
 # shellcheck disable=2034
 studio_type="stage1"

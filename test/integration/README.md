@@ -17,7 +17,7 @@ git submodule update
 ```
 
 These tests exercise various aspects of the `doj` CLI tool, and makes
-real requests against the [Builder](https://bldr.dojo.invalid)
+real requests against the [Builder](https://bldr.karate.company)
 service. It also assumes full control of the local `/doj` directory
 (not a mocked directory!) and regularly wipes its contents, so be
 aware of this if you plan to run the tests directly on your local

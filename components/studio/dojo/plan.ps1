@@ -1,9 +1,9 @@
 $pkg_name="doj-studio"
-$pkg_origin="core"
+$pkg_origin="karate"
 $pkg_version=Get-Content "$PLAN_CONTEXT/../../../VERSION"
-$pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_maintainer="Strip Mall Karate Company"
 $pkg_license=@("Apache-2.0")
-$pkg_build_deps=@("core/powershell", "core/doj", "core/doj-plan-build-ps1", "core/7zip")
+$pkg_build_deps=@("karate/powershell", "karate/doj", "karate/doj-plan-build-ps1", "karate/7zip")
 $pkg_bin_dirs=@("bin")
 
 function Invoke-Build {

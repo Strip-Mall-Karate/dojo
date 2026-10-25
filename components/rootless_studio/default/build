@@ -6,4 +6,4 @@
 # build` leads to the exact same experience, at least as far as initial
 # `$PATH` is concerned.
 
-exec doj pkg exec core/doj-plan-build doj-plan-build "$@"
+exec doj pkg exec karate/doj-plan-build doj-plan-build "$@"

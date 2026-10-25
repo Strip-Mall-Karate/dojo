@@ -46,5 +46,5 @@ else
 fi
 
 sudo sh /tmp/install.sh
-sudo doj install core/busybox-static core/doj-studio
+sudo doj install karate/busybox-static karate/doj-studio
 sudo rm -rf /tmp/install.sh

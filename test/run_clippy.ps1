@@ -51,26 +51,26 @@ rustup component add clippy
 
 # TODO: these should be in a shared script?
 Write-Host "--- Installing required prerequisites"
-doj pkg install core/cacerts
-doj pkg install core/libarchive
-doj pkg install core/libsodium
-doj pkg install core/openssl
-doj pkg install core/protobuf
-doj pkg install core/xz
-doj pkg install core/zeromq
-doj pkg install core/zlib
-doj pkg install core/visual-cpp-build-tools-2015
+doj pkg install karate/cacerts
+doj pkg install karate/libarchive
+doj pkg install karate/libsodium
+doj pkg install karate/openssl
+doj pkg install karate/protobuf
+doj pkg install karate/xz
+doj pkg install karate/zeromq
+doj pkg install karate/zlib
+doj pkg install karate/visual-cpp-build-tools-2015
 
 # Set up some path variables for ease of use later
-$cacertsDir     = & doj pkg path core/cacerts
-$libarchiveDir  = & doj pkg path core/libarchive
-$libsodiumDir   = & doj pkg path core/libsodium
-$opensslDir     = & doj pkg path core/openssl
-$protobufDir    = & doj pkg path core/protobuf
-$xzDir          = & doj pkg path core/xz
-$zeromqDir      = & doj pkg path core/zeromq
-$zlibDir        = & doj pkg path core/zlib
-$vsDir          = & doj pkg path core/visual-cpp-build-tools-2015
+$cacertsDir     = & doj pkg path karate/cacerts
+$libarchiveDir  = & doj pkg path karate/libarchive
+$libsodiumDir   = & doj pkg path karate/libsodium
+$opensslDir     = & doj pkg path karate/openssl
+$protobufDir    = & doj pkg path karate/protobuf
+$xzDir          = & doj pkg path karate/xz
+$zeromqDir      = & doj pkg path karate/zeromq
+$zlibDir        = & doj pkg path karate/zlib
+$vsDir          = & doj pkg path karate/visual-cpp-build-tools-2015
 
 # Set some required variables
 $env:SODIUM_LIB_DIR             = "$libsodiumDir\lib"

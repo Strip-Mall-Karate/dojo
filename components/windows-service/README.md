@@ -11,8 +11,8 @@ The only requirement is that you have the Dojo cli (doj.exe) installed and on yo
 To install the Dojo Windows service, run:
 
 ```
-doj pkg install core/windows-service
-doj pkg exec core/windows-service install
+doj pkg install karate/windows-service
+doj pkg exec karate/windows-service install
 ```
 
 This will install the service in the Windows Service Control Manager (SCM). You can locate the service in the Services console app. It will be named "Dojo." It will be set to start automatically and run under the `Local System` account. You may of course change the startup type and/or account identity in the service's properties.
@@ -22,7 +22,7 @@ This will install the service in the Windows Service Control Manager (SCM). You 
 To uninstall the Dojo service, run:
 
 ```
-doj pkg exec core/windows-service uninstall
+doj pkg exec karate/windows-service uninstall
 ```
 
 This will stop the service if it is running and uninstall it from the Windows Service Control Manager (SCM).

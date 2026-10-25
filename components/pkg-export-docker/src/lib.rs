@@ -69,9 +69,9 @@ use std::{env,
 pub const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 
 /// The Dojo Package Identifier string for a Busybox package.
-const BUSYBOX_IDENT: &str = "core/busybox-static";
+const BUSYBOX_IDENT: &str = "karate/busybox-static";
 /// The Dojo Package Identifier string for SSL certificate authorities (CA) certificates package.
-const CACERTS_IDENT: &str = "core/cacerts";
+const CACERTS_IDENT: &str = "karate/cacerts";
 
 /// An image naming policy.
 ///

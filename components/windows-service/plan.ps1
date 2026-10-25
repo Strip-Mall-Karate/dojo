@@ -1,11 +1,11 @@
 $pkg_name="windows-service"
-$pkg_origin="core"
+$pkg_origin="karate"
 $pkg_version="0.4.0"
-$pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_maintainer="Strip Mall Karate Company"
 $pkg_license=@('Apache-2.0')
 $pkg_description="A Windows Service for runnung the Dojo Supervisor"
-$pkg_deps=@("core/doj-launcher", "core/powershell")
-$pkg_build_deps=@("core/dotnet-core-sdk")
+$pkg_deps=@("karate/doj-launcher", "karate/powershell")
+$pkg_build_deps=@("karate/dotnet-core-sdk")
 $pkg_bin_dirs=@("bin")
 
 function Invoke-Build {

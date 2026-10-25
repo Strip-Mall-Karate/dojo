@@ -1,7 +1,7 @@
 pkg_name=possums
 pkg_origin=happyhumans
 pkg_version=8.1.4
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 pkg_license=('apachev2')
 pkg_source=nosuchfile.tar.gz
 pkg_deps=()

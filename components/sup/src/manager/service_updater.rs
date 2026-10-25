@@ -580,10 +580,10 @@ mod tests {
     locked_env_var!(DOJ_UPDATE_STRATEGY_FREQUENCY_BYPASS_CHECK, lock_bypass_var);
 
     fn worker() -> Worker {
-        Worker { current:     "core/testing/1.0.0/20181109125930".parse()
+        Worker { current:     "karate/testing/1.0.0/20181109125930".parse()
                                                                  .expect("Can't parse ident!"),
-                 spec_ident:  "core/testing".parse().expect("Can't parse ident!"),
-                 builder_url: String::from("https://bldr.dojo.invalid"),
+                 spec_ident:  "karate/testing".parse().expect("Can't parse ident!"),
+                 builder_url: String::from("https://bldr.karate.company"),
                  channel:     ChannelIdent::stable(), }
     }
 

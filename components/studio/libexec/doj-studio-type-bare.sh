@@ -1,6 +1,6 @@
 # TESTING CHANGES
 # Documentation on testing local changes to this lives here:
-# https://github.com/reset/dojo/blob/master/BUILDING.md#testing-changes
+# https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
 
 # shellcheck disable=2034
 studio_type="bare"
@@ -11,7 +11,7 @@ studio_build_command=
 studio_run_environment=
 studio_run_command=
 
-base_pkgs="core/doj core/doj-sup"
+base_pkgs="karate/doj karate/doj-sup"
 : "${PKGS:=}"
 
 run_user="doj"
@@ -44,14 +44,14 @@ finish_setup() {
   done
 
   local doj_path
-  doj_path=$(_pkgpath_for core/doj)
+  doj_path=$(_pkgpath_for karate/doj)
   local sup_path
-  sup_path=$(_pkgpath_for core/doj-sup)
+  sup_path=$(_pkgpath_for karate/doj-sup)
   local busybox_path
-  busybox_path=$(_pkgpath_for core/busybox-static)
+  busybox_path=$(_pkgpath_for karate/busybox-static)
 
   local full_path=""
-  for path_pkg in $PKGS core/doj-sup core/busybox-static; do
+  for path_pkg in $PKGS karate/doj-sup karate/busybox-static; do
     local path_file
     path_file="$DOJ_STUDIO_ROOT/$(_pkgpath_for $path_pkg)/PATH"
     if [ -f "$path_file" ]; then
@@ -83,11 +83,11 @@ finish_setup() {
   $bb mkdir -p $v "$DOJ_STUDIO_ROOT""$DOJ_ROOT_PATH"/bin
 
   # Put `doj` on the default `$PATH`
-  _doj pkg binlink --dest "$DOJ_ROOT_PATH"/bin core/doj doj
+  _doj pkg binlink --dest "$DOJ_ROOT_PATH"/bin karate/doj doj
 
   # Create `/bin/{sh,bash}` for software that hardcodes these shells
-  _doj pkg binlink --dest=/bin core/busybox-static bash
-  _doj pkg binlink --dest=/bin core/busybox-static sh
+  _doj pkg binlink --dest=/bin karate/busybox-static bash
+  _doj pkg binlink --dest=/bin karate/busybox-static sh
 
   # Set the login shell for any relevant user to be `/bin/bash`
   $bb sed -e "s,/bin/sh,$busybox_path/bin/bash,g" -i "$DOJ_STUDIO_ROOT"/etc/passwd

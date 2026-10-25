@@ -42,7 +42,7 @@ else
 endif
 
 # launcher is intentionally omitted from the standard build process
-# see https://github.com/reset/dojo/blob/master/components/launcher/README.md
+# see https://github.com/Strip-Mall-Karate/dojo/blob/master/components/launcher/README.md
 BIN = doj pkg-export-docker sup
 LIB = butterfly common builder-api-client sup-protocol sup-client
 ALL = $(BIN) $(LIB)
@@ -144,9 +144,9 @@ distclean: clean ## fully cleans up project tree
 endif
 
 changelog: image
-	@$(run) sh -c 'doj pkg install core/github_changelog_generator && \
-		doj pkg binlink core/git git --force && \
-		doj pkg binlink core/github_changelog_generator github_changelog_generator --force && \
+	@$(run) sh -c 'doj pkg install karate/github_changelog_generator && \
+		doj pkg binlink karate/git git --force && \
+		doj pkg binlink karate/github_changelog_generator github_changelog_generator --force && \
 		github_changelog_generator --future-release $(VERSION) --token $(GITHUB_TOKEN) --max-issues=1000'
 
 docs: image ## build the docs

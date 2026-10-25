@@ -1880,33 +1880,33 @@ mod test {
         /// current specs, we shouldn't have anything to change.
         #[test]
         fn identical_specs_yield_no_changes() {
-            let specs = vec![new_spec("core/foo"), new_spec("core/bar")];
+            let specs = vec![new_spec("karate/foo"), new_spec("karate/bar")];
             assert!(Manager::specs_to_operations(specs.clone(), specs.clone()).is_empty());
         }
 
         #[test]
         fn missing_spec_on_disk_means_stop() {
-            let running = vec![new_spec("core/foo")];
+            let running = vec![new_spec("karate/foo")];
             let on_disk = vec![];
 
             let operations = Manager::specs_to_operations(running, on_disk);
             assert_eq!(operations.len(), 1);
-            assert_eq!(operations[0], ServiceOperation::Stop(new_spec("core/foo")));
+            assert_eq!(operations[0], ServiceOperation::Stop(new_spec("karate/foo")));
         }
 
         #[test]
         fn missing_active_spec_means_start() {
             let running = vec![];
-            let on_disk = vec![new_spec("core/foo")];
+            let on_disk = vec![new_spec("karate/foo")];
 
             let operations = Manager::specs_to_operations(running, on_disk);
             assert_eq!(operations.len(), 1);
-            assert_eq!(operations[0], ServiceOperation::Start(new_spec("core/foo")));
+            assert_eq!(operations[0], ServiceOperation::Start(new_spec("karate/foo")));
         }
 
         #[test]
         fn down_spec_on_disk_means_stop_running_service() {
-            let spec = new_spec("core/foo");
+            let spec = new_spec("karate/foo");
 
             let running = vec![spec.clone()];
 
@@ -1927,7 +1927,7 @@ mod test {
         fn down_spec_on_disk_with_no_running_service_yields_no_changes() {
             let running = vec![];
             let down_spec = {
-                let mut s = new_spec("core/foo");
+                let mut s = new_spec("karate/foo");
                 s.desired_state = DesiredState::Down;
                 s
             };
@@ -1939,7 +1939,7 @@ mod test {
 
         #[test]
         fn modified_spec_on_disk_means_restart() {
-            let running_spec = new_spec("core/foo");
+            let running_spec = new_spec("karate/foo");
 
             let on_disk_spec = {
                 let mut s = running_spec.clone();
@@ -1971,11 +1971,11 @@ mod test {
         fn multiple_operations_can_be_determined_at_once() {
             // Nothing should happen with this; it's already how it
             // needs to be.
-            let svc_1_running = new_spec("core/foo");
+            let svc_1_running = new_spec("karate/foo");
             let svc_1_on_disk = svc_1_running.clone();
 
             // Should get shut down.
-            let svc_2_running = new_spec("core/bar");
+            let svc_2_running = new_spec("karate/bar");
             let svc_2_on_disk = {
                 let mut s = svc_2_running.clone();
                 s.desired_state = DesiredState::Down;
@@ -1983,7 +1983,7 @@ mod test {
             };
 
             // Should get restarted.
-            let svc_3_running = new_spec("core/baz");
+            let svc_3_running = new_spec("karate/baz");
             let svc_3_on_disk = {
                 let mut s = svc_3_running.clone();
                 s.update_strategy = UpdateStrategy::AtOnce;
@@ -1992,16 +1992,16 @@ mod test {
 
             // Nothing should happen with this; it's already down.
             let svc_4_on_disk = {
-                let mut s = new_spec("core/quux");
+                let mut s = new_spec("karate/quux");
                 s.desired_state = DesiredState::Down;
                 s
             };
 
             // This should get started
-            let svc_5_on_disk = new_spec("core/wat");
+            let svc_5_on_disk = new_spec("karate/wat");
 
             // This should get shut down
-            let svc_6_running = new_spec("core/lolwut");
+            let svc_6_running = new_spec("karate/lolwut");
 
             let running = vec![svc_1_running.clone(),
                                svc_2_running.clone(),
@@ -2027,7 +2027,7 @@ mod test {
             // `expected_operations`, but we can't, since that would
             // mean we'd need a total ordering on `PackageIdent`,
             // which we can't do, since identifiers of different
-            // packages (say, `core/foo` and `core/bar`) are not
+            // packages (say, `karate/foo` and `karate/bar`) are not
             // comparable.
             //
             // Instead, we'll just do the verification one at a time.

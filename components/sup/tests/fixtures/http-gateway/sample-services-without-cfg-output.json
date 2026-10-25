@@ -12,7 +12,7 @@
     "binds": [
       "router:builder-router.default"
     ],
-    "bldr_url": "https://bldr.dojo.invalid",
+    "bldr_url": "https://bldr.karate.company",
     "channel": "stable",
     "config_from": null,
     "desired_state": "Up",
@@ -155,7 +155,7 @@
         }
       ],
       "env": {
-        "PATH": "/doj/pkgs/dojo/builder-api/7602/20180906202535/bin:/doj/pkgs/core/glibc/2.27/20180608041157/bin:/doj/pkgs/core/openssl/1.0.2n/20180608102213/bin:/doj/pkgs/core/coreutils/8.29/20180608092141/bin:/doj/pkgs/core/curl/7.54.1/20180906202233/bin:/doj/pkgs/core/acl/2.2.52/20180608091922/bin:/doj/pkgs/core/attr/2.4.47/20180608091914/bin:/doj/pkgs/core/libcap/2.25/20180608091936/bin:/doj/pkgs/core/bzip2/1.0.6/20180608091727/bin:/doj/pkgs/core/xz/5.2.3/20180608100110/bin:/doj/pkgs/core/busybox-static/1.28.1/20180608102729/bin:/bin"
+        "PATH": "/doj/pkgs/dojo/builder-api/7602/20180906202535/bin:/doj/pkgs/karate/glibc/2.27/20180608041157/bin:/doj/pkgs/karate/openssl/1.0.2n/20180608102213/bin:/doj/pkgs/karate/coreutils/8.29/20180608092141/bin:/doj/pkgs/karate/curl/7.54.1/20180906202233/bin:/doj/pkgs/karate/acl/2.2.52/20180608091922/bin:/doj/pkgs/karate/attr/2.4.47/20180608091914/bin:/doj/pkgs/karate/libcap/2.25/20180608091936/bin:/doj/pkgs/karate/bzip2/1.0.6/20180608091727/bin:/doj/pkgs/karate/xz/5.2.3/20180608100110/bin:/doj/pkgs/karate/busybox-static/1.28.1/20180608102729/bin:/bin"
       },
       "exports": {
         "port": "http.port"

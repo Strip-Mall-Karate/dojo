@@ -45,9 +45,9 @@ use crate::rootfs;
 // Much of this functionality is duplicated (or slightly modified)
 // from the Docker exporter. This needs to be abstacted out in
 // the future for use with further exporters.
-const DEFAULT_DOJ_IDENT: &str = "core/doj";
-const DEFAULT_LAUNCHER_IDENT: &str = "core/doj-launcher";
-const DEFAULT_SUP_IDENT: &str = "core/doj-sup";
+const DEFAULT_DOJ_IDENT: &str = "karate/doj";
+const DEFAULT_LAUNCHER_IDENT: &str = "karate/doj-launcher";
+const DEFAULT_SUP_IDENT: &str = "karate/doj-sup";
 
 /// The specification for creating a temporary file system build root, based on Dojo packages.
 ///

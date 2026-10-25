@@ -67,7 +67,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
     clap_app!(doj =>
         (about: "\"A Dojo is the natural environment for your services\" - Alan Turing")
         (version: super::VERSION)
-        (author: "\nMaintainer: Jamie Stormbreaker <jamie@reset.dev>\n")
+        (author: "\nMaintainer: Strip Mall Karate Company\n")
         (@setting GlobalVersion)
         (@setting ArgRequiredElseHelp)
         (@subcommand cli =>
@@ -86,7 +86,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (about: "Displays the default configuration options for a service")
                 (aliases: &["sh", "sho"])
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
                 (@arg REMOTE_SUP: --("remote-sup") -r +takes_value
                     "Address to a remote Supervisor's Control Gateway [default: 127.0.0.1:9632]")
             )
@@ -123,12 +123,12 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (about: "Schedule a build job or group of jobs")
                     (aliases: &["s", "st", "sta", "star"])
                     (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                        "The origin and name of the package to schedule a job for (eg: core/redis)")
+                        "The origin and name of the package to schedule a job for (eg: karate/redis)")
                     (arg: arg_target())
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the cli.toml or DOJ_BLDR_URL environment variable if defined. \
-                         (default: https://bldr.dojo.invalid)")
+                         (default: https://bldr.karate.company)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg GROUP: -g --group "Schedule jobs for this package and all of its reverse \
                         dependencies")
@@ -142,7 +142,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg FORCE: -f --force
                      "Don't prompt for confirmation")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
@@ -161,7 +161,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 )
                 (@subcommand demote =>
@@ -178,7 +178,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 )
                 (@subcommand status =>
@@ -201,7 +201,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                 )
             )
             (@subcommand channel =>
@@ -214,7 +214,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg CHANNEL: +required + takes_value "The channel name")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "Sets the origin to which the channel will belong. Default is from \
@@ -226,7 +226,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg CHANNEL: +required + takes_value "The channel name")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "Sets the origin to which the channel belongs. Default is from 'DOJ_ORIGIN'\
@@ -238,7 +238,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg ORIGIN: +takes_value {valid_origin}
                         "The origin for which channels will be listed. Default is from 'DOJ_ORIGIN'\
                         or cli.toml")
@@ -256,7 +256,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (@arg BLDR_URL: -u --url +takes_value {valid_url}
                      "Specify an alternate Builder endpoint. If not specified, the value will \
                      be taken from the `DOJ_BLDR_URL environment variable if defined. (default: \
-                     https://bldr.dojo.invalid)")
+                     https://bldr.karate.company)")
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
             )
             (@subcommand key =>
@@ -274,7 +274,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg WITH_SECRET: -s --secret
                         "Download secret signing key instead of public signing key")
                     (@arg WITH_ENCRYPTION: -e --encryption
@@ -328,7 +328,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 )
             )
@@ -345,7 +345,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "The origin for which the secret will be uploaded. Default is from \
@@ -361,7 +361,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "The origin for which the secret will be deleted. Default is from \
@@ -372,7 +372,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "The origin for which secrets will be listed. Default is from 'DOJ_ORIGIN' \
@@ -387,13 +387,13 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
             (@subcommand binds =>
                 (about: "Displays the binds for a service")
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-statis/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-statis/1.42.2)")
             )
             (@subcommand binlink =>
                 (about: "Creates a binlink for a package binary in a common 'PATH' location")
                 (aliases: &["bi", "bin", "binl", "binli", "binlin"])
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
                 (@arg BINARY: +takes_value
                     "The command to binlink (ex: bash)")
                 (@arg DEST_DIR: -d --dest +takes_value {non_empty} env(BINLINK_DIR_ENVVAR) default_value(DEFAULT_BINLINK_DIR)
@@ -404,19 +404,19 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (about: "Displays the default configuration options for a service")
                 (aliases: &["conf", "cfg"])
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
             )
             (subcommand: sub_pkg_build())
             (@subcommand env =>
                 (about: "Prints the runtime environment of a specific installed package")
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
             )
             (@subcommand exec =>
                 (about: "Executes a command using the 'PATH' context of an installed package")
                 (aliases: &["exe"])
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
                 (@arg CMD: +required +takes_value
                     "The command to execute (ex: ls)")
                 (@arg ARGS: +takes_value +multiple
@@ -428,13 +428,13 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (@arg FORMAT: +required +takes_value
                     "The export format (ex: docker or tar)")
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2) or \
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2) or \
                     filepath to a Dojo Artifact \
                     (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)")
                 (@arg BLDR_URL: -u --url +takes_value {valid_url}
                     "Specify an alternate Builder endpoint. If not specified, the value will \
                      be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                     https://bldr.dojo.invalid)")
+                     https://bldr.karate.company)")
                 (@arg CHANNEL: --channel -c +takes_value default_value[stable] env(ChannelIdent::ENVVAR)
                     "Retrieve the container's package from the specified release channel")
             )
@@ -449,7 +449,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (about: "Prints the path to a specific installed release of a package")
                 (aliases: &["p", "pa", "pat"])
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
             )
             (@subcommand list =>
                 (about: "List all versions of installed packages")
@@ -461,7 +461,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                             "An origin to list")
                     (@arg PKG_IDENT: +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2).")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2).")
                 )
 
             )
@@ -471,7 +471,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     "File name to find")
                 (@arg FULL_RELEASES: -r
                     "Show fully qualified package names \
-                    (ex: core/busybox-static/1.24.2/20160708162350)")
+                    (ex: karate/busybox-static/1.24.2/20160708162350)")
                 (@arg FULL_PATHS: -p "Show full path to file")
             )
             (@subcommand search =>
@@ -479,7 +479,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (@arg SEARCH_TERM: +required +takes_value "Search term")
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.dojo.invalid)")
+                    environment variable if defined. (default: https://bldr.karate.company)")
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
             )
             (@subcommand sign =>
@@ -500,11 +500,11 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (about: "Safely uninstall a package and dependencies from the local filesystem")
                 (aliases: &["un", "unin"])
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2/21120102031201)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2/21120102031201)")
                 (@arg DRYRUN: -d --dryrun "Just show what would be uninstalled, don't actually do it")
                 (@arg EXCLUDE: --exclude +takes_value +multiple {valid_ident}
                     "Identifier of one or more packages that should not be uninstalled. \
-                    (ex: core/redis, core/busybox-static/1.42.2/21120102031201)")
+                    (ex: karate/redis, karate/busybox-static/1.42.2/21120102031201)")
                 (@arg NO_DEPS: --("no-deps") "Don't uninstall dependencies")
             )
             (@subcommand upload =>
@@ -512,7 +512,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["u", "up", "upl", "uplo", "uploa"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.dojo.invalid)")
+                    environment variable if defined. (default: https://bldr.karate.company)")
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 (@arg CHANNEL: --channel -c +takes_value
                     "Optional additional release channel to upload package to. \
@@ -533,9 +533,9 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["del", "dele"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.dojo.invalid)")
+                    environment variable if defined. (default: https://bldr.karate.company)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
-                    (ex: core/busybox-static/1.42.2/20170513215502)")
+                    (ex: karate/busybox-static/1.42.2/20170513215502)")
                 (arg: arg_target())
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
             )
@@ -544,9 +544,9 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["pr", "pro", "promo", "promot"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.dojo.invalid)")
+                    environment variable if defined. (default: https://bldr.karate.company)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
-                    (ex: core/busybox-static/1.42.2/20170513215502)")
+                    (ex: karate/busybox-static/1.42.2/20170513215502)")
                 (@arg CHANNEL: +required +takes_value "Promote to the specified release channel")
                 (arg: arg_target())
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
@@ -556,9 +556,9 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["de", "dem", "demo", "demot"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.dojo.invalid)")
+                    environment variable if defined. (default: https://bldr.karate.company)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
-                    (ex: core/busybox-static/1.42.2/20170513215502)")
+                    (ex: karate/busybox-static/1.42.2/20170513215502)")
                 (@arg CHANNEL: +required +takes_value "Demote from the specified release channel")
                 (arg: arg_target())
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
@@ -568,9 +568,9 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["ch", "cha", "chan", "chann", "channe", "channel"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.dojo.invalid)")
+                    environment variable if defined. (default: https://bldr.karate.company)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
-                    (ex: core/busybox-static/1.42.2/20170513215502)")
+                    (ex: karate/busybox-static/1.42.2/20170513215502)")
                 (arg: arg_target())
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
             )
@@ -604,7 +604,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (@arg TRANSITIVE: -t --transitive "Show transitive dependencies")
                 (@arg REVERSE: -r --reverse "Show packages which are dependant on this one")
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: core/redis, core/busybox-static/1.42.2)")
+                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
             )
         )
         (@subcommand plan =>
@@ -707,7 +707,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     running it will additionally be stopped.")
                 (aliases: &["u", "un", "unl", "unlo", "unloa"])
                 (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A Dojo package identifier (ex: core/redis)")
+                    "A Dojo package identifier (ex: karate/redis)")
                 (@arg REMOTE_SUP: --("remote-sup") -r +takes_value
                     "Address to a remote Supervisor's Control Gateway [default: 127.0.0.1:9632]")
             )
@@ -791,7 +791,7 @@ pub fn sup_commands() -> App<'static, 'static> {
     clap_app!(("sup") =>
     (about: "The Dojo Supervisor")
     (version: super::VERSION)
-    (author: "\nMaintainer: Jamie Stormbreaker <jamie@reset.dev>\n")
+    (author: "\nMaintainer: Strip Mall Karate Company\n")
     // set custom usage string, otherwise the binary
     // is displayed as the clap_app name, which may or may not be different.
     // see: https://github.com/kbknapp/clap-rs/blob/2724ec5399c500b12a1a24d356f4090f4816f5e2/src/app/mod.rs#L373-L394
@@ -894,7 +894,7 @@ fn sub_pkg_install(feature_flags: FeatureFlag) -> App<'static, 'static> {
         (@arg BLDR_URL: --url -u +takes_value {valid_url}
             "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.dojo.invalid)")
+                         https://bldr.karate.company)")
         (@arg CHANNEL: --channel -c +takes_value default_value[stable] env(ChannelIdent::ENVVAR)
             "Install from the specified release channel")
         (@arg PKG_IDENT_OR_ARTIFACT: +required +multiple
@@ -1017,7 +1017,7 @@ pub fn sub_sup_run() -> App<'static, 'static> {
     (@arg BLDR_URL: -u --url +takes_value {valid_url}
         "Specify an alternate Builder endpoint. If not specified, the value will \
          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-         https://bldr.dojo.invalid)")
+         https://bldr.karate.company)")
 
     (@arg CONFIG_DIR: --("config-from") +takes_value {dir_exists}
         "Use package config from this path, rather than the package itself")
@@ -1036,7 +1036,7 @@ pub fn sub_sup_run() -> App<'static, 'static> {
     // === Optional arguments to additionally load an initial service for the Supervisor
     (@arg PKG_IDENT_OR_ARTIFACT: +takes_value "Load the given Dojo package as part of \
         the Supervisor startup specified by a package identifier \
-        (ex: core/redis) or filepath to a Dojo Artifact \
+        (ex: karate/redis) or filepath to a Dojo Artifact \
         (ex: /home/core-redis-3.0.7-21120102031201-x86_64-linux.hart).")
     (@arg APPLICATION: --application -a +takes_value requires[ENVIRONMENT]
         "Application name; [default: not set].")
@@ -1086,7 +1086,7 @@ fn sub_svc_start() -> App<'static, 'static> {
     clap_app!(@subcommand start =>
         (about: "Start a loaded, but stopped, Dojo service.")
         (@arg PKG_IDENT: +required +takes_value {valid_ident}
-            "A Dojo package identifier (ex: core/redis)")
+            "A Dojo package identifier (ex: karate/redis)")
         (@arg REMOTE_SUP: --("remote-sup") -r +takes_value
             "Address to a remote Supervisor's Control Gateway [default: 127.0.0.1:9632]")
     )
@@ -1097,7 +1097,7 @@ fn sub_svc_start() -> App<'static, 'static> {
 pub fn sub_svc_status() -> App<'static, 'static> {
     clap_app!(@subcommand status =>
         (about: "Query the status of Dojo services.")
-        (@arg PKG_IDENT: +takes_value {valid_ident} "A Dojo package identifier (ex: core/redis)")
+        (@arg PKG_IDENT: +takes_value {valid_ident} "A Dojo package identifier (ex: karate/redis)")
         (@arg REMOTE_SUP: --("remote-sup") -r +takes_value
         "Address to a remote Supervisor's Control Gateway [default: 127.0.0.1:9632]")
     )
@@ -1107,7 +1107,7 @@ fn sub_svc_stop() -> App<'static, 'static> {
     clap_app!(@subcommand stop =>
         (about: "Stop a running Dojo service.")
         (@arg PKG_IDENT: +required +takes_value {valid_ident}
-            "A Dojo package identifier (ex: core/redis)")
+            "A Dojo package identifier (ex: karate/redis)")
         (@arg REMOTE_SUP: --("remote-sup") -r +takes_value
             "Address to a remote Supervisor's Control Gateway [default: 127.0.0.1:9632]")
     )
@@ -1119,7 +1119,7 @@ fn sub_svc_load() -> App<'static, 'static> {
             identifier. If an installed package doesn't satisfy the given package \
             identifier, a suitable package will be installed from Builder.")
         (@arg PKG_IDENT: +required +takes_value {valid_ident}
-            "A Dojo package identifier (ex: core/redis)")
+            "A Dojo package identifier (ex: karate/redis)")
         (@arg APPLICATION: --application -a +takes_value requires[ENVIRONMENT]
             "Application name; [default: not set].")
         (@arg ENVIRONMENT: --environment -e +takes_value requires[APPLICATION]
@@ -1131,7 +1131,7 @@ fn sub_svc_load() -> App<'static, 'static> {
         (@arg BLDR_URL: -u --url +takes_value {valid_url}
             "Specify an alternate Builder endpoint. If not specified, the value will \
              be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-             https://bldr.dojo.invalid)")
+             https://bldr.karate.company)")
         (@arg TOPOLOGY: --topology -t +takes_value possible_value[standalone leader]
             "Service topology; [default: none]")
         (@arg STRATEGY: --strategy -s +takes_value {valid_update_strategy}

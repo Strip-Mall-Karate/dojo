@@ -507,7 +507,7 @@ impl PackageInstall {
     /// present once in the order of their first appearance.
     ///
     /// Preserved reference implementation:
-    /// https://github.com/reset/dojo/blob/333b75d6234db0531cf4a5bdcb859f7d4adc2478/components/core/src/package/install.rs#L321-L350
+    /// https://github.com/Strip-Mall-Karate/dojo/blob/333b75d6234db0531cf4a5bdcb859f7d4adc2478/components/core/src/package/install.rs#L321-L350
     fn legacy_runtime_paths(&self) -> Result<Vec<PathBuf>> {
         let mut paths = Vec::new();
         let mut seen = HashSet::new();
@@ -750,12 +750,12 @@ mod test {
     #[test]
     fn reading_a_valid_bind_map_file_works() {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
-        let package_install = testing_package_install("core/composite", fs_root.path());
+        let package_install = testing_package_install("karate/composite", fs_root.path());
 
         // Create a BIND_MAP file for that package
         let bind_map_contents = r#"
-core/foo=db:core/database fe:core/front-end be:core/back-end
-core/bar=pub:core/publish sub:core/subscribe
+karate/foo=db:core/database fe:core/front-end be:core/back-end
+karate/bar=pub:core/publish sub:core/subscribe
         "#;
         write_metafile(&package_install, MetaFile::BindMap, bind_map_contents);
 
@@ -764,11 +764,11 @@ core/bar=pub:core/publish sub:core/subscribe
 
         // Assert that it was interpreted correctly
         let mut expected: HashMap<PackageIdent, Vec<BindMapping>> = HashMap::new();
-        expected.insert("core/foo".parse().unwrap(),
+        expected.insert("karate/foo".parse().unwrap(),
                         vec!["db:core/database".parse().unwrap(),
                              "fe:core/front-end".parse().unwrap(),
                              "be:core/back-end".parse().unwrap(),]);
-        expected.insert("core/bar".parse().unwrap(),
+        expected.insert("karate/bar".parse().unwrap(),
                         vec!["pub:core/publish".parse().unwrap(),
                              "sub:core/subscribe".parse().unwrap(),]);
 
@@ -778,10 +778,10 @@ core/bar=pub:core/publish sub:core/subscribe
     #[test]
     fn reading_a_bad_bind_map_file_results_in_an_error() {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
-        let package_install = testing_package_install("core/dud", fs_root.path());
+        let package_install = testing_package_install("karate/dud", fs_root.path());
 
         // Create a BIND_MAP directory for that package
-        let bind_map_contents = "core/foo=db:this-is-not-an-identifier";
+        let bind_map_contents = "karate/foo=db:this-is-not-an-identifier";
         write_metafile(&package_install, MetaFile::BindMap, bind_map_contents);
 
         // Grab the bind map from that package
@@ -794,7 +794,7 @@ core/bar=pub:core/publish sub:core/subscribe
     #[test]
     fn missing_bind_map_files_are_ok() {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
-        let package_install = testing_package_install("core/no-binds", fs_root.path());
+        let package_install = testing_package_install("karate/no-binds", fs_root.path());
 
         // Grab the bind map from that package
         let bind_map = package_install.bind_map().unwrap();

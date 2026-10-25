@@ -80,7 +80,7 @@ mod test {
         pkg_origin=neurosis
         pkg_name=testapp
         pkg_version=0.1.3
-        pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+        pkg_maintainer="Strip Mall Karate Company"
         pkg_license=()
         pkg_upstream_url=https://example.com/example-plans
         pkg_source=nosuchfile.tar.gz
@@ -119,7 +119,7 @@ mod test {
         pkg_origin="neurosis"
         pkg_name="testapp"
         pkg_version="0.1.3"
-        pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+        pkg_maintainer="Strip Mall Karate Company"
         pkg_license=()
         pkg_upstream_url=https://example.com/example-plans
         pkg_source=nosuchfile.tar.gz
@@ -158,7 +158,7 @@ mod test {
         pkg_origin='neurosis'
         pkg_name='testapp'
         pkg_version='0.1.3'
-        pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+        pkg_maintainer="Strip Mall Karate Company"
         pkg_license=()
         pkg_upstream_url=https://example.com/example-plans
         pkg_source=nosuchfile.tar.gz
@@ -197,7 +197,7 @@ mod test {
         $pkg_name="testapp"
         $pkg_origin="neurosis"
         $pkg_version="1.04"
-        $pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+        $pkg_maintainer="Strip Mall Karate Company"
 
         function Invoke-Unpack {
         }

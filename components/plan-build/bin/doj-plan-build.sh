@@ -367,7 +367,7 @@ DOJ_PKG_PATH=$DOJ_ROOT_PATH/pkgs
 PLAN_CONTEXT=${1:-.}
 # The default Dojo Depot from where to download dependencies. If
 # `DOJ_BLDR_URL` is set, this value is overridden.
-: "${DOJ_BLDR_URL:=https://bldr.dojo.invalid}"
+: "${DOJ_BLDR_URL:=https://bldr.karate.company}"
 # Export the Builder URL so all other programs and subshells use this same one
 export DOJ_BLDR_URL
 # The default Dojo channel from where to download dependencies. If
@@ -1508,7 +1508,7 @@ _resolve_dependencies() {
 # `_resolve_dependencies()` function.
 #
 # Reference implementation:
-# https://github.com/reset/dojo/blob/3d63753468ace168bbbe4c52e600d408c4981b03/components/plan-build/bin/doj-plan-build.sh#L1584-L1638
+# https://github.com/Strip-Mall-Karate/dojo/blob/3d63753468ace168bbbe4c52e600d408c4981b03/components/plan-build/bin/doj-plan-build.sh#L1584-L1638
 _set_build_path() {
   local paths=()
   local dir dep data

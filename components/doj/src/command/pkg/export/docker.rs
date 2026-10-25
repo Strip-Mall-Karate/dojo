@@ -20,7 +20,7 @@ use crate::error::Result;
 
 const EXPORT_CMD: &str = "doj-pkg-export-docker";
 const EXPORT_CMD_ENVVAR: &str = "DOJ_PKG_EXPORT_DOCKER_BINARY";
-const EXPORT_PKG_IDENT: &str = "core/doj-pkg-export-docker";
+const EXPORT_PKG_IDENT: &str = "karate/doj-pkg-export-docker";
 const EXPORT_PKG_IDENT_ENVVAR: &str = "DOJ_PKG_EXPORT_DOCKER_PKG_IDENT";
 
 pub fn start(ui: &mut UI, args: &[OsString]) -> Result<()> {

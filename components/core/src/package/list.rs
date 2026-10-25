@@ -333,7 +333,7 @@ mod test {
     fn can_read_single_package() {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
         let package_root = fs::pkg_root_path(Some(fs_root.path()));
-        let package_install = testing_package_install("core/redis", fs_root.path());
+        let package_install = testing_package_install("karate/redis", fs_root.path());
 
         let packages = all_packages(&package_root).unwrap();
 
@@ -345,9 +345,9 @@ mod test {
     fn can_read_multiple_packages() {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
         let package_root = fs::pkg_root_path(Some(fs_root.path()));
-        let expected = vec![testing_package_install("core/redis/1.0.0", fs_root.path()),
+        let expected = vec![testing_package_install("karate/redis/1.0.0", fs_root.path()),
                             testing_package_install("test/foobar", fs_root.path()),
-                            testing_package_install("core/redis/1.1.0", fs_root.path()),];
+                            testing_package_install("karate/redis/1.1.0", fs_root.path()),];
 
         let packages = all_packages(&package_root).unwrap();
 
@@ -389,10 +389,10 @@ mod test {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
         let package_root = fs::pkg_root_path(Some(fs_root.path()));
         let test_origin = vec![testing_package_install("test/foobar", fs_root.path())];
-        let core_origin = vec![testing_package_install("core/redis/1.0.0", fs_root.path()),
-                               testing_package_install("core/redis/1.1.0", fs_root.path()),];
+        let core_origin = vec![testing_package_install("karate/redis/1.0.0", fs_root.path()),
+                               testing_package_install("karate/redis/1.1.0", fs_root.path()),];
 
-        let packages = package_list_for_origin(&package_root, &String::from("core")).unwrap();
+        let packages = package_list_for_origin(&package_root, &String::from("karate")).unwrap();
 
         assert_eq!(2, packages.len());
         for p in &core_origin {
@@ -409,7 +409,7 @@ mod test {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
         let package_root = fs::pkg_root_path(Some(fs_root.path()));
 
-        let packages = package_list_for_origin(&package_root, &String::from("core")).unwrap();
+        let packages = package_list_for_origin(&package_root, &String::from("karate")).unwrap();
 
         assert_eq!(0, packages.len());
     }

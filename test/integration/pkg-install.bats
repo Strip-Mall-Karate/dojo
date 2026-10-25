@@ -7,23 +7,23 @@ setup() {
 }
 
 @test "doj pkg install: origin/name (standalone service)" {
-    run ${doj} pkg install core/redis
+    run ${doj} pkg install karate/redis
     assert_success
 
-    latest_redis=$(latest_from_builder core/redis stable)
+    latest_redis=$(latest_from_builder karate/redis stable)
     assert_package_and_deps_installed "${latest_redis}"
 }
 
 @test "doj pkg install: origin/name/version (standalone service)" {
-    run ${doj} pkg install core/redis/3.2.4
+    run ${doj} pkg install karate/redis/3.2.4
     assert_success
 
-    latest_redis=$(latest_from_builder core/redis/3.2.4 stable)
+    latest_redis=$(latest_from_builder karate/redis/3.2.4 stable)
     assert_package_and_deps_installed "${latest_redis}"
 }
 
 @test "doj pkg install: origin/name/version/release (standalone service)" {
-    desired_version="core/redis/3.2.3/20160920131015"
+    desired_version="karate/redis/3.2.3/20160920131015"
 
     run ${doj} pkg install "${desired_version}"
     assert_success
@@ -31,7 +31,7 @@ setup() {
 }
 
 @test "doj pkg install: local hart file (standalone service)" {
-    desired_version="core/redis/3.2.4/20170514150022"
+    desired_version="karate/redis/3.2.4/20170514150022"
 
     # First, grab a hart file! Then set it aside and clean everything
     # out of /doj. This way, we'll have a hart file, but nothing else,
@@ -48,7 +48,7 @@ setup() {
 }
 
 @test "doj pkg install: local hart from /doj/cache/artifacts (standalone service)" {
-    desired_version="core/redis/3.2.4/20170514150022"
+    desired_version="karate/redis/3.2.4/20170514150022"
 
     # First, grab a hart file!
     run ${doj} pkg install "${desired_version}"

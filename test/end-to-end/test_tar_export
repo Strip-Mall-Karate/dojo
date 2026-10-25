@@ -12,8 +12,8 @@ USAGE:
         $program <PKG_IDENT>
 
 ARGS:
-    <PKG_IDENT>  The origin and name of the package to schedule a job for (eg: core/redis) or
-                 A fully qualified package identifier (ex: core/busybox-static/1.42.2/20170513215502)
+    <PKG_IDENT>  The origin and name of the package to schedule a job for (eg: karate/redis) or
+                 A fully qualified package identifier (ex: karate/busybox-static/1.42.2/20170513215502)
 "
 }
 

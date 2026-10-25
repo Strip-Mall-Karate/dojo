@@ -38,9 +38,9 @@ mod test {
                         "PEER" => ["1.1.1.1", "2.2.2.2"]);
 
         assert_cli_cmd!(should_handle_peer_flag_with_arguments,
-                        "doj-sup run --peer 1.1.1.1 2.2.2.2 -- core/redis",
+                        "doj-sup run --peer 1.1.1.1 2.2.2.2 -- karate/redis",
                         "PEER" => ["1.1.1.1", "2.2.2.2"],
-                        "PKG_IDENT_OR_ARTIFACT" => "core/redis");
+                        "PKG_IDENT_OR_ARTIFACT" => "karate/redis");
 
         assert_cli_cmd!(should_handle_multiple_bind_flags,
                         "doj-sup run --bind service.group1 --bind service.group2",
@@ -51,9 +51,9 @@ mod test {
                         "BIND" => ["service.group1", "service.group2"]);
 
         assert_cli_cmd!(should_handle_bind_flag_with_arguments,
-                        "doj-sup run --bind service.group1 service.group2 -- core/redis",
+                        "doj-sup run --bind service.group1 service.group2 -- karate/redis",
                         "BIND" => ["service.group1", "service.group2"],
-                        "PKG_IDENT_OR_ARTIFACT" => "core/redis");
+                        "PKG_IDENT_OR_ARTIFACT" => "karate/redis");
 
         #[test]
         fn local_gossip_mode_and_listen_gossip_are_mutually_exclusive() {

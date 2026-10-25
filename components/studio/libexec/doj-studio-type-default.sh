@@ -2,17 +2,17 @@
 
 # TESTING CHANGES
 # Documentation on testing local changes to this lives here:
-# https://github.com/reset/dojo/blob/master/BUILDING.md#testing-changes
+# https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
 
 # shellcheck disable=2034
 studio_type="default"
 studio_path="$DOJ_ROOT_PATH/bin"
 studio_enter_environment="STUDIO_ENTER=true"
-studio_enter_command="$DOJ_ROOT_PATH/bin/doj pkg exec core/doj-backline bash --login +h"
+studio_enter_command="$DOJ_ROOT_PATH/bin/doj pkg exec karate/doj-backline bash --login +h"
 studio_build_environment=
 studio_build_command="_record_build $DOJ_ROOT_PATH/bin/build"
 studio_run_environment=
-studio_run_command="$DOJ_ROOT_PATH/bin/doj pkg exec core/doj-backline bash --login"
+studio_run_command="$DOJ_ROOT_PATH/bin/doj pkg exec karate/doj-backline bash --login"
 
 pkgs="${DOJ_STUDIO_BACKLINE_PKG:-core/doj-backline/$(
   echo "$version" | $bb cut -d / -f 1)}"
@@ -100,18 +100,18 @@ finish_setup() {
     fi
   done
 
-  bash_path=$(_pkgpath_for core/bash)
-  coreutils_path=$(_pkgpath_for core/coreutils)
+  bash_path=$(_pkgpath_for karate/bash)
+  coreutils_path=$(_pkgpath_for karate/coreutils)
 
   # shellcheck disable=2086,2154
   $bb mkdir -p $v "$DOJ_STUDIO_ROOT""$DOJ_ROOT_PATH"/bin
 
   # Put `doj` on the default `$PATH`
-  _doj pkg binlink --dest "$DOJ_ROOT_PATH"/bin core/doj doj
+  _doj pkg binlink --dest "$DOJ_ROOT_PATH"/bin karate/doj doj
 
   # Create `/bin/{sh,bash}` for software that hardcodes these shells
-  _doj pkg binlink core/bash bash
-  _doj pkg binlink core/bash sh
+  _doj pkg binlink karate/bash bash
+  _doj pkg binlink karate/bash sh
 
   # Create a wrapper to `build` so that any calls to it have a super-stripped
   # `$PATH` and not whatever augmented version is currently in use. This should
@@ -120,7 +120,7 @@ finish_setup() {
   # `$PATH` is concerned.
   $bb cat <<EOF > "$DOJ_STUDIO_ROOT""$DOJ_ROOT_PATH"/bin/build
 #!$bash_path/bin/sh
-exec $DOJ_ROOT_PATH/bin/doj pkg exec core/doj-plan-build doj-plan-build "\$@"
+exec $DOJ_ROOT_PATH/bin/doj pkg exec karate/doj-plan-build doj-plan-build "\$@"
 EOF
   # shellcheck disable=2086
   $bb chmod $v 755 "$DOJ_STUDIO_ROOT""$DOJ_ROOT_PATH"/bin/build
@@ -141,7 +141,7 @@ alias fgrep='fgrep --color=auto'
 
 # Set TERMINFO so doj can give us a delightful experience.
 export TERMINFO
-TERMINFO=$(_pkgpath_for core/ncurses)/share/terminfo
+TERMINFO=$(_pkgpath_for karate/ncurses)/share/terminfo
 
 emacs() {
   if command -v emacs > /dev/null; then

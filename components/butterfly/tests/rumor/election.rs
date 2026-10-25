@@ -21,9 +21,9 @@ use crate::btest;
 fn three_members_run_election() {
     let mut net = btest::SwimNet::new(3);
     net.mesh();
-    net.add_service(0, "core/witcher/1.2.3/20161208121212");
-    net.add_service(1, "core/witcher/1.2.3/20161208121212");
-    net.add_service(2, "core/witcher/1.2.3/20161208121212");
+    net.add_service(0, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(1, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(2, "karate/witcher/1.2.3/20161208121212");
 
     net.add_election(0, "witcher");
     net.add_election(1, "witcher");
@@ -37,9 +37,9 @@ fn three_members_run_election() {
 fn three_members_run_election_from_one_starting_rumor() {
     let mut net = btest::SwimNet::new(3);
     net.mesh();
-    net.add_service(0, "core/witcher/1.2.3/20161208121212");
-    net.add_service(1, "core/witcher/1.2.3/20161208121212");
-    net.add_service(2, "core/witcher/1.2.3/20161208121212");
+    net.add_service(0, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(1, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(2, "karate/witcher/1.2.3/20161208121212");
     net.add_election(0, "witcher");
     assert_wait_for_election_status!(net, [0..3], "witcher.prod", ElectionStatus::Finished);
     assert_wait_for_equal_election!(net, [0..3, 0..3], "witcher.prod");
@@ -50,11 +50,11 @@ fn three_members_run_election_from_one_starting_rumor() {
 fn five_members_elect_a_new_leader_when_the_old_one_dies() {
     let mut net = btest::SwimNet::new(5);
     net.mesh();
-    net.add_service(0, "core/witcher/1.2.3/20161208121212");
-    net.add_service(1, "core/witcher/1.2.3/20161208121212");
-    net.add_service(2, "core/witcher/1.2.3/20161208121212");
-    net.add_service(3, "core/witcher/1.2.3/20161208121212");
-    net.add_service(4, "core/witcher/1.2.3/20161208121212");
+    net.add_service(0, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(1, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(2, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(3, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(4, "karate/witcher/1.2.3/20161208121212");
     net.add_election(0, "witcher");
     assert_wait_for_election_status!(net, [0..5], "witcher.prod", ElectionStatus::Finished);
     assert_wait_for_equal_election!(net, [0..5, 0..5], "witcher.prod");
@@ -111,11 +111,11 @@ fn five_members_elect_a_new_leader_when_they_are_quorum_partitioned() {
           .write()
           .expect("Member lock is poisoned")
           .set_persistent();
-    net.add_service(0, "core/witcher/1.2.3/20161208121212");
-    net.add_service(1, "core/witcher/1.2.3/20161208121212");
-    net.add_service(2, "core/witcher/1.2.3/20161208121212");
-    net.add_service(3, "core/witcher/1.2.3/20161208121212");
-    net.add_service(4, "core/witcher/1.2.3/20161208121212");
+    net.add_service(0, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(1, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(2, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(3, "karate/witcher/1.2.3/20161208121212");
+    net.add_service(4, "karate/witcher/1.2.3/20161208121212");
     net.add_election(0, "witcher");
     net.connect(0, 1);
     net.connect(1, 2);

@@ -10,7 +10,7 @@
 # a "newer" version of bash-completion, so if you see an error such as
 # "_get_comp_words_by_ref: command not found", try sourcing the Dojo
 # bash-completion package via:
-#   source "`doj pkg path core/bash-completion`/etc/profile.d/bash_completion.sh"
+#   source "`doj pkg path karate/bash-completion`/etc/profile.d/bash_completion.sh"
 
 # bash_completion for doj
 _doj()

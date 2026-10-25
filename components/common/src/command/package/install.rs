@@ -17,13 +17,13 @@
 //! # Examples
 //!
 //! ```bash
-//! $ doj pkg install core/redis
+//! $ doj pkg install karate/redis
 //! ```
 //!
-//! Will install `core/redis` package from a custom depot:
+//! Will install `karate/redis` package from a custom depot:
 //!
 //! ```bash
-//! $ doj pkg install core/redis/3.0.1 redis -u http://depot.co:9633
+//! $ doj pkg install karate/redis/3.0.1 redis -u http://depot.co:9633
 //! ```
 //!
 //! This would install the `3.0.1` version of redis.
@@ -128,7 +128,7 @@ impl FromStr for InstallSource {
     type Err = hcore::Error;
 
     /// Create an `InstallSource` from either a package identifier
-    /// string (e.g. "core/doj"), or from the path to a local package.
+    /// string (e.g. "karate/doj"), or from the path to a local package.
     ///
     /// Returns an error if the string is neither a valid package
     /// identifier, or is not the path to an actual Dojo package.

@@ -1,21 +1,21 @@
 $pkg_name = "doj-launcher"
-$pkg_origin = "core"
-$pkg_maintainer = "Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_origin = "karate"
+$pkg_maintainer = "Strip Mall Karate Company"
 $pkg_license = @("Apache-2.0")
 $pkg_deps=@(
-    "core/openssl",
-    "core/zlib",
-    "core/libarchive",
-    "core/libsodium",
-    "core/xz"
+    "karate/openssl",
+    "karate/zlib",
+    "karate/libarchive",
+    "karate/libsodium",
+    "karate/xz"
 )
 $pkg_bin_dirs = @("bin")
 $pkg_build_deps = @(
-    "core/visual-cpp-redist-2015",
-    "core/visual-cpp-build-tools-2015",
-    "core/rust",
-    "core/cacerts",
-    "core/git"
+    "karate/visual-cpp-redist-2015",
+    "karate/visual-cpp-build-tools-2015",
+    "karate/rust",
+    "karate/cacerts",
+    "karate/git"
 )
 
 function Invoke-Prepare {

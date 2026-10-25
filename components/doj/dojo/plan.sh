@@ -1,22 +1,22 @@
 # shellcheck disable=2154
 pkg_name=doj
 _pkg_distname=$pkg_name
-pkg_origin=core
+pkg_origin=karate
 pkg_version=$(cat "$SRC_PATH/../../VERSION")
-pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+pkg_maintainer="Strip Mall Karate Company"
 pkg_license=('Apache-2.0')
 # The result is a portable, static binary in a zero-dependency package.
 pkg_deps=()
-pkg_build_deps=(core/musl
-                core/zlib-musl
-                core/xz-musl
-                core/bzip2-musl
-                core/libarchive-musl
-                core/openssl-musl
-                core/libsodium-musl
-                core/coreutils
-                core/rust
-                core/gcc)
+pkg_build_deps=(karate/musl
+                karate/zlib-musl
+                karate/xz-musl
+                karate/bzip2-musl
+                karate/libarchive-musl
+                karate/openssl-musl
+                karate/libsodium-musl
+                karate/coreutils
+                karate/rust
+                karate/gcc)
 pkg_bin_dirs=(bin)
 
 bin=$_pkg_distname

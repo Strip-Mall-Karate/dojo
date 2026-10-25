@@ -1,24 +1,24 @@
 $pkg_name = "doj-sup"
-$pkg_origin = "core"
+$pkg_origin = "karate"
 $pkg_version = "$(Get-Content $PLAN_CONTEXT/../../../VERSION)"
-$pkg_maintainer = "Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_maintainer = "Strip Mall Karate Company"
 $pkg_license = @("Apache-2.0")
 $pkg_bin_dirs = @("bin")
 $pkg_deps=@(
-    "core/powershell",
-    "core/openssl",
-    "core/zlib",
-    "core/libarchive",
-    "core/libsodium",
-    "core/visual-cpp-redist-2015",
-    "core/xz",
-    "core/zeromq"
+    "karate/powershell",
+    "karate/openssl",
+    "karate/zlib",
+    "karate/libarchive",
+    "karate/libsodium",
+    "karate/visual-cpp-redist-2015",
+    "karate/xz",
+    "karate/zeromq"
 )
 $pkg_build_deps = @(
-    "core/visual-cpp-build-tools-2015",
-    "core/rust",
-    "core/cacerts",
-    "core/raml2html"
+    "karate/visual-cpp-build-tools-2015",
+    "karate/rust",
+    "karate/cacerts",
+    "karate/raml2html"
 )
 
 function Invoke-Prepare {

@@ -285,7 +285,7 @@ two = 2
     /// If you want to modify parts of it, it's easier to change
     /// things on a mutable reference.
     fn default_render_context<'a>() -> RenderContext<'a> {
-        let ident = PackageIdent::new("core", "test_pkg", Some("1.0.0"), Some("20180321150416"));
+        let ident = PackageIdent::new("karate", "test_pkg", Some("1.0.0"), Some("20180321150416"));
 
         let deps = vec![PackageIdent::new("test", "pkg1", Some("1.0.0"), Some("20180321150416")),
                         PackageIdent::new("test", "pkg2", Some("2.0.0"), Some("20180321150416")),
@@ -388,6 +388,6 @@ two = 2
 
         let output = render("{{pkg.origin}}", &ctx);
 
-        assert_eq!(output, "core");
+        assert_eq!(output, "karate");
     }
 }

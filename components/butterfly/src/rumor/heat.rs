@@ -434,7 +434,7 @@ mod tests {
     }
 
     fn test_service(member_id: &str) -> Service {
-        let package: PackageIdent = "core/foo/1.0.0/20180701125610".parse().unwrap();
+        let package: PackageIdent = "karate/foo/1.0.0/20180701125610".parse().unwrap();
         let sg = ServiceGroup::new(None, "foo", "default", None).unwrap();
         Service::new(member_id, &package, sg, SysInfo::default(), None)
     }

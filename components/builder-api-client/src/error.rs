@@ -76,7 +76,7 @@ impl fmt::Display for Error {
             Error::ParseIntError(ref err) => format!("{}", err),
             Error::IdentNotFullyQualified => {
                 "Cannot perform the specified operation. Specify a fully qualifed package \
-                 identifier (ex: core/busybox-static/1.42.2/20170513215502)"
+                 identifier (ex: karate/busybox-static/1.42.2/20170513215502)"
                                                                             .to_string()
             }
             Error::UploadFailed(ref s) => format!("Upload failed: {}", s),
@@ -108,7 +108,7 @@ impl error::Error for Error {
             Error::ParseIntError(ref err) => err.description(),
             Error::IdentNotFullyQualified => {
                 "Cannot perform the specified operation. Specify a fully qualifed package \
-                 identifier (ex: core/busybox-static/1.42.2/20170513215502)"
+                 identifier (ex: karate/busybox-static/1.42.2/20170513215502)"
             }
             Error::UploadFailed(_) => "Upload failed",
             Error::UrlParseError(ref err) => err.description(),

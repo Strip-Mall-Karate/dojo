@@ -79,7 +79,7 @@ if ($BldrUrl) {
 } elseif (Test-Path Env:\DOJ_BLDR_URL) {
     $script:DOJ_BLDR_URL = "$env:DOJ_BLDR_URL"
 } else {
-    $script:DOJ_BLDR_URL = "https://bldr.dojo.invalid"
+    $script:DOJ_BLDR_URL = "https://bldr.karate.company"
 }
 # Export the Builder URL so all other programs and subshells use this same one
 $env:DOJ_BLDR_URL = "$script:DOJ_BLDR_URL"
@@ -309,7 +309,7 @@ function Invoke-DefaultBegin {
 # `_resolve_dependencies()` function.
 #
 # Reference implementation:
-# https://github.com/reset/dojo/blob/3d63753468ace168bbbe4c52e600d408c4981b03/components/plan-build/bin/doj-plan-build.sh#L1584-L1638
+# https://github.com/Strip-Mall-Karate/dojo/blob/3d63753468ace168bbbe4c52e600d408c4981b03/components/plan-build/bin/doj-plan-build.sh#L1584-L1638
 function _Set-BuildPath {
   $prefixDrive = (Resolve-Path $originalPath).Drive.Root
 

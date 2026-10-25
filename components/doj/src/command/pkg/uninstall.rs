@@ -171,10 +171,10 @@ fn maybe_delete(ui: &mut UI,
     let ident = install.ident();
     let pkg_root_path = hfs::pkg_root_path(Some(fs_root_path));
 
-    let doj = PackageIdent::from_str("core/doj")?;
+    let doj = PackageIdent::from_str("karate/doj")?;
     if ident.satisfies(&doj) {
         ui.status(Status::Skipping,
-                  format!("{}. You can't uninstall core/doj", &ident))?;
+                  format!("{}. You can't uninstall karate/doj", &ident))?;
         return Ok(false);
     }
 
@@ -185,8 +185,8 @@ fn maybe_delete(ui: &mut UI,
         return Ok(false);
     }
 
-    // The excludes list could be looser than the fully qualified idents.  E.g. if core/redis is on
-    // the exclude list then we should exclude core/redis/1.1.0/20180608091936.  We use the
+    // The excludes list could be looser than the fully qualified idents.  E.g. if karate/redis is on
+    // the exclude list then we should exclude karate/redis/1.1.0/20180608091936.  We use the
     // `Identifiable` trait which supplies this logic for PackageIdents
     let should_exclude = excludes.iter().any(|i| i.satisfies(ident));
     if should_exclude {

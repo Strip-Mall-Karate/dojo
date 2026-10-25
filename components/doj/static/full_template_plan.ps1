@@ -25,7 +25,7 @@ $pkg_version="0.1.0"
 {{#if pkg_maintainer ~}}
 $pkg_maintainer="{{ pkg_maintainer }}"
 {{else ~}}
-$pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_maintainer="Strip Mall Karate Company"
 {{/if}}
 
 # Optional.
@@ -208,7 +208,7 @@ $pkg_upstream_url="{{ pkg_upstream_url }}"
 #
 # The default implementations (the Invoke-Default* functions) are defined in the
 # plan build script:
-# https://github.com/reset/dojo/tree/master/components/plan-build-ps1/bin/doj-plan-build.ps1
+# https://github.com/Strip-Mall-Karate/dojo/tree/master/components/plan-build-ps1/bin/doj-plan-build.ps1
 
 # There is no default implementation of this callback. You can use it to execute
 # any arbitrary commands before anything else happens.
@@ -288,7 +288,7 @@ $pkg_version="0.1.0"
 {{#if pkg_maintainer ~}}
 $pkg_maintainer="{{ pkg_maintainer }}"
 {{else ~}}
-$pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
+$pkg_maintainer="Strip Mall Karate Company"
 {{/if~}}
 {{#if pkg_license ~}}
 $pkg_license={{ pkg_license }}

@@ -34,9 +34,9 @@ try {
     # install from its stable channel
     if(!$InstallHarts) {
         $InstallHarts = @(
-            "core/doj-studio",
-            "core/doj-sup",
-            "core/windows-service"
+            "karate/doj-studio",
+            "karate/doj-sup",
+            "karate/windows-service"
         )
     }
     $InstallHarts | % {
@@ -45,9 +45,9 @@ try {
             Write-Error "doj install failed for $_, aborting"
         }
     }
-    $studioPath = doj pkg path core/doj-studio
+    $studioPath = doj pkg path karate/doj-studio
     if ($LASTEXITCODE -ne 0) {
-      Write-Error "core/doj-studio must be installed, aborting"
+      Write-Error "karate/doj-studio must be installed, aborting"
     }
     
     info "Purging container doj cache"
@@ -60,10 +60,10 @@ try {
     
 @"
 FROM microsoft/windowsservercore
-MAINTAINER Jamie Stormbreaker <jamie@reset.dev>
+MAINTAINER Strip Mall Karate Company
 ADD rootfs /
 WORKDIR /src
-RUN /doj/pkgs/$ident/bin/doj/doj.exe pkg exec core/windows-service install
+RUN /doj/pkgs/$ident/bin/doj/doj.exe pkg exec karate/windows-service install
 ENTRYPOINT ["/doj/pkgs/$ident/bin/powershell/pwsh.exe", "-ExecutionPolicy", "bypass", "-NoLogo", "-file", "/doj/pkgs/$ident/bin/doj-studio.ps1"]
 "@ | Out-File "$tmpRoot/Dockerfile" -Encoding ascii
     

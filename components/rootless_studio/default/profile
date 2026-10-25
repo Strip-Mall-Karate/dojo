@@ -38,7 +38,7 @@ alias fgrep='fgrep --color=auto'
 
 # Set TERMINFO so doj can give us a delightful experience.
 export TERMINFO
-TERMINFO=$(doj pkg path core/ncurses)/share/terminfo
+TERMINFO=$(doj pkg path karate/ncurses)/share/terminfo
 
 emacs() {
   if command -v emacs > /dev/null; then

@@ -634,7 +634,7 @@ two = 2
 
     /// Create a basic SvcMember struct for use in tests
     fn default_svc_member<'a>() -> SvcMember<'a> {
-        let ident = PackageIdent::new("core", "test_pkg", Some("1.0.0"), Some("20180321150416"));
+        let ident = PackageIdent::new("karate", "test_pkg", Some("1.0.0"), Some("20180321150416"));
         SvcMember { member_id: Cow::Owned("MEMBER_ID".into()),
                     pkg: Cow::Owned(Some(ident)),
                     application: Cow::Owned(None),
@@ -679,7 +679,7 @@ two = 2
                          ctl_gateway_port:  Cow::Owned(5679),
                          permanent:         Cow::Owned(false), };
 
-        let ident = PackageIdent::new("core", "test_pkg", Some("1.0.0"), Some("20180321150416"));
+        let ident = PackageIdent::new("karate", "test_pkg", Some("1.0.0"), Some("20180321150416"));
 
         let deps = vec![PackageIdent::new("test", "pkg1", Some("1.0.0"), Some("20180321150416")),
                         PackageIdent::new("test", "pkg2", Some("2.0.0"), Some("20180321150416")),

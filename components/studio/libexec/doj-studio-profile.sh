@@ -2,7 +2,7 @@
 
 # TESTING CHANGES
 # Documentation on testing local changes to this lives here:
-# https://github.com/reset/dojo/blob/master/BUILDING.md#testing-changes
+# https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
 
 # Setting the user file-creation mask (umask) to 022 ensures that newly created
 # files and directories are only writable by their owner, but are readable and

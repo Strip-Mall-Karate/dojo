@@ -1169,9 +1169,9 @@ mod tests {
                            http_addr);
 
         let ident = if cfg!(target_os = "linux") {
-            PackageIdent::new("core", "tree", Some("1.7.0"), Some("20180609045201"))
+            PackageIdent::new("karate", "tree", Some("1.7.0"), Some("20180609045201"))
         } else if cfg!(target_os = "windows") {
-            PackageIdent::new("core", "7zip", Some("16.04"), Some("20170131110814"))
+            PackageIdent::new("karate", "7zip", Some("16.04"), Some("20170131110814"))
         } else {
             panic!("This is being run on a platform that's not currently supported");
         };

@@ -30,7 +30,7 @@ pub const ARTIFACT_PATH_ENVVAR: &str = "ARTIFACT_PATH";
 const ORIGIN_ENVVAR: &str = "DOJ_ORIGIN";
 const STUDIO_CMD: &str = "doj-studio";
 const STUDIO_CMD_ENVVAR: &str = "DOJ_STUDIO_BINARY";
-const STUDIO_PACKAGE_IDENT: &str = "core/doj-studio";
+const STUDIO_PACKAGE_IDENT: &str = "karate/doj-studio";
 
 pub fn start(ui: &mut UI, args: &[OsString]) -> Result<()> {
     if henv::var(ORIGIN_ENVVAR).is_err() {

@@ -256,7 +256,7 @@ impl fmt::Display for SupError {
                 format!("Missing required bind(s), {}", e.join(", "))
             }
             Error::MissingRequiredIdent => {
-                "Missing required ident field: (example: ident = \"core/redis\")".to_string()
+                "Missing required ident field: (example: ident = \"karate/redis\")".to_string()
             }
             Error::NameLookup(ref e) => format!("Error resolving a name or IP address: {}", e),
             Error::NetErr(ref err) => err.to_string(),
@@ -385,7 +385,7 @@ impl error::Error for SupError {
                 "A service to start without specifying a service group for all required binds"
             }
             Error::MissingRequiredIdent => {
-                "Missing required ident field: (example: ident = \"core/redis\")"
+                "Missing required ident field: (example: ident = \"karate/redis\")"
             }
             Error::NetErr(ref err) => err.description(),
             Error::NetParseError(_) => "Can't parse IP:port",

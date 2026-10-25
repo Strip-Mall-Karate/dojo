@@ -6,10 +6,10 @@
 version = "0.0.0"
 
 [pkg]
-ident = "core/testplan/0.1.0/20170224155210"
+ident = "karate/testplan/0.1.0/20170224155210"
 name = "testplan"
 origin = "core"
-path = "/doj/pkgs/core/testplan/0.1.0/20170224155210"
+path = "/doj/pkgs/karate/testplan/0.1.0/20170224155210"
 release = "20170224155210"
 svc_config_path = "/doj/svc/testplan/config"
 svc_data_path = "/doj/svc/testplan/data"

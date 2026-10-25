@@ -75,7 +75,7 @@ print_help() {
   cat <<USAGE
 ${_cmd}
 
-Maintainer: Jamie Stormbreaker <jamie@reset.dev>
+Maintainer: Strip Mall Karate Company
 
 Installs the Dojo 'doj' program.
 
@@ -290,7 +290,7 @@ install_doj() {
       install -v "${archive_dir}"/doj /usr/local/bin/doj
       ;;
     linux)
-      local _ident="core/doj"
+      local _ident="karate/doj"
       if [ -n "${version-}" ]; then
         _ident+="/$version";
       fi

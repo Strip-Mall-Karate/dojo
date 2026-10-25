@@ -20,7 +20,7 @@ Expand-Archive -Path doj.zip -DestinationPath $bootstrapDir -Force
 Remove-Item doj.zip -Force
 $dojExe = (Get-Item "$bootstrapDir/*/doj.exe").FullName
 
-$env:DOJ_ORIGIN="core"
+$env:DOJ_ORIGIN="karate"
 if($env:ORIGIN_KEY) {
     "SIG-SEC-1`ncore-20170318210306`n`n$($env:ORIGIN_KEY)" | & $dojExe origin key import
 }
@@ -37,12 +37,12 @@ $hart = (Get-Item "results\*.hart")[-1]
 & $dojExe pkg install $hart.FullName
 if ($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
 
-$binPath = (Resolve-Path "/doj/pkgs/core/windows-service/*/*/bin").Path
+$binPath = (Resolve-Path "/doj/pkgs/karate/windows-service/*/*/bin").Path
 $pathParts = $binPath.Split("\")
 $versionStamp = "$($pathParts[-3])-$($pathParts[-2])"
 Update-AppveyorBuild -Version $versionStamp
 
-& $dojExe pkg exec core/windows-service install
+& $dojExe pkg exec karate/windows-service install
 if(!(Get-Service Dojo -ErrorAction SilentlyContinue)) {
     Throw "The Dojo service was not installed!"
 }

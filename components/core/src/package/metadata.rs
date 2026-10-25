@@ -385,7 +385,7 @@ port=front-end.port
 
         assert_eq!(output.bind_name, "my_bind");
         assert_eq!(output.satisfying_service,
-                   PackageIdent::from_str("core/test").unwrap());
+                   PackageIdent::from_str("karate/test").unwrap());
     }
 
     #[test]
@@ -400,7 +400,7 @@ port=front-end.port
         let pkg_root = Builder::new().prefix("pkg-root").tempdir().unwrap();
         let install_dir = pkg_root.path();
 
-        let expected = "core/foo=db:core/database";
+        let expected = "karate/foo=db:core/database";
         write_metafile(install_dir, MetaFile::Binds, expected);
 
         let bind_map = read_metafile(install_dir, MetaFile::Binds).unwrap();

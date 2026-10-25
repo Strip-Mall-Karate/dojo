@@ -341,13 +341,13 @@ current_running_version_for() {
 #
 # Examples:
 #
-#    latest_from_builder core/redis stable
-#    # => core/redis/x.x.x/nnnnnnnnnnnnnn from `stable` channel
+#    latest_from_builder karate/redis stable
+#    # => karate/redis/x.x.x/nnnnnnnnnnnnnn from `stable` channel
 #
-#    latest_from_builder core/redis/2.3.4 stable
-#    # => core/redis/2.3.4/nnnnnnnnnnnnnn from `stable` channel
+#    latest_from_builder karate/redis/2.3.4 stable
+#    # => karate/redis/2.3.4/nnnnnnnnnnnnnn from `stable` channel
 #
-#    latest_from_builder core/redis unstable
+#    latest_from_builder karate/redis unstable
 #    # => same, but from the 'unstable' channel
 #
 latest_from_builder() {
@@ -362,7 +362,7 @@ latest_from_builder() {
     local package_name
     local version
 
-    url_base="https://bldr.dojo.invalid/v1/depot"
+    url_base="https://bldr.karate.company/v1/depot"
 
     # Generate an appropriate URL based on our input
     case "${#parsed[@]}" in

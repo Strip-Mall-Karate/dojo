@@ -32,7 +32,7 @@ use dojo_core::{package::{PackageIdent,
 use time::{Duration as TimeDuration,
            SteadyTime};
 
-pub const SUP_PKG_IDENT: &str = "core/doj-sup";
+pub const SUP_PKG_IDENT: &str = "karate/doj-sup";
 const DEFAULT_FREQUENCY: i64 = 60_000;
 const FREQUENCY_ENVVAR: &str = "DOJ_SUP_UPDATE_MS";
 

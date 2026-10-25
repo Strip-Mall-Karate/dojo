@@ -62,14 +62,14 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
     ui.heading("Dojo Builder Instance")?;
     ui.para(
         "Dojo packages can be stored in either the public builder instance \
-         https://bldr.dojo.invalid or in an on-premises builder depot instance. If \
+         https://bldr.karate.company or in an on-premises builder depot instance. If \
          you do not set a builder URL now, the `doj` CLI will default to using \
          the public builder instance. This can be overridden at any time after setup.",
     )?;
     if ask_default_builder_instance(ui)? {
         ui.br()?;
         ui.para("Enter the url of your builder instance. The default is \
-                 https://bldr.dojo.invalid. The configured endpoint can be overridden any time \
+                 https://bldr.karate.company. The configured endpoint can be overridden any time \
                  with a `DOJ_BLDR_URL` envvar or a --url flag on the cli.")?;
         let mut url = prompt_url(ui)?;
 
@@ -100,7 +100,7 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
         ui.br()?;
         ui.para("Enter the name of your origin. If you plan to publish your packages publicly, \
                  we recommend that you select one that is not already in use on the Dojo \
-                 build service found at https://bldr.dojo.invalid/.")?;
+                 build service found at https://bldr.karate.company/.")?;
         ui.para("Origins must begin with a lowercase letter or number. Allowed characters \
                  include lowercase letters, numbers, _, -. No more than 255 characters.")?;
         let mut origin = prompt_origin(ui)?;
@@ -143,7 +143,7 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
              to Builder, or checking status of your build jobs from the Dojo client will \
              require you to use an access token.")?;
     ui.para("The Dojo Personal Access Token can be generated via the Builder  Profile page \
-             (https://bldr.dojo.invalid/#/profile). Once you have generated your token, you can \
+             (https://bldr.karate.company/#/profile). Once you have generated your token, you can \
              enter it here.")?;
     ui.para("If you would like to save your token for use by the Dojo client, please enter \
              your access token. Otherwise, just enter No.")?;

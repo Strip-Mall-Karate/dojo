@@ -46,7 +46,7 @@ mod ssl {
 
     use crate::error::Result;
 
-    const CACERTS_PKG_IDENT: &str = "core/cacerts";
+    const CACERTS_PKG_IDENT: &str = "karate/cacerts";
     const CACERT_PEM: &str = include_str!(concat!(env!("OUT_DIR"), "/cacert.pem"));
 
     pub fn set_ca(ctx: &mut SslContextBuilder, fs_root_path: Option<&Path>) -> Result<()> {

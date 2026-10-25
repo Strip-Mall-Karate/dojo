@@ -12,7 +12,7 @@
           "cfg": {
             "port": 80,
             "ssl-port": 443,
-            "url": "https://bldr.dojo.invalid"
+            "url": "https://bldr.karate.company"
           },
           "confirmed": false,
           "departed": false,
@@ -120,7 +120,7 @@
             "client_id": "hahano",
             "client_secret": "justkidding",
             "enabled": true,
-            "redirect_url": "https://bldr.dojo.invalid/",
+            "redirect_url": "https://bldr.karate.company/",
             "webhook_secret": "nowayjose"
           },
           "log_level": "info",
@@ -128,7 +128,7 @@
             "client_id": "fakeclientidyo",
             "client_secret": "topsekret",
             "provider": "github",
-            "redirect_url": "https://bldr.dojo.invalid/",
+            "redirect_url": "https://bldr.karate.company/",
             "token_url": "https://github.com/login/oauth/access_token",
             "userinfo_url": "https://api.github.com/user"
           },

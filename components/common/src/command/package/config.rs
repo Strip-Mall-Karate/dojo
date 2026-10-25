@@ -17,7 +17,7 @@
 //! # Examples
 //!
 //! ```bash
-//! $ doj pkg config core/redis
+//! $ doj pkg config karate/redis
 //! ```
 //!
 //! Will show the `default.toml`.
