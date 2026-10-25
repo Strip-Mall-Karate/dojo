@@ -6,19 +6,36 @@
 //!
 //! The kernel panics when init exits, so as PID 1 the Launcher never exits.
 //! Where it would have exited it stops every remaining process, flushes the
-//! filesystems and powers the machine off.
+//! filesystems and powers the machine off, or reboots it.
 
 use std::process;
 
 /// Whether this process is the machine's init.
 pub fn is_init() -> bool { process::id() == 1 }
 
+/// Prepares the machine for an init Launcher. The kernel reboots at once on
+/// Ctrl-Alt-Del unless init asks for it as SIGINT, which the Launcher turns
+/// into a clean reboot.
+pub fn prepare() {
+    if is_init() {
+        imp::catch_ctrl_alt_del()
+    }
+}
+
 /// Ends the Launcher with `code`, or powers the machine off if it is init.
 pub fn exit(code: i32) -> ! {
     if is_init() {
-        imp::power_off(code)
+        imp::halt(imp::Halt::PowerOff, code)
     }
     process::exit(code)
+}
+
+/// Reboots the machine. A Launcher that isn't init just exits.
+pub fn reboot() -> ! {
+    if is_init() {
+        imp::halt(imp::Halt::Reboot, 0)
+    }
+    process::exit(0)
 }
 
 #[cfg(target_os = "linux")]
@@ -36,9 +53,24 @@ mod imp {
     /// How long the remaining processes get to exit after SIGTERM before they are killed.
     const TERM_GRACE: Duration = Duration::from_secs(10);
 
-    pub fn power_off(code: i32) -> ! {
-        outputln!("Launcher is init and finished with code {}; powering off",
-                  code);
+    pub enum Halt {
+        PowerOff,
+        Reboot,
+    }
+
+    pub fn catch_ctrl_alt_del() {
+        if unsafe { libc::reboot(libc::RB_DISABLE_CAD) } != 0 {
+            error!("Unable to catch Ctrl-Alt-Del: {}",
+                   io::Error::last_os_error());
+        }
+    }
+
+    pub fn halt(how: Halt, code: i32) -> ! {
+        let (verb, cmd) = match how {
+            Halt::PowerOff => ("powering off", libc::RB_POWER_OFF),
+            Halt::Reboot => ("rebooting", libc::RB_AUTOBOOT),
+        };
+        outputln!("Launcher is init and finished with code {}; {}", code, verb);
 
         // As init, a signal to pid -1 reaches every process but this one.
         unsafe { libc::kill(-1, libc::SIGTERM) };
@@ -51,10 +83,10 @@ mod imp {
 
         unsafe {
             libc::sync();
-            libc::reboot(libc::RB_POWER_OFF);
+            libc::reboot(cmd);
         }
         // reboot(2) returns only when it fails, and init still must not exit.
-        error!("Unable to power off: {}", io::Error::last_os_error());
+        error!("Unable to finish {}: {}", verb, io::Error::last_os_error());
         loop {
             thread::sleep(Duration::from_secs(3600));
         }
@@ -77,5 +109,12 @@ mod imp {
     use std::process;
 
     // Dojo is init only on Linux.
-    pub fn power_off(code: i32) -> ! { process::exit(code) }
+    pub enum Halt {
+        PowerOff,
+        Reboot,
+    }
+
+    pub fn catch_ctrl_alt_del() {}
+
+    pub fn halt(_how: Halt, code: i32) -> ! { process::exit(code) }
 }

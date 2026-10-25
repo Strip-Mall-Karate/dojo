@@ -406,6 +406,16 @@ impl Manager {
 
     pub fn term(proc_lock_file: &Path) -> Result<()> {
         match read_process_lock(proc_lock_file) {
+            // The lock holds the Launcher's PID. When that is the machine's init, SIGTERM would
+            // power the machine off, so restart the Supervisor instead: the Launcher passes
+            // SIGHUP on to it.
+            #[cfg(unix)]
+            Ok(1) => {
+                println!("The Launcher is this machine's init, so the Supervisor restarts \
+                          instead of stopping. SIGTERM to PID 1 powers the machine off.");
+                process::signal(1, Signal::HUP).map_err(|_| sup_error!(Error::SignalFailed))?;
+                Ok(())
+            }
             Ok(pid) => {
                 process::signal(pid, Signal::TERM).map_err(|_| sup_error!(Error::SignalFailed))?;
                 Ok(())

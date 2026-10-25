@@ -26,6 +26,7 @@ use crate::{core::{self,
                              PackageInstall}},
             error::{Error,
                     Result},
+            init,
             protocol::{self,
                        ERR_NO_RETRY_EXCODE,
                        OK_NO_RETRY_EXCODE},
@@ -45,7 +46,8 @@ use semver::{Version,
 use std::os::unix::process::ExitStatusExt;
 #[cfg(unix)]
 use std::process::ExitStatus;
-use std::{collections::HashMap,
+use std::{cmp,
+          collections::HashMap,
           fs,
           io::Write,
           path::PathBuf,
@@ -57,7 +59,8 @@ use std::{collections::HashMap,
                  Condvar,
                  Mutex},
           thread,
-          time::Duration};
+          time::{Duration,
+                 Instant}};
 
 const IPC_CONNECT_TIMEOUT_SECS: &str = "DOJ_LAUNCH_SUP_CONNECT_TIMEOUT_SECS";
 const DEFAULT_IPC_CONNECT_TIMEOUT_SECS: u64 = 5;
@@ -70,12 +73,27 @@ const SUP_VERSION_CHECK_DISABLE: &str = "DOJ_LAUNCH_NO_SUP_VERSION_CHECK";
 // always existed.
 const SUP_VERSION_REQ: &str = ">= 0.56";
 
+/// The delay before restarting a Supervisor that exited, doubled each time it exits again soon
+/// after starting, up to `MAX_RESTART_DELAY`.
+const MIN_RESTART_DELAY: Duration = Duration::from_secs(1);
+const MAX_RESTART_DELAY: Duration = Duration::from_secs(30);
+/// A Supervisor that ran at least this long before exiting restarts after `MIN_RESTART_DELAY`.
+const STABLE_RUN: Duration = Duration::from_secs(60);
+
 type Receiver = IpcReceiver<Vec<u8>>;
 type Sender = IpcSender<Vec<u8>>;
 
 enum TickState {
     Continue,
     Exit(i32),
+    Reboot,
+}
+
+/// How the Launcher finished.
+pub enum Ending {
+    Exit(i32),
+    /// Asked to reboot the machine, which only an init Launcher does.
+    Reboot,
 }
 
 pub struct Server {
@@ -86,6 +104,9 @@ pub struct Server {
     pipe:          String,
     supervisor:    Child,
     args:          Vec<String>,
+    started:       Instant,
+    restart_at:    Option<Instant>,
+    restart_delay: Duration,
 }
 
 impl Drop for Server {
@@ -111,7 +132,10 @@ impl Server {
                     rx,
                     pipe,
                     supervisor,
-                    args })
+                    args,
+                    started: Instant::now(),
+                    restart_at: None,
+                    restart_delay: MIN_RESTART_DELAY })
     }
 
     /// Spawn a Supervisor and setup a bi-directional IPC connection to it.
@@ -151,6 +175,18 @@ impl Server {
         Ok(())
     }
 
+    /// Restarts the Supervisor after a delay that doubles while it keeps exiting soon after it
+    /// starts.
+    fn schedule_restart(&mut self) {
+        if self.started.elapsed() >= STABLE_RUN {
+            self.restart_delay = MIN_RESTART_DELAY;
+        }
+        let delay = self.restart_delay;
+        self.restart_delay = cmp::min(delay * 2, MAX_RESTART_DELAY);
+        outputln!("Restarting the Supervisor in {}s", delay.as_secs());
+        self.restart_at = Some(Instant::now() + delay);
+    }
+
     fn forward_signal(&self, signal: Signal) {
         if let Err(err) = core::os::process::signal(self.supervisor.id() as Pid, signal) {
             error!("Unable to signal Supervisor, {}, {}",
@@ -187,6 +223,14 @@ impl Server {
     // well, accepting an ExitStatus instead of Option<i32>
     fn handle_supervisor_exit(&mut self, code: Option<i32>) -> Result<TickState> {
         debug!("launcher::server::handle_supervisor_exit(code: {:?})", code);
+        // Init keeps its Supervisor running. Only a signal to init itself ends it.
+        if init::is_init() {
+            match code {
+                Some(code) => outputln!("Supervisor exited with code {}", code),
+                None => outputln!("Supervisor exited"),
+            }
+            return Err(Error::SupShutdown);
+        }
         match code {
             Some(ERR_NO_RETRY_EXCODE) => {
                 self.services.kill_all();
@@ -267,6 +311,15 @@ impl Server {
                 self.shutdown();
                 return Ok(TickState::Exit(0));
             }
+            // To init, SIGINT is the kernel's Ctrl-Alt-Del.
+            Some(SignalEvent::Interrupt) => {
+                self.shutdown();
+                return Ok(if init::is_init() {
+                    TickState::Reboot
+                } else {
+                    TickState::Exit(0)
+                });
+            }
             Some(SignalEvent::WaitForChild) => {
                 // We only return Some if we ended up reaping our
                 // Supervisor; otherwise, we don't need to do anything
@@ -281,6 +334,15 @@ impl Server {
                 self.forward_signal(signal);
             }
             None => (),
+        }
+        if let Some(at) = self.restart_at {
+            if Instant::now() < at {
+                return Ok(TickState::Continue);
+            }
+            self.restart_at = None;
+            self.started = Instant::now();
+            self.reload()?;
+            return Ok(TickState::Continue);
         }
         self.handle_message()
     }
@@ -348,6 +410,10 @@ impl Server {
                 debug!("Supervisor exit status: {}", exit_code);
                 Some(self.handle_supervisor_exit(Some(exit_code)))
             } else if let Some(signal) = status.signal() {
+                if init::is_init() {
+                    outputln!("Supervisor process killed by signal {}", signal);
+                    return Some(Err(Error::SupShutdown));
+                }
                 // If you TERM or INT the Supervisor (currently), the
                 // Supervisor does not otherwise catch the signal. The
                 // previous Launcher implementation ultimately shut
@@ -427,23 +493,57 @@ impl ServiceTable {
 // Public Func
 //
 
-pub fn run(args: Vec<String>) -> Result<i32> {
-    let mut server = Server::new(args)?;
+pub fn run(args: Vec<String>) -> Result<Ending> {
     signals::init();
-    loop {
-        match server.tick() {
-            Ok(TickState::Continue) => thread::sleep(Duration::from_millis(100)),
-            Ok(TickState::Exit(code)) => {
-                return Ok(code);
-            }
-            Err(_) => {
-                while server.reload().is_err() {
-                    thread::sleep(Duration::from_millis(1_000));
+    let mut server = loop {
+        match Server::new(args.clone()) {
+            Ok(server) => break server,
+            Err(err) => {
+                if !init::is_init() {
+                    return Err(err);
+                }
+                // Init has nothing to do without a Supervisor but wait to try again.
+                error!("Unable to start the Supervisor, {}; trying again in {}s",
+                       err,
+                       MAX_RESTART_DELAY.as_secs());
+                if let Some(ending) = wait_without_supervisor(MAX_RESTART_DELAY) {
+                    return Ok(ending);
                 }
             }
         }
+    };
+    loop {
+        match server.tick() {
+            Ok(TickState::Continue) => thread::sleep(Duration::from_millis(100)),
+            Ok(TickState::Exit(code)) => return Ok(Ending::Exit(code)),
+            Ok(TickState::Reboot) => return Ok(Ending::Reboot),
+            Err(_) => server.schedule_restart(),
+        }
     }
 }
+
+/// Waits `delay` while no Supervisor is running, reaping orphans. A signal to shut down or
+/// reboot ends the wait with how the Launcher should finish.
+fn wait_without_supervisor(delay: Duration) -> Option<Ending> {
+    let deadline = Instant::now() + delay;
+    while Instant::now() < deadline {
+        match signals::check_for_signal() {
+            Some(SignalEvent::Shutdown) => return Some(Ending::Exit(0)),
+            Some(SignalEvent::Interrupt) => return Some(Ending::Reboot),
+            Some(SignalEvent::WaitForChild) => reap_orphans(),
+            // There is no Supervisor to pass any other signal to.
+            _ => (),
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+    None
+}
+
+#[cfg(unix)]
+fn reap_orphans() { while unsafe { libc::waitpid(-1, std::ptr::null_mut(), libc::WNOHANG) } > 0 {} }
+
+#[cfg(windows)]
+fn reap_orphans() {}
 
 pub fn send<T>(tx: &Sender, msg: &T) -> Result<()>
     where T: protocol::LauncherMessage
