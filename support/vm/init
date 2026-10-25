@@ -1,0 +1,18 @@
+#!/bin/sh
+# Stage 0 PID 1: mounts the kernel filesystems and hands the console to a
+# shell. doj-launch replaces this once it can run as PID 1.
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t tmpfs tmpfs /run
+
+echo "dojo: booted $(uname -srm)"
+
+if grep -qw dojo.check /proc/cmdline; then
+  echo "dojo: pid1=$(cat /proc/1/comm)"
+  echo "dojo: check ok"
+  poweroff -f
+fi
+
+exec sh

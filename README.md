@@ -25,11 +25,23 @@ another.
 | `components/plan-build` | Builds a package from a plan |
 | `components/studio` | The clean-room build environment |
 | `components/pkg-export-docker`, `pkg-export-tar` | Exporters |
+| `support/vm` | The Dojo VM for Apple silicon Macs |
 | `vendor/ipc-channel` | Servo's ipc-channel with Windows support |
 
 ## Building
 
 See [BUILDING.md](BUILDING.md).
+
+## The Dojo VM
+
+On an Apple silicon Mac with Nix, `support/vm/boot` boots Dojo in a VM under
+Apple's hypervisor with its serial console on your terminal (Ctrl-A X quits).
+`support/vm/boot --check` boots it, waits for the init to report and powers it
+off, exiting non-zero if it didn't report within 60 seconds.
+
+The kernel and userland come from nixpkgs (nixos-26.05) as a stage-0 bootstrap
+until `karate` packages replace them, and the init is a shell script until
+`doj-launch` can run as PID 1.
 
 ## License
 

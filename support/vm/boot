@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Boots the Dojo VM on an Apple silicon Mac with the serial console on this
+# terminal (Ctrl-A X quits). --check boots, waits for the init to report and
+# exits 0 only if it did.
+set -euo pipefail
+
+usage() {
+  echo "usage: support/vm/boot [--check]" >&2
+  exit 2
+}
+
+check=false
+case "${1-}" in
+  "") ;;
+  --check) check=true ;;
+  *) usage ;;
+esac
+[[ $# -le 1 ]] || usage
+
+if [[ "$(uname -sm)" != "Darwin arm64" ]]; then
+  echo "boot: needs an Apple silicon Mac (Apple's hypervisor runs arm64 guests natively)" >&2
+  exit 1
+fi
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+build() {
+  nix-build --no-out-link "${here}" -A "$1"
+}
+qemu="$(build qemu)/bin/qemu-system-aarch64"
+kernel="$(build kernel)/Image"
+initrd="$(build initrd)"
+
+append="console=ttyAMA0 panic=-1"
+args=(
+  -machine virt -accel hvf -cpu host -smp 4 -m 2048
+  -kernel "${kernel}" -initrd "${initrd}"
+  -nographic -no-reboot
+)
+
+if ! "${check}"; then
+  exec "${qemu}" "${args[@]}" -append "${append}"
+fi
+
+log="$(mktemp -t dojo-vm-check)"
+status=0
+"$(build coreutils)/bin/timeout" 60 "${qemu}" "${args[@]}" -append "${append} dojo.check" </dev/null >"${log}" 2>&1 || status=$?
+cat "${log}"
+if [[ "${status}" -ne 0 ]]; then
+  echo "boot: QEMU exited ${status} (124 is the 60 second deadline); log in ${log}" >&2
+  exit 1
+fi
+if ! grep -q '^dojo: check ok' "${log}"; then
+  echo "boot: the VM shut down without reporting; log in ${log}" >&2
+  exit 1
+fi
+rm -f "${log}"
