@@ -5,11 +5,19 @@
 # ends with a reboot instead. --payload adds a gzipped cpio archive
 # (doj-launch, doj-sup and their libraries) on top of the initramfs.
 #
-# The VM has eth0 on QEMU's user-mode network, which needs no privilege.
+# The VM always has eth0 on QEMU's user-mode network. --ring and --link add
+# eth1 on a UDP tunnel between two QEMU processes on this Mac, which is how
+# support/vm/ring joins two VMs; --peer and --members tell the Supervisor and
+# the check about the other machine. --console serves the serial console on a
+# local TCP port instead of this terminal, so two VMs can run at once.
 set -euo pipefail
 
 usage() {
-  echo "usage: support/vm/boot [--check | --check-reboot] [--payload <file.cpio.gz>]" >&2
+  cat >&2 <<'EOF'
+usage: support/vm/boot [--check | --check-reboot] [--payload <file.cpio.gz>]
+                       [--ring <addr/prefix> --link <local udp port>:<remote udp port>]
+                       [--peer <addr>] [--members <n>] [--console <tcp port>]
+EOF
   exit 2
 }
 
@@ -17,6 +25,11 @@ check=false
 check_args="dojo.check"
 ending="reboot: Power down"
 payload=""
+ring=""
+link=""
+peer=""
+members=""
+console=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --check) check=true; shift ;;
@@ -29,11 +42,40 @@ while [[ $# -gt 0 ]]; do
     --payload)
       [[ $# -ge 2 ]] || usage
       payload="$2"; shift 2 ;;
+    --ring)
+      [[ $# -ge 2 ]] || usage
+      ring="$2"; shift 2 ;;
+    --link)
+      [[ $# -ge 2 ]] || usage
+      link="$2"; shift 2 ;;
+    --peer)
+      [[ $# -ge 2 ]] || usage
+      peer="$2"; shift 2 ;;
+    --members)
+      [[ $# -ge 2 ]] || usage
+      members="$2"; shift 2 ;;
+    --console)
+      [[ $# -ge 2 ]] || usage
+      console="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
 if [[ -n "${payload}" && ! -f "${payload}" ]]; then
   echo "boot: no payload at ${payload}" >&2
+  exit 2
+fi
+if [[ -n "${ring}" || -n "${link}" ]]; then
+  if [[ ! "${ring}" =~ ^[0-9.]+/[0-9]+$ || ! "${link}" =~ ^[0-9]+:[0-9]+$ ]]; then
+    echo "boot: --ring <addr/prefix> and --link <local udp port>:<remote udp port> go together" >&2
+    exit 2
+  fi
+fi
+if [[ -n "${members}" && ! "${members}" =~ ^[0-9]+$ ]]; then
+  echo "boot: --members takes a count" >&2
+  exit 2
+fi
+if [[ -n "${console}" ]] && "${check}"; then
+  echo "boot: --check keeps the console itself" >&2
   exit 2
 fi
 
@@ -71,9 +113,31 @@ args=(
   # its own DHCP server and routes out through the Mac.
   -netdev user,id=net0 -device virtio-net-pci,netdev=net0
 )
+if [[ -n "${ring}" ]]; then
+  # eth1: Ethernet frames in UDP datagrams between two QEMU processes on the
+  # loopback, a link the user-mode network cannot offer. The guest addresses
+  # it statically; init reads dojo.ring from the command line.
+  args+=(
+    -netdev "dgram,id=ring0,local.type=inet,local.host=127.0.0.1,local.port=${link%%:*},remote.type=inet,remote.host=127.0.0.1,remote.port=${link##*:}"
+    -device virtio-net-pci,netdev=ring0
+  )
+  append+=" dojo.ring=${ring}"
+fi
+if [[ -n "${peer}" ]]; then
+  append+=" dojo.peer=${peer}"
+fi
+if [[ -n "${members}" ]]; then
+  check_args+=" dojo.members=${members}"
+fi
 
 if ! "${check}"; then
-  "${qemu}" "${args[@]}" -append "${append}" -nographic
+  if [[ -n "${console}" ]]; then
+    echo "boot: serial console on 127.0.0.1:${console} (nc 127.0.0.1 ${console})" >&2
+    "${qemu}" "${args[@]}" -append "${append}" \
+      -display none -monitor none -serial "tcp:127.0.0.1:${console},server=on,wait=off"
+  else
+    "${qemu}" "${args[@]}" -append "${append}" -nographic
+  fi
   exit
 fi
 

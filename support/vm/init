@@ -12,11 +12,29 @@ hostname dojo
 
 echo "dojo: booted $(uname -srm)"
 
+# The kernel command line says where this machine stands in a ring:
+# dojo.ring=<addr/prefix> is its address on the link to the other machines,
+# dojo.peer=<addr> the Supervisor it joins through.
+ring=""
+peer=""
+for word in $(cat /proc/cmdline); do
+  case "${word}" in
+    dojo.ring=*) ring="${word#dojo.ring=}" ;;
+    dojo.peer=*) peer="${word#dojo.peer=}" ;;
+  esac
+done
+
 # eth0 is QEMU's user-mode network. Its DHCP lease brings a default route,
 # which the Supervisor needs to find its own address. udhcpc -n gives up after
 # its retries rather than wait forever, so a VM without a NIC still boots.
 ip link set eth0 up
 udhcpc -i eth0 -s /bin/lease -n -q || echo "dojo: no DHCP lease on eth0"
+
+# eth1 is the ring link: a static address on the second NIC boot attaches.
+if [ -n "${ring}" ]; then
+  ip addr add "${ring}" dev eth1
+  ip link set eth1 up
+fi
 
 if grep -qw dojo.check /proc/cmdline; then
   /bin/check &
@@ -24,7 +42,11 @@ fi
 
 if [ -x /bin/doj-launch ]; then
   export DOJ_SUP_BINARY=/bin/doj-sup
-  exec /bin/doj-launch run
+  set -- run
+  if [ -n "${peer}" ]; then
+    set -- "$@" --peer "${peer}"
+  fi
+  exec /bin/doj-launch "$@"
 fi
 
 exec sh
