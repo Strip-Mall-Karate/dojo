@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+# Runs nixpkgs' Linux builder, an arm64 NixOS VM under Apple's hypervisor, and
+# builds and tests this tree in it.
+#
+#   builder start                  start the VM and wait for ssh
+#   builder stop                   stop it
+#   builder ssh [command...]       a shell or a command in the VM
+#   builder payload [--update-lock]
+#                                  build doj-launch, doj-sup and doj into
+#                                  support/vm/out/payload.cpio.gz for boot --payload;
+#                                  --update-lock lets cargo change Cargo.lock and
+#                                  copies it back
+#   builder test <package>...      test packages and check their formatting
+#
+# The VM's disk, ssh key and log live in DOJO_BUILDER_STATE (default
+# ~/.local/state/dojo-builder). Its ssh port listens on localhost only.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo="$(cd "${here}/../.." && pwd)"
+state="${DOJO_BUILDER_STATE:-${XDG_STATE_HOME:-${HOME}/.local/state}/dojo-builder}"
+port=31022
+
+usage() {
+  sed -n '5,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  exit 2
+}
+
+vm_ssh() {
+  ssh -F "${state}/ssh_config" dojo-builder "$@"
+}
+
+running() {
+  [[ -f "${state}/pid" ]] && kill -0 "$(cat "${state}/pid")" 2>/dev/null
+}
+
+start() {
+  if running; then
+    echo "builder: already running (pid $(cat "${state}/pid"))" >&2
+    return 0
+  fi
+  mkdir -p "${state}/key"
+  if [[ ! -f "${state}/key/builder_ed25519" ]]; then
+    ssh-keygen -q -t ed25519 -N "" -C builder@dojo -f "${state}/key/builder_ed25519"
+  fi
+  # The VM's sshd reads the public key from a mounted directory and, with
+  # StrictModes, wants it owned by root: a store path is.
+  mkdir -p "${state}/authorized"
+  cp "${state}/key/builder_ed25519.pub" "${state}/authorized/builder_ed25519.pub"
+  local keys
+  keys="$(nix-store --add "${state}/authorized")"
+  cat >"${state}/ssh_config" <<CONFIG
+Host dojo-builder
+  HostName 127.0.0.1
+  Port ${port}
+  User builder
+  IdentityFile ${state}/key/builder_ed25519
+  IdentitiesOnly yes
+  BatchMode yes
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ${state}/known_hosts
+  ConnectTimeout 5
+CONFIG
+  rm -f "${state}/known_hosts"
+
+  # nixpkgs' start script, with four changes: hardware virtualization only (no
+  # emulation fallback), 8 CPUs (GICv2's limit) and 32 GB, ssh on localhost
+  # only, and a 120 GB disk for Rust builds.
+  local vm
+  vm="$(nix-build --no-out-link "${here}" -A builder)"
+  local script="${state}/run-builder"
+  cp "${vm}/bin/run-nixos-vm" "${script}"
+  chmod u+w "${script}"
+  local edits=(
+    's/accel=hvf:tcg/accel=hvf/'
+    's/-m 3072 /-m 32768 /'
+    's/-smp 1 /-smp 8 /'
+    's/hostfwd=tcp::31022-:22/hostfwd=tcp:127.0.0.1:31022-:22/'
+    's/"20480M"/"122880M"/'
+  )
+  local edit
+  for edit in "${edits[@]}"; do
+    local before
+    before="$(cat "${script}")"
+    sed -i.bak "${edit}" "${script}"
+    if [[ "$(cat "${script}")" == "${before}" ]]; then
+      echo "builder: nixpkgs' start script changed; this edit no longer applies: ${edit}" >&2
+      exit 1
+    fi
+  done
+  rm -f "${script}.bak"
+
+  (
+    cd "${state}"
+    KEYS="${keys}" NIX_DISK_IMAGE="${state}/nixos.qcow2" nohup "${script}" </dev/null >"${state}/console.log" 2>&1 &
+    echo $! >"${state}/pid"
+  )
+  local _
+  for _ in $(seq 1 60); do
+    if vm_ssh true 2>/dev/null; then
+      echo "builder: running (pid $(cat "${state}/pid")); console log ${state}/console.log" >&2
+      return 0
+    fi
+    if ! running; then
+      echo "builder: the VM exited; see ${state}/console.log" >&2
+      exit 1
+    fi
+    sleep 3
+  done
+  echo "builder: no ssh after 180 seconds; see ${state}/console.log" >&2
+  exit 1
+}
+
+stop() {
+  if ! running; then
+    echo "builder: not running" >&2
+    return 0
+  fi
+  local pid
+  pid="$(cat "${state}/pid")"
+  vm_ssh sudo -n poweroff 2>/dev/null || kill "${pid}"
+  local _
+  for _ in $(seq 1 30); do
+    if ! kill -0 "${pid}" 2>/dev/null; then
+      rm -f "${state}/pid"
+      return 0
+    fi
+    sleep 1
+  done
+  kill -9 "${pid}"
+  rm -f "${state}/pid"
+}
+
+require_running() {
+  if ! running; then
+    echo "builder: not running; start it with support/vm/builder start" >&2
+    exit 1
+  fi
+}
+
+# Copies the tree's tracked and unignored files into a fresh ~/dojo in the VM,
+# keeping the old tree's target directory so builds stay incremental.
+sync_tree() {
+  (cd "${repo}" && git ls-files -z --cached --others --exclude-standard |
+    COPYFILE_DISABLE=1 tar --no-mac-metadata --null -T - -cf -) |
+    vm_ssh 'rm -rf dojo.new && mkdir dojo.new && tar -x -C dojo.new 2>/dev/null &&
+            if [ -d dojo/target ]; then mv dojo/target dojo.new/; fi &&
+            chmod -R u+w dojo 2>/dev/null; rm -rf dojo && mv dojo.new dojo'
+}
+
+case "${1-}" in
+  start)
+    [[ $# -eq 1 ]] || usage
+    start
+    ;;
+  stop)
+    [[ $# -eq 1 ]] || usage
+    stop
+    ;;
+  ssh)
+    require_running
+    shift
+    exec ssh -F "${state}/ssh_config" -t dojo-builder "$@"
+    ;;
+  payload)
+    [[ $# -le 2 ]] || usage
+    case "${2-}" in
+      "" | --update-lock) ;;
+      *) usage ;;
+    esac
+    require_running
+    sync_tree
+    vm_ssh "dojo/support/vm/guest/build.sh dojo out ${2-}"
+    mkdir -p "${here}/out"
+    scp -q -F "${state}/ssh_config" dojo-builder:out/payload.cpio.gz "${here}/out/payload.cpio.gz"
+    if [[ "${2-}" == --update-lock ]]; then
+      scp -q -F "${state}/ssh_config" dojo-builder:dojo/Cargo.lock "${repo}/Cargo.lock"
+    fi
+    echo "builder: ${here}/out/payload.cpio.gz" >&2
+    ;;
+  test)
+    [[ $# -ge 2 ]] || usage
+    require_running
+    shift
+    sync_tree
+    vm_ssh dojo/support/vm/guest/test.sh dojo "$@"
+    ;;
+  *) usage ;;
+esac

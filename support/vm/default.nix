@@ -18,6 +18,9 @@ in
   inherit (host) qemu coreutils;
   inherit kernel;
 
+  # nixpkgs' Linux builder: a NixOS VM that builds Dojo's binaries for arm64.
+  builder = host.darwin.linux-builder.nixosConfig.system.build.vm;
+
   initrd =
     host.runCommand "dojo-initrd"
       {
@@ -27,13 +30,17 @@ in
         ];
       }
       ''
-        mkdir -p root/bin root/dev root/proc root/sys root/run root/tmp
+        mkdir -p root/bin root/root root/dev root/proc root/sys root/run root/tmp
         cp ${busybox}/bin/busybox root/bin/busybox
         for applet in $(${host.coreutils}/bin/cat ${./applets}); do
           ln -s busybox "root/bin/$applet"
         done
         cp ${./init} root/init
-        chmod 0755 root/init
+        cp ${./check} root/bin/check
+        chmod 0755 root/init root/bin/check
+        mkdir -p root/etc
+        echo "root:x:0:0:root:/root:/bin/sh" > root/etc/passwd
+        echo "root:x:0:" > root/etc/group
         (cd root && find . | cpio --quiet -o -H newc -R 0:0) | gzip -9 > $out
       '';
 }

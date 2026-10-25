@@ -1,0 +1,33 @@
+#!/bin/sh
+# Runs beside PID 1 when the kernel command line has dojo.check. Reports what
+# it finds and shuts the VM down; boot --check reads the report.
+
+report() {
+  echo "dojo: $*"
+}
+
+if [ ! -x /bin/doj-launch ]; then
+  report "pid1=$(cat /proc/1/comm)"
+  report "check ok"
+  poweroff -f
+fi
+
+ok=false
+for _ in $(seq 1 60); do
+  if wget -q -O /tmp/services http://127.0.0.1:9631/services 2>/dev/null; then
+    ok=true
+    break
+  fi
+  sleep 1
+done
+
+report "pid1=$(cat /proc/1/comm)"
+report "supervisor=$(pidof doj-sup || echo none)"
+if [ "$(cat /proc/1/comm)" != doj-launch ] || ! "${ok}"; then
+  report "check failed: the Supervisor's HTTP gateway did not answer"
+  poweroff -f
+fi
+report "check ok"
+# SIGTERM to init is a shutdown request. The Launcher stops the Supervisor and,
+# being init, powers the machine off instead of exiting.
+kill -TERM 1

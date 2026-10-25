@@ -34,14 +34,24 @@ See [BUILDING.md](BUILDING.md).
 
 ## The Dojo VM
 
-On an Apple silicon Mac with Nix, `support/vm/boot` boots Dojo in a VM under
-Apple's hypervisor with its serial console on your terminal (Ctrl-A X quits).
-`support/vm/boot --check` boots it, waits for the init to report and powers it
-off, exiting non-zero if it didn't report within 60 seconds.
+On an Apple silicon Mac with Nix, `support/vm/boot` boots Dojo in an arm64 VM
+under Apple's hypervisor, with its serial console on your terminal (Ctrl-A X
+quits). The kernel and userland come from nixpkgs (nixos-26.05) as a stage-0
+bootstrap until `karate` packages replace them.
 
-The kernel and userland come from nixpkgs (nixos-26.05) as a stage-0 bootstrap
-until `karate` packages replace them, and the init is a shell script until
-`doj-launch` can run as PID 1.
+To run `doj-launch` as PID 1, build it in nixpkgs' Linux builder (another arm64
+VM, which `support/vm/builder` starts) and boot with the result:
+
+```sh
+support/vm/builder start
+support/vm/builder payload
+support/vm/boot --payload support/vm/out/payload.cpio.gz
+```
+
+`--check` boots, waits for the Supervisor's HTTP gateway to answer, sends
+SIGTERM to PID 1, and exits non-zero unless the Launcher powers the VM off
+cleanly. `support/vm/builder test <package>...` runs a package's tests and
+format check in the builder. `support/vm/builder stop` stops it.
 
 ## License
 

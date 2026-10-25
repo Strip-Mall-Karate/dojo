@@ -1,21 +1,30 @@
 #!/usr/bin/env bash
 # Boots the Dojo VM on an Apple silicon Mac with the serial console on this
 # terminal (Ctrl-A X quits). --check boots, waits for the init to report and
-# exits 0 only if it did.
+# exits 0 only if it did. --payload adds a gzipped cpio archive (doj-launch,
+# doj-sup and their libraries) on top of the initramfs.
 set -euo pipefail
 
 usage() {
-  echo "usage: support/vm/boot [--check]" >&2
+  echo "usage: support/vm/boot [--check] [--payload <file.cpio.gz>]" >&2
   exit 2
 }
 
 check=false
-case "${1-}" in
-  "") ;;
-  --check) check=true ;;
-  *) usage ;;
-esac
-[[ $# -le 1 ]] || usage
+payload=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check) check=true; shift ;;
+    --payload)
+      [[ $# -ge 2 ]] || usage
+      payload="$2"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+if [[ -n "${payload}" && ! -f "${payload}" ]]; then
+  echo "boot: no payload at ${payload}" >&2
+  exit 2
+fi
 
 if [[ "$(uname -sm)" != "Darwin arm64" ]]; then
   echo "boot: needs an Apple silicon Mac (Apple's hypervisor runs arm64 guests natively)" >&2
@@ -29,6 +38,14 @@ build() {
 qemu="$(build qemu)/bin/qemu-system-aarch64"
 kernel="$(build kernel)/Image"
 initrd="$(build initrd)"
+work="$(mktemp -d -t dojo-vm)"
+trap 'rm -rf "${work}"' EXIT
+if [[ -n "${payload}" ]]; then
+  # The kernel unpacks concatenated archives in order, so the payload lands
+  # on top of the base initramfs.
+  cat "${initrd}" "${payload}" > "${work}/initrd"
+  initrd="${work}/initrd"
+fi
 
 append="console=ttyAMA0 panic=-1"
 args=(
@@ -38,19 +55,23 @@ args=(
 )
 
 if ! "${check}"; then
-  exec "${qemu}" "${args[@]}" -append "${append}"
+  "${qemu}" "${args[@]}" -append "${append}"
+  exit
 fi
 
-log="$(mktemp -t dojo-vm-check)"
+log="${work}/check.log"
 status=0
-"$(build coreutils)/bin/timeout" 60 "${qemu}" "${args[@]}" -append "${append} dojo.check" </dev/null >"${log}" 2>&1 || status=$?
+"$(build coreutils)/bin/timeout" 120 "${qemu}" "${args[@]}" -append "${append} quiet dojo.check" </dev/null >"${log}" 2>&1 || status=$?
 cat "${log}"
 if [[ "${status}" -ne 0 ]]; then
-  echo "boot: QEMU exited ${status} (124 is the 60 second deadline); log in ${log}" >&2
+  echo "boot: QEMU exited ${status} (124 is the 120 second deadline)" >&2
   exit 1
 fi
-if ! grep -q '^dojo: check ok' "${log}"; then
-  echo "boot: the VM shut down without reporting; log in ${log}" >&2
+if ! grep -q 'dojo: check ok' "${log}"; then
+  echo "boot: the VM shut down without reporting success" >&2
   exit 1
 fi
-rm -f "${log}"
+if grep -q 'Kernel panic' "${log}" || ! grep -q 'reboot: Power down' "${log}"; then
+  echo "boot: the VM did not power off cleanly" >&2
+  exit 1
+fi
