@@ -1,6 +1,6 @@
 # Sourced by build.sh and test.sh inside the builder VM: the build environment
-# for the 0.79.1 tree (Rust 1.33.0, OpenSSL 1.0.2) and run(), which runs a
-# command in it.
+# for the tree (the Rust its rust-toolchain names, OpenSSL 1.0.2) and run(),
+# which runs a command in it.
 base=$HOME/dojo-build
 np=github:NixOS/nixpkgs/nixos-24.05
 export NIX_CONFIG="extra-experimental-features = nix-command flakes"
