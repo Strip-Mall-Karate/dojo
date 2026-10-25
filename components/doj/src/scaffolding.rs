@@ -109,7 +109,7 @@ fn autodiscover_scaffolding(ui: &mut UI) -> Result<Option<PackageIdent>> {
         ui.warn("Unable to determine the type of app in your current directory")?;
         ui.para("For now, we'll generate a plan with all of the available plan variables and \
                  build phase callbacks. For more documentation on plan options try passing \
-                 --withdocs or visit https://www.habitat.sh/docs/reference/plan-syntax/")?;
+                 --withdocs.")?;
         Ok(None)
     }
 }

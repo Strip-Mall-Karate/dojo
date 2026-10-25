@@ -75,7 +75,7 @@ print_help() {
   cat <<USAGE
 ${_cmd}
 
-Authors: The Dojo Maintainers <humans@habitat.sh>
+Maintainer: Jamie Stormbreaker <jamie@reset.dev>
 
 Installs the Dojo 'doj' program.
 

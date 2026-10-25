@@ -79,9 +79,7 @@ use toml;
 /// Serde `Serialize` implementation (and those of its members), so
 /// change this with care.
 ///
-/// User-facing documentation is available at
-/// https://www.habitat.sh/docs/reference/#template-data; update that
-/// as required.
+/// User-facing documentation describes this data; update it as required.
 #[derive(Clone, Debug, Serialize)]
 pub struct RenderContext<'a> {
     sys:  SystemInfo<'a>,

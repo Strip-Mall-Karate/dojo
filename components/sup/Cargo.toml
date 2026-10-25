@@ -2,7 +2,7 @@
 name = "dojo_sup"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+authors = []
 build = "./build.rs"
 workspace = "../../"
 
@@ -78,7 +78,7 @@ ctrlc = "*"
 winapi =  { version = "*", features = ["tlhelp32"] }
 
 [dev-dependencies]
-# Pending upgrade activities in https://github.com/habitat-sh/core/issues/72
+# Pending upgrade activities
 hyper = "0.10"
 json = "*"
 

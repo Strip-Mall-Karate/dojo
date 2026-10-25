@@ -137,7 +137,6 @@ pub fn sup_root(custom_state_path: Option<&PathBuf>) -> PathBuf {
         // supervisors on the same host with --override-name. The sup dir
         // should really be /doj/sup now, but it would be an awkward change
         // since the assumption of /doj/sup/default is pervasive.
-        // See https://github.com/habitat-sh/habitat/issues/5266
         None => STATE_PATH_PREFIX.join("default"),
     }
 }

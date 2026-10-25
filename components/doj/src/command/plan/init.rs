@@ -153,10 +153,6 @@ pub fn start(ui: &mut UI,
     }
     ui.para("`/hooks/` contains automation hooks into your dojo.")?;
 
-    ui.para(
-        "For more information on any of the files: \
-         https://www.habitat.sh/docs/reference/plan-syntax/",
-    )?;
 
     render_ignorefile(ui, &root)?;
 

@@ -37,8 +37,8 @@ use crate::{error::{Error,
 const DOCKER_CMD: &str = "docker";
 const DOCKER_CMD_ENVVAR: &str = "DOJ_DOCKER_BINARY";
 
-const DOCKER_IMAGE: &str = "habitat/default-studio";
-const DOCKER_WINDOWS_IMAGE: &str = "dojo-docker-registry.bintray.io/win-studio";
+const DOCKER_IMAGE: &str = "localhost/dojo/default-studio";
+const DOCKER_WINDOWS_IMAGE: &str = "localhost/dojo/win-studio";
 const DOCKER_IMAGE_ENVVAR: &str = "DOJ_DOCKER_STUDIO_IMAGE";
 const DOCKER_OPTS_ENVVAR: &str = "DOJ_DOCKER_OPTS";
 const DOCKER_SOCKET: &str = "/var/run/docker.sock";

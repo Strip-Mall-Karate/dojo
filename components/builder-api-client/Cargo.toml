@@ -2,13 +2,13 @@
 name = "dojo_api_client"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+authors = []
 workspace = "../../"
 
 [dependencies]
 broadcast = "*"
 chrono = "*"
-# Pending upgrade activities in https://github.com/habitat-sh/core/issues/72
+# Pending upgrade activities
 hyper = "0.10"
 hyper-openssl = "*"
 log = "*"

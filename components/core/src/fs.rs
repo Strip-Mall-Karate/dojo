@@ -410,7 +410,6 @@ impl<'a> SvcDir<'a> {
     {
         // We do not want to change the permissions of an already
         // existing directory
-        // See https://github.com/habitat-sh/habitat/issues/4475
         if path.as_ref().exists() {
             return Ok(());
         }

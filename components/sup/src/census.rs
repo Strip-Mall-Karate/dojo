@@ -556,9 +556,7 @@ impl Serialize for CensusGroup {
 // NOTE: This is exposed to users in templates. Any public member is
 // accessible to users, so change this interface with care.
 //
-// User-facing documentation is available at
-// https://www.habitat.sh/docs/reference/#template-data; update that
-// as required.
+// User-facing documentation describes this data; update it as required.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CensusMember {
     pub member_id: MemberId,

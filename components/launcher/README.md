@@ -26,41 +26,6 @@ from this directory. To make a build for release, run the `build` command from w
 
 Since the Supervisor requires the Launcher to start and it always attempts to start the latest version of the Supervisor packaged and installed on the host you may find it difficult to start your dev version of the Supervisor. You can force the Supervisor to start a specific version of the Supervisor by setting the `DOJ_SUP_BINARY` environment variable to the file path of the desired Supervisor binary to start.
 
-### Building Windows Release
+### Windows service identities
 
-The launcher may optionaly start a Windows process under an alternate identity declared via `svc_user`. Windows requires a password for this identity. We encrypt the identity when loading services and decrypt the password when the launcher spawns the new process. We ["complexify" this encryption with a secret key](https://docs.microsoft.com/en-us/windows/desktop/api/dpapi/nf-dpapi-cryptprotectdata). This key is stored in 1password and must be set in the `DOJ_CRYPTO_KEY` environment variable when building `doj` or `launcher`. The `doj` build gets this from a secret appveyor key but the key must be manually set wnenever the launcher is built manually.
-
-We have an appveyor build that will build and promote Windows launchers when code changes are merged into the `launcher` component. In order for a new launcher to get included in the Dojo Windows service and also built into the dockerized Windows Studio, one needs to invoke a new Appveyor build of the [windows-service](https://github.com/habitat-sh/windows-service) repo. This builds, uploads and promotes the `windows-service` Dojo package. The best way to do this is by using its rest API. First you will need a bearer token to authenticate with. You can get this by signing into the Appveyor site and then going to your [api-keys](https://ci.appveyor.com/api-keys) page. Choose "chef" from the accounts drop down menu and then copy your bearer token. With that, the following Powershell script will invoke the build:
-
-```
-$token = 'MY_BEARER_TOKEN'
-$headers = @{
-  "Authorization" = "Bearer $token"
-  "Content-type" = "application/json"
-}
-$body = @"
-{
-    "accountName": "chef",
-    "projectSlug": "windows-service",
-    "branch": "master"
-}
-"@
-curl -H  -Uri 'https://ci.appveyor.com/api/builds' -Headers $headers -Method Post -Body $body
-```
-
-In bash:
-
-```
-token=MY_BEARER_TOKEN
-curl -H "Content-type: application/json" -H "Authorization: Bearer ${token}"  https://ci.appveyor.com/api/builds -X POST --data "{'accountName': 'chef','projectSlug': 'windows-service','branch': 'master'}"
-```
-
-You must invoke this build before starting a Windows release build.
-
-### Building an x86_64-linux-kernel2 Release
-
-If you are promoting launchers for x86_64-linux and x86_64-windows, you will also need to build a launcher for x86_64-linux-kernel2 by hand. You can do this by creating a CentOS-6 VM, either on your laptop or in a cloud instance. All further instructions are executed in the context of this VM. Once the VM is booted, you will then need to obtain an x86_64-linux-kernel2 doj binary, which can be downloaded by passing the -t argument to the install.sh script: `curl https://raw.githubusercontent.com/reset/dojo/master/components/doj/install.sh | sudo bash -s -- -t x86_64-linux-kernel2`.  Then, you will need to obtain the core origin signing keys and [install them](https://www.habitat.sh/docs/dojo-cli/#doj-origin-key-import). Next, you will need to clone this repository. Once that is done, cd into the directory created and run `env DOJ_ORIGIN=core doj pkg build components/launcher`.  The resulting hart file should be uploaded to builder to the `unstable` channel. Take note of the `$pkg_ident` for use in the pipeline.
-
-### Releasing
-
-To release a new version of the supervisor, upload the new `.hart` file and then [promote it to stable in builder](https://bldr.habitat.sh/#/pkgs/core/doj-launcher). If a new release contains important features or bug fixes, it will have to be communicated to the community and installed manually. Because of the nature of the launcher, this will require downtime in production environments, but it should be an exceedingly rare occurrence.
+The launcher may optionally start a Windows process under an alternate identity declared via `svc_user`. Windows requires a password for this identity. The password is encrypted when a service is loaded and decrypted when the launcher spawns the process, ["complexified" with a secret key](https://docs.microsoft.com/en-us/windows/desktop/api/dpapi/nf-dpapi-cryptprotectdata). Set that key in the `DOJ_CRYPTO_KEY` environment variable when building `doj` or the launcher.

@@ -1,6 +1,6 @@
 # 17.10 (artful) will be EOL July 2018; update FROM directive before then
 FROM ubuntu:18.04
-MAINTAINER The Dojo Maintainers <humans@habitat.sh>
+MAINTAINER Jamie Stormbreaker <jamie@reset.dev>
 
 ENV CARGO_HOME /cargo-cache
 ENV PATH $PATH:$CARGO_HOME/bin:/root/.cargo/bin

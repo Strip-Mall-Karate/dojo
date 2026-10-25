@@ -12,7 +12,7 @@ if((Get-Command doj -ErrorAction SilentlyContinue) -eq $null) {
 }
 
 If (-not (Test-Path env:IMAGE_NAME)) {
-   $imageName = "dojo-docker-registry.bintray.io/win-studio-x86_64-windows"
+   $imageName = "localhost/dojo/win-studio-x86_64-windows"
 } Else {
    $imageName = $env:IMAGE_NAME
 }
@@ -60,7 +60,7 @@ try {
     
 @"
 FROM microsoft/windowsservercore
-MAINTAINER The Dojo Maintainers <humans@habitat.sh>
+MAINTAINER Jamie Stormbreaker <jamie@reset.dev>
 ADD rootfs /
 WORKDIR /src
 RUN /doj/pkgs/$ident/bin/doj/doj.exe pkg exec core/windows-service install

@@ -67,7 +67,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
     clap_app!(doj =>
         (about: "\"A Dojo is the natural environment for your services\" - Alan Turing")
         (version: super::VERSION)
-        (author: "\nAuthors: The Dojo Maintainers <humans@habitat.sh>\n")
+        (author: "\nMaintainer: Jamie Stormbreaker <jamie@reset.dev>\n")
         (@setting GlobalVersion)
         (@setting ArgRequiredElseHelp)
         (@subcommand cli =>
@@ -128,7 +128,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the cli.toml or DOJ_BLDR_URL environment variable if defined. \
-                         (default: https://bldr.habitat.sh)")
+                         (default: https://bldr.dojo.invalid)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg GROUP: -g --group "Schedule jobs for this package and all of its reverse \
                         dependencies")
@@ -142,7 +142,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg FORCE: -f --force
                      "Don't prompt for confirmation")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
@@ -161,7 +161,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 )
                 (@subcommand demote =>
@@ -178,7 +178,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 )
                 (@subcommand status =>
@@ -201,7 +201,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                 )
             )
             (@subcommand channel =>
@@ -214,7 +214,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg CHANNEL: +required + takes_value "The channel name")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "Sets the origin to which the channel will belong. Default is from \
@@ -226,7 +226,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg CHANNEL: +required + takes_value "The channel name")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "Sets the origin to which the channel belongs. Default is from 'DOJ_ORIGIN'\
@@ -238,7 +238,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg ORIGIN: +takes_value {valid_origin}
                         "The origin for which channels will be listed. Default is from 'DOJ_ORIGIN'\
                         or cli.toml")
@@ -256,7 +256,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (@arg BLDR_URL: -u --url +takes_value {valid_url}
                      "Specify an alternate Builder endpoint. If not specified, the value will \
                      be taken from the `DOJ_BLDR_URL environment variable if defined. (default: \
-                     https://bldr.habitat.sh)")
+                     https://bldr.dojo.invalid)")
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
             )
             (@subcommand key =>
@@ -274,7 +274,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg WITH_SECRET: -s --secret
                         "Download secret signing key instead of public signing key")
                     (@arg WITH_ENCRYPTION: -e --encryption
@@ -328,7 +328,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 )
             )
@@ -345,7 +345,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "The origin for which the secret will be uploaded. Default is from \
@@ -361,7 +361,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "The origin for which the secret will be deleted. Default is from \
@@ -372,7 +372,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     (@arg BLDR_URL: -u --url +takes_value {valid_url}
                         "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
                     (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                     (@arg ORIGIN: -o --origin +takes_value {valid_origin}
                         "The origin for which secrets will be listed. Default is from 'DOJ_ORIGIN' \
@@ -434,7 +434,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (@arg BLDR_URL: -u --url +takes_value {valid_url}
                     "Specify an alternate Builder endpoint. If not specified, the value will \
                      be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                     https://bldr.habitat.sh)")
+                     https://bldr.dojo.invalid)")
                 (@arg CHANNEL: --channel -c +takes_value default_value[stable] env(ChannelIdent::ENVVAR)
                     "Retrieve the container's package from the specified release channel")
             )
@@ -479,7 +479,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (@arg SEARCH_TERM: +required +takes_value "Search term")
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.habitat.sh)")
+                    environment variable if defined. (default: https://bldr.dojo.invalid)")
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
             )
             (@subcommand sign =>
@@ -512,7 +512,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["u", "up", "upl", "uplo", "uploa"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.habitat.sh)")
+                    environment variable if defined. (default: https://bldr.dojo.invalid)")
                 (@arg AUTH_TOKEN: -z --auth +takes_value "Authentication token for Builder")
                 (@arg CHANNEL: --channel -c +takes_value
                     "Optional additional release channel to upload package to. \
@@ -533,7 +533,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["del", "dele"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.habitat.sh)")
+                    environment variable if defined. (default: https://bldr.dojo.invalid)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
                     (ex: core/busybox-static/1.42.2/20170513215502)")
                 (arg: arg_target())
@@ -544,7 +544,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["pr", "pro", "promo", "promot"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.habitat.sh)")
+                    environment variable if defined. (default: https://bldr.dojo.invalid)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
                     (ex: core/busybox-static/1.42.2/20170513215502)")
                 (@arg CHANNEL: +required +takes_value "Promote to the specified release channel")
@@ -556,7 +556,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["de", "dem", "demo", "demot"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.habitat.sh)")
+                    environment variable if defined. (default: https://bldr.dojo.invalid)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
                     (ex: core/busybox-static/1.42.2/20170513215502)")
                 (@arg CHANNEL: +required +takes_value "Demote from the specified release channel")
@@ -568,7 +568,7 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 (aliases: &["ch", "cha", "chan", "chann", "channe", "channel"])
                 (@arg BLDR_URL: -u --url +takes_value {valid_url} "Specify an alternate Builder \
                     endpoint. If not specified, the value will be taken from the DOJ_BLDR_URL \
-                    environment variable if defined. (default: https://bldr.habitat.sh)")
+                    environment variable if defined. (default: https://bldr.dojo.invalid)")
                 (@arg PKG_IDENT: +required +takes_value {valid_fully_qualified_ident} "A fully qualified package identifier \
                     (ex: core/busybox-static/1.42.2/20170513215502)")
                 (arg: arg_target())
@@ -791,7 +791,7 @@ pub fn sup_commands() -> App<'static, 'static> {
     clap_app!(("sup") =>
     (about: "The Dojo Supervisor")
     (version: super::VERSION)
-    (author: "\nAuthors: The Dojo Maintainers <humans@habitat.sh>\n")
+    (author: "\nMaintainer: Jamie Stormbreaker <jamie@reset.dev>\n")
     // set custom usage string, otherwise the binary
     // is displayed as the clap_app name, which may or may not be different.
     // see: https://github.com/kbknapp/clap-rs/blob/2724ec5399c500b12a1a24d356f4090f4816f5e2/src/app/mod.rs#L373-L394
@@ -894,7 +894,7 @@ fn sub_pkg_install(feature_flags: FeatureFlag) -> App<'static, 'static> {
         (@arg BLDR_URL: --url -u +takes_value {valid_url}
             "Specify an alternate Builder endpoint. If not specified, the value will \
                          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-                         https://bldr.habitat.sh)")
+                         https://bldr.dojo.invalid)")
         (@arg CHANNEL: --channel -c +takes_value default_value[stable] env(ChannelIdent::ENVVAR)
             "Install from the specified release channel")
         (@arg PKG_IDENT_OR_ARTIFACT: +required +multiple
@@ -1017,7 +1017,7 @@ pub fn sub_sup_run() -> App<'static, 'static> {
     (@arg BLDR_URL: -u --url +takes_value {valid_url}
         "Specify an alternate Builder endpoint. If not specified, the value will \
          be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-         https://bldr.habitat.sh)")
+         https://bldr.dojo.invalid)")
 
     (@arg CONFIG_DIR: --("config-from") +takes_value {dir_exists}
         "Use package config from this path, rather than the package itself")
@@ -1131,7 +1131,7 @@ fn sub_svc_load() -> App<'static, 'static> {
         (@arg BLDR_URL: -u --url +takes_value {valid_url}
             "Specify an alternate Builder endpoint. If not specified, the value will \
              be taken from the DOJ_BLDR_URL environment variable if defined. (default: \
-             https://bldr.habitat.sh)")
+             https://bldr.dojo.invalid)")
         (@arg TOPOLOGY: --topology -t +takes_value possible_value[standalone leader]
             "Service topology; [default: none]")
         (@arg STRATEGY: --strategy -s +takes_value {valid_update_strategy}

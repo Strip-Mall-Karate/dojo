@@ -2,7 +2,7 @@
 name = "dojo-launcher"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+authors = []
 workspace = "../../"
 
 [[bin]]

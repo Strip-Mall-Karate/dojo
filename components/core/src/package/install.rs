@@ -406,10 +406,7 @@ impl PackageInstall {
                 }
                 // The `filter()` in this chain is to reject any path entries that do not start
                 // with the package's `installed_path` (aka pkg_prefix). This check is for any
-                // packages built after
-                // https://github.com/habitat-sh/habitat/commit/13344a679155e5210dd58ecb9d94654f5ae676d3
-                // was merged (in https://github.com/habitat-sh/habitat/pull/4067, released in
-                // Dojo 0.50.0, 2017-11-30) which produced `PATH` metafiles containing extra
+                // packages built by 0.50.0 (2017-11-30) and later, which produced `PATH` metafiles containing extra
                 // path entries.
                 let pkg_prefix = fs::pkg_install_path(self.ident(), None::<&Path>);
                 let v = env::split_paths(&body).filter(|p| p.starts_with(&pkg_prefix))
@@ -418,10 +415,8 @@ impl PackageInstall {
             }
             Err(Error::MetaFileNotFound(MetaFile::Path)) => {
                 if cfg!(windows) {
-                    // This check is for any packages built after
-                    // https://github.com/habitat-sh/habitat/commit/cc1f35e4bd9f7a8d881a602380730488e6ad055a
-                    // was merged (in https://github.com/habitat-sh/habitat/pull/4478, released in
-                    // Dojo 0.53.0, 2018-02-05) which stopped producing `PATH` metafiles. This
+                    // This check is for any packages built by 0.53.0 (2018-02-05) and later,
+                    // which stopped producing `PATH` metafiles. This
                     // workaround attempts to fallback to the `RUNTIME_ENVIRONMENT` metafile and
                     // use the value of the `PATH` key as a stand-in for the `PATH` metafile.
                     let pkg_prefix = fs::pkg_install_path(self.ident(), None::<&Path>);

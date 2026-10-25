@@ -2,7 +2,7 @@
 name = "dojo_butterfly"
 version = "0.1.0"
 edition = "2018"
-authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+authors = []
 build = "build.rs"
 workspace = "../../"
 

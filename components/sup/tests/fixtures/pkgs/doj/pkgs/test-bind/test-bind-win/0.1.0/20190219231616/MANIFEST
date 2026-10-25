@@ -1,7 +1,7 @@
 # test-bind / test-bind-win
 
 
-* __Maintainer__: The Dojo Maintainers <humans@habitat.sh>
+* __Maintainer__: Jamie Stormbreaker <jamie@reset.dev>
 * __Version__: 0.1.0
 * __Release__: 20190219231616
 * __Target__: x86_64-windows
@@ -22,7 +22,7 @@
 $pkg_name="test-bind-win"
 $pkg_origin="test-bind"
 $pkg_version="0.1.0"
-$pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+$pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 $pkg_license=@("Apache-2.0")
 $pkg_binds=@{
   database="port host"

@@ -3,7 +3,7 @@ pkg_name=doj-pkg-export-docker
 _pkg_distname=$pkg_name
 pkg_origin=core
 pkg_version=$(cat "$PLAN_CONTEXT/../../../VERSION")
-pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 pkg_license=('Apache-2.0')
 # The result is a portable, static binary. However, we shell out to the
 # Docker command which we need at runtime.

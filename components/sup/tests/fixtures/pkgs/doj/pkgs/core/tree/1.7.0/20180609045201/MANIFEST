@@ -1,7 +1,7 @@
 # core / tree
 
 
-* __Maintainer__: The Dojo Maintainers <humans@habitat.sh>
+* __Maintainer__: Jamie Stormbreaker <jamie@reset.dev>
 * __Version__: 1.7.0
 * __Release__: 20180609045201
 * __Architecture__: x86_64
@@ -34,7 +34,7 @@ LD_RUN_PATH: /doj/pkgs/core/tree/1.7.0/20180609045201/lib:/doj/pkgs/core/glibc/2
 pkg_name=tree
 pkg_origin=core
 pkg_version=1.7.0
-pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 pkg_license=('gplv2+')
 pkg_source=http://mama.indstate.edu/users/ice/tree/src/tree-${pkg_version}.tgz
 pkg_shasum=6957c20e82561ac4231638996e74f4cfa4e6faabc5a2f511f0b4e3940e8f7b12

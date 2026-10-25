@@ -4,7 +4,7 @@ Brief description of {{ pkg_name }}
 
 ## Maintainers
 
-Names of core plans maintainers (The Dojo Maintainers humans@habitat.sh is usually sufficient)
+Names of the plan's maintainers
 
 ## Type of Package
 
@@ -20,58 +20,44 @@ How would a user use this package?  i.e. can a user simply call the package as a
 
 ## Bindings
 
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
+*(This is only required for service packages, not binary wrapper packages)*
 
 How do other services that want to consume this service bind to it?
 
-Checkout [the core/postgresql](https://github.com/habitat-sh/core-plans/tree/master/postgresql) README for a good example of this.
-
 ## Topologies
 
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
+*(This is only required for service packages, not binary wrapper packages)*
 
 What topologies does this plan support?
 
 ### Standalone
 
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
-
-Check out [the Dojo docs on standalone](https://www.habitat.sh/docs/using-dojo/#standalone) for more details on what the standalone topology is and what it does.
+*(This is only required for service packages, not binary wrapper packages)*
 
 If this plan can be used with the standalone topology, how do you do it?
 
-Checkout [the core/postgresql](https://github.com/habitat-sh/core-plans/tree/master/postgresql) README for a good example of this.
-
 ### Leader-Follower
 
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
+*(This is only required for service packages, not binary wrapper packages)*
 
 If this plan can be used with the leader/follower topology, how do you do it?
 
-Check out [the Dojo docs on Leader-Follower](https://www.habitat.sh/docs/using-dojo/#leader-follower-topology) for more details on what the leader-follower topology is and what it does.
-
-Checkout [the core/postgresql](https://github.com/habitat-sh/core-plans/tree/master/postgresql) README for a good example of this (look under the Clustering heading)
-
 ## Update Strategies
 
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
+*(This is only required for service packages, not binary wrapper packages)*
 
 What update strategies would work best for this plan?
 
-Checkout [the update strategy documentation](https://www.habitat.sh/docs/using-dojo/#update-strategy) for information on the strategies Dojo supports.
-
 ### Configuration Updates
 
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
-
-Checkout the [configuration update](https://www.habitat.sh/docs/using-dojo/#configuration-updates) documentation for more information on what configuration updates are and how they are executed.
+*(This is only required for service packages, not binary wrapper packages)*
 
 Link to the plan's default.toml file to list all the configurable values of the plan.
 
 If your plan has configuration values that require a complete rebuild when updated, note those here.
 
 ## Scaling
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
+*(This is only required for service packages, not binary wrapper packages)*
 
 (Optional, but recommended)
 
@@ -81,7 +67,7 @@ Can this service be run in a cluster and/or as high availability?
 
 ## Monitoring
 
-*(This is only required for service packages, not [binary wrapper packages](https://www.habitat.sh/docs/best-practices/#binary-wrapper-packages))*
+*(This is only required for service packages, not binary wrapper packages)*
 
 (Optional, but recommended)
 

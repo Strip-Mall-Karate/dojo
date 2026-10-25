@@ -22,7 +22,7 @@ impl<'a, 'b> Cli<'a, 'b> {
               (name) =>
               (about: about)
               (version: VERSION)
-              (author: "\nAuthors: The Dojo Maintainers <humans@habitat.sh>\n\n")
+              (author: "\nMaintainer: Jamie Stormbreaker <jamie@reset.dev>\n\n")
               ), }
     }
 
@@ -79,7 +79,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                     .validator(valid_url)
                     .help(
                         "Install packages from Builder at the specified URL \
-                         (default: https://bldr.habitat.sh)",
+                         (default: https://bldr.dojo.invalid)",
                     ),
             )
             .arg(
@@ -96,7 +96,7 @@ impl<'a, 'b> Cli<'a, 'b> {
                     .validator(valid_url)
                     .help(
                         "Install base packages from Builder at the specified URL \
-                         (default: https://bldr.habitat.sh)",
+                         (default: https://bldr.dojo.invalid)",
                     ),
             )
             .arg(

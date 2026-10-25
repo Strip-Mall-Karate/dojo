@@ -1,6 +1,5 @@
 {{#if with_docs ~}}
 # This file is the heart of your application's dojo.
-# See full docs at https://www.habitat.sh/docs/reference/plan-syntax/
 
 # Required.
 # Sets the name of the package. This will be used along with `$pkg_origin`,

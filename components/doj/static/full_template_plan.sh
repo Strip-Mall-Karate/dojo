@@ -1,6 +1,5 @@
 {{#if with_docs ~}}
 # This file is the heart of your application's dojo.
-# See full docs at https://www.habitat.sh/docs/reference/plan-syntax/
 
 # Required.
 # Sets the name of the package. This will be used in along with `pkg_origin`,
@@ -26,7 +25,7 @@ pkg_version="0.1.0"
 {{#if pkg_maintainer ~}}
 pkg_maintainer="{{ pkg_maintainer }}"
 {{else ~}}
-pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 {{/if}}
 
 # Optional.
@@ -362,7 +361,7 @@ pkg_version="0.1.0"
 {{#if pkg_maintainer ~}}
 pkg_maintainer="{{ pkg_maintainer }}"
 {{else ~}}
-pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 {{/if~}}
 {{#if pkg_license ~}}
 pkg_license={{ pkg_license }}

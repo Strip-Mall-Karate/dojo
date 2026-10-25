@@ -367,7 +367,7 @@ DOJ_PKG_PATH=$DOJ_ROOT_PATH/pkgs
 PLAN_CONTEXT=${1:-.}
 # The default Dojo Depot from where to download dependencies. If
 # `DOJ_BLDR_URL` is set, this value is overridden.
-: "${DOJ_BLDR_URL:=https://bldr.habitat.sh}"
+: "${DOJ_BLDR_URL:=https://bldr.dojo.invalid}"
 # Export the Builder URL so all other programs and subshells use this same one
 export DOJ_BLDR_URL
 # The default Dojo channel from where to download dependencies. If
@@ -2567,7 +2567,7 @@ _determine_doj_bin
 # We removed support for composite plans in dojo 0.75.0.  Let's give a useful error message
 # if you happen to try and build one rather than create a useless package
 if [[ -n "${pkg_type:-}" && "${pkg_type}" == "composite" ]]; then
-     exit_with "Composite plans are no longer supported. For more details see https://www.habitat.sh/blog/2018/10/shelving-composites/" 1
+     exit_with "Composite plans are no longer supported." 1
 fi
 
 # Run `do_begin`

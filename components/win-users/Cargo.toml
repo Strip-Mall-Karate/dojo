@@ -2,7 +2,7 @@
 name = "dojo_win_users"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+authors = []
 description = "Dojo library for win32 account api calls"
 workspace = "../../"
 build = "build.rs"
@@ -16,6 +16,6 @@ log = "*"
 [target.'cfg(windows)'.dependencies]
 # Moving to 0.4.0 is breaking some of our windows API calls
 # pinning to 0.3.0 until we can get to the bottom of those
-# breakages. See https://github.com/habitat-sh/core/issues/127
+# breakages.
 widestring = "0.3.0"
 winapi = { version = "*", features = ["winbase", "winerror", "handleapi"] }

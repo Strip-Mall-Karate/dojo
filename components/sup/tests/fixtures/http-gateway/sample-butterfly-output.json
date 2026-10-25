@@ -163,7 +163,7 @@
           "cfg": {
             "port": 80,
             "ssl-port": 443,
-            "url": "https://bldr.habitat.sh"
+            "url": "https://bldr.dojo.invalid"
           },
           "incarnation": 1,
           "initialized": false,
@@ -175,7 +175,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "api-proxy.habitat.dev",
+            "hostname": "api-proxy.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.6"
@@ -197,7 +197,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "api.habitat.dev",
+            "hostname": "api.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.26.0.8"
@@ -219,7 +219,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "datastore.habitat.dev",
+            "hostname": "datastore.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.4"
@@ -243,7 +243,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "jobsrv.habitat.dev",
+            "hostname": "jobsrv.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.9"
@@ -263,7 +263,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "minio.habitat.dev",
+            "hostname": "minio.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.12"
@@ -283,7 +283,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "originsrv.habitat.dev",
+            "hostname": "originsrv.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.5"
@@ -305,7 +305,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "router.habitat.dev",
+            "hostname": "router.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.26.0.4"
@@ -325,7 +325,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "sessionsrv.habitat.dev",
+            "hostname": "sessionsrv.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.8"
@@ -345,7 +345,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "0.0.0.0",
             "gossip_port": 9638,
-            "hostname": "worker.habitat.dev",
+            "hostname": "worker.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.26.0.6"

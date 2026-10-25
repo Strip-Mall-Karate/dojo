@@ -6,7 +6,7 @@
     <title>dojo</title>
     <version>$version$</version>
     <authors>Dojo Maintainers</authors>
-    <owners>Dojo, Matt Wrock</owners>
+    <owners>Jamie Stormbreaker</owners>
     <summary>A simple, flexible way to build, deploy, and manage cloud native applications</summary>
     <description>
 Dojo centers application configuration, management, and behavior around the application itself, not the infrastructure that the app runs on.
@@ -15,12 +15,9 @@ Dojo provides automation that can programmatically and declaratively build, depl
 
 Dojo can be deployed and run on various infrastructure environments including bare metal, VM, containers, and PaaS. 
     </description>
-    <projectUrl>https://habitat.sh</projectUrl>
-    <iconUrl>https://brand.chef.io/images/dojo/logos/logo-3.png</iconUrl>
+    <projectUrl>https://github.com/reset/dojo</projectUrl>
     <projectSourceUrl>https://github.com/reset/dojo</projectSourceUrl>
-    <docsUrl>https://www.habitat.sh/docs/overview/</docsUrl>
-    <mailingListUrl>https://forums.habitat.sh/</mailingListUrl>
-    <bugTrackerUrl>https://github.com/habitat-sh/habitat/issues</bugTrackerUrl>
+    <bugTrackerUrl>https://github.com/reset/dojo/issues</bugTrackerUrl>
     <tags>dojo</tags>
     <copyright>Copyright (c) 2016-2017 Chef Software Inc. and/or applicable contributors</copyright>
     <licenseUrl>https://github.com/reset/dojo/blob/master/LICENSE</licenseUrl>

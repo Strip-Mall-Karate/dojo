@@ -67,7 +67,7 @@ static LOGKEY: &'static str = "SV";
 const SUP_VERSION_CHECK_DISABLE: &str = "DOJ_LAUNCH_NO_SUP_VERSION_CHECK";
 // Version 0.56 is somewhat arbitrary. This functionality is for when we make
 // changes to the launcher that depend on supervisor behavior that hasn't
-// always existed such as https://github.com/habitat-sh/habitat/issues/5380
+// always existed.
 const SUP_VERSION_REQ: &str = ">= 0.56";
 
 type Receiver = IpcReceiver<Vec<u8>>;
@@ -144,7 +144,7 @@ impl Server {
         self.rx = rx;
         self.supervisor = supervisor;
         // We're connecting to a new supervisor instance, so we need to remove
-        // the socket files for the old pipe to avoid https://github.com/habitat-sh/habitat/issues/4673
+        // the socket files for the old pipe so the new one can bind them.
         #[cfg(not(windows))]
         self.remove_pipe();
         self.pipe = pipe;
@@ -223,8 +223,7 @@ impl Server {
         // the Supervisor can end up waiting a long time on zombie
         // processes.
         //
-        // But see https://github.com/habitat-sh/habitat/issues/6131
-        // for a possible future where this isn't needed, and reaping
+        // In a possible future this isn't needed, and reaping
         // could theoretically just take place at the very end of this
         // shutdown process, rather than repeatedly.
         while let Ok(None) = self.supervisor.try_wait() {
@@ -580,7 +579,6 @@ fn spawn_supervisor(pipe: &str, args: &[String], clean: bool) -> Result<Child> {
                    SUP_VERSION_CHECK_DISABLE);
             error!("Disabling this check may result in undefined behavior; please update to a \
                     newer Dojo version");
-            error!("For more information see https://github.com/habitat-sh/habitat/pull/5484");
             return Err(Error::SupBinaryVersion);
         }
     }

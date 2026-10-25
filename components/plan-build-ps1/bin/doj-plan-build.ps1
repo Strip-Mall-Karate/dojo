@@ -79,7 +79,7 @@ if ($BldrUrl) {
 } elseif (Test-Path Env:\DOJ_BLDR_URL) {
     $script:DOJ_BLDR_URL = "$env:DOJ_BLDR_URL"
 } else {
-    $script:DOJ_BLDR_URL = "https://bldr.habitat.sh"
+    $script:DOJ_BLDR_URL = "https://bldr.dojo.invalid"
 }
 # Export the Builder URL so all other programs and subshells use this same one
 $env:DOJ_BLDR_URL = "$script:DOJ_BLDR_URL"

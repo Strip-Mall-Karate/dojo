@@ -1,7 +1,7 @@
 $pkg_name = "doj-pkg-export-tar"
 $pkg_origin = "core"
 $pkg_version = "$(Get-Content $PLAN_CONTEXT/../../../VERSION)"
-$pkg_maintainer = "The Dojo Maintainers <humans@habitat.sh>"
+$pkg_maintainer = "Jamie Stormbreaker <jamie@reset.dev>"
 $pkg_license = @("Apache-2.0")
 $pkg_bin_dirs = @("bin")
 $pkg_deps=@(

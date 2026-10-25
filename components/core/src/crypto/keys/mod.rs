@@ -835,7 +835,6 @@ mod test {
     /// files. This is particularly important in environments like
     /// Kubernetes that rely heavily on symlinks.
     ///
-    /// See https://github.com/habitat-sh/habitat/issues/2939
     #[test]
     fn keys_that_are_symlinks_can_still_be_found() {
         let temp_dir = Builder::new().prefix("symlinks_are_ok").tempdir().unwrap();

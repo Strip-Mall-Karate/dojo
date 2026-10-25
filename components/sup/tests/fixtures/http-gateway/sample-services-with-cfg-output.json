@@ -12,7 +12,7 @@
     "binds": [
       "router:builder-router.default"
     ],
-    "bldr_url": "https://bldr.habitat.sh",
+    "bldr_url": "https://bldr.dojo.invalid",
     "cfg": {
       "api": {
         "features_enabled": "jobsrv",
@@ -243,7 +243,7 @@
       "ctl_gateway_port": 9632,
       "gossip_ip": "0.0.0.0",
       "gossip_port": 9638,
-      "hostname": "api.habitat.dev",
+      "hostname": "api.dojo.test",
       "http_gateway_ip": "0.0.0.0",
       "http_gateway_port": 9631,
       "ip": "172.25.0.3",

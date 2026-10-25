@@ -2,7 +2,7 @@
 name = "dojo_common"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+authors = []
 build = "../build-dojo.rs"
 workspace = "../../"
 
@@ -21,7 +21,7 @@ glob = "*"
 #   "foo.[0]"
 #   See https://github.com/sunng87/handlebars-rust/commit/707f05442ef6f441a1cfc6b13ac180b78cb296db
 handlebars = { version = "= 0.28.3", default-features = false }
-# Pending upgrade activities in https://github.com/habitat-sh/core/issues/72
+# Pending upgrade activities
 hyper = "0.10"
 json = "*"
 lazy_static = "*"

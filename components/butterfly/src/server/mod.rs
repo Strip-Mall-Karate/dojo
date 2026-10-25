@@ -695,7 +695,6 @@ impl Server {
     /// have seen the transition to Confirmed at different times and we don't
     /// want to depart a bunch of different members unnecessarily.
     ///
-    /// See https://github.com/habitat-sh/habitat/issues/1994
     /// See Server::check_quorum
     pub fn insert_service(&self, service: Service) {
         Self::insert_service_impl(service,

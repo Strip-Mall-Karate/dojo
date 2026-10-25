@@ -1,7 +1,7 @@
 $pkg_name="doj-studio"
 $pkg_origin="core"
 $pkg_version=Get-Content "$PLAN_CONTEXT/../../../VERSION"
-$pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+$pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 $pkg_license=@("Apache-2.0")
 $pkg_build_deps=@("core/powershell", "core/doj", "core/doj-plan-build-ps1", "core/7zip")
 $pkg_bin_dirs=@("bin")

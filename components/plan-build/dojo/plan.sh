@@ -2,7 +2,7 @@
 pkg_name=doj-plan-build
 pkg_origin=core
 pkg_version=$(cat "$SRC_PATH/../../VERSION")
-pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 pkg_license=('Apache-2.0')
 pkg_bin_dirs=(bin)
 

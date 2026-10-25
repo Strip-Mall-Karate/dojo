@@ -1,6 +1,6 @@
 $pkg_name = "doj-launcher"
 $pkg_origin = "core"
-$pkg_maintainer = "The Dojo Maintainers <humans@habitat.sh>"
+$pkg_maintainer = "Jamie Stormbreaker <jamie@reset.dev>"
 $pkg_license = @("Apache-2.0")
 $pkg_deps=@(
     "core/openssl",

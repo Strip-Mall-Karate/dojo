@@ -342,7 +342,6 @@ mod tests {
 
         // This map contains a scalar value and a table such that the serialization order
         // would trigger a ValueAfterTable error. This test ensures we avoid it.
-        // See https://github.com/habitat-sh/habitat/issues/5854
         // See https://github.com/alexcrichton/toml-rs/issues/142
         let mut map = toml::value::Table::default();
         let sub_map = toml::value::Table::default();

@@ -62,14 +62,14 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
     ui.heading("Dojo Builder Instance")?;
     ui.para(
         "Dojo packages can be stored in either the public builder instance \
-         https://bldr.habitat.sh or in an on-premises builder depot instance. If \
+         https://bldr.dojo.invalid or in an on-premises builder depot instance. If \
          you do not set a builder URL now, the `doj` CLI will default to using \
          the public builder instance. This can be overridden at any time after setup.",
     )?;
     if ask_default_builder_instance(ui)? {
         ui.br()?;
         ui.para("Enter the url of your builder instance. The default is \
-                 https://bldr.habitat.sh. The configured endpoint can be overridden any time \
+                 https://bldr.dojo.invalid. The configured endpoint can be overridden any time \
                  with a `DOJ_BLDR_URL` envvar or a --url flag on the cli.")?;
         let mut url = prompt_url(ui)?;
 
@@ -96,13 +96,11 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
              build' what key should be used to sign the packages produced. If you do not set a \
              default origin now, you will have to tell package building commands each time what \
              origin to use.")?;
-    ui.para("For more information on origins and how they are used in building packages, please \
-             consult the docs at https://www.habitat.sh/docs/create-packages-build/")?;
     if ask_default_origin(ui)? {
         ui.br()?;
         ui.para("Enter the name of your origin. If you plan to publish your packages publicly, \
                  we recommend that you select one that is not already in use on the Dojo \
-                 build service found at https://bldr.habitat.sh/.")?;
+                 build service found at https://bldr.dojo.invalid/.")?;
         ui.para("Origins must begin with a lowercase letter or number. Allowed characters \
                  include lowercase letters, numbers, _, -. No more than 255 characters.")?;
         let mut origin = prompt_origin(ui)?;
@@ -128,8 +126,6 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
             ui.para("You can either create a new signing key now, or, if you are building \
                      packages for an origin that already exists, ask the owner to give you the \
                      signing key.")?;
-            ui.para("For more information on the use of origin keys, please consult the \
-                     documentation at https://www.habitat.sh/docs/concepts-keys/#origin-keys")?;
             if ask_create_origin(ui, &origin)? {
                 create_origin(ui, &origin, cache_path)?;
             } else {
@@ -147,14 +143,10 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
              to Builder, or checking status of your build jobs from the Dojo client will \
              require you to use an access token.")?;
     ui.para("The Dojo Personal Access Token can be generated via the Builder  Profile page \
-             (https://bldr.habitat.sh/#/profile). Once you have generated your token, you can \
+             (https://bldr.dojo.invalid/#/profile). Once you have generated your token, you can \
              enter it here.")?;
     ui.para("If you would like to save your token for use by the Dojo client, please enter \
              your access token. Otherwise, just enter No.")?;
-    ui.para(
-        "For more information on using Builder, please read the \
-         documentation at https://www.habitat.sh/docs/using-builder/",
-    )?;
     if ask_default_auth_token(ui)? {
         ui.br()?;
         ui.para("Enter your Dojo Personal Access Token.")?;

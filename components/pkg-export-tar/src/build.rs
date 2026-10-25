@@ -45,7 +45,6 @@ use crate::rootfs;
 // Much of this functionality is duplicated (or slightly modified)
 // from the Docker exporter. This needs to be abstacted out in
 // the future for use with further exporters.
-// https://github.com/habitat-sh/habitat/issues/4522
 const DEFAULT_DOJ_IDENT: &str = "core/doj";
 const DEFAULT_LAUNCHER_IDENT: &str = "core/doj-launcher";
 const DEFAULT_SUP_IDENT: &str = "core/doj-sup";

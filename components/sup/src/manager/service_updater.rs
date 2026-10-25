@@ -583,7 +583,7 @@ mod tests {
         Worker { current:     "core/testing/1.0.0/20181109125930".parse()
                                                                  .expect("Can't parse ident!"),
                  spec_ident:  "core/testing".parse().expect("Can't parse ident!"),
-                 builder_url: String::from("https://bldr.habitat.sh"),
+                 builder_url: String::from("https://bldr.dojo.invalid"),
                  channel:     ChannelIdent::stable(), }
     }
 

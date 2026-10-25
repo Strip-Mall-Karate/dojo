@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Dojo helps you build, manage, and run applications - on bare metal, in the cloud, and in
-//! containers. You can [read more about it on the website](https://www.habitat.sh/).
+//! containers.
 //!
 //! Dojo contains two main components:
 //!

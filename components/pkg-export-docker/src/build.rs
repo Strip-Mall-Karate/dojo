@@ -59,7 +59,6 @@ use tempfile::TempDir;
 // Much of this functionality is duplicated (or slightly modified)
 // in the tar exporter. This needs to be abstacted out in
 // the future for use with further exporters.
-// https://github.com/habitat-sh/habitat/issues/4522
 
 const DEFAULT_DOJ_IDENT: &str = "core/doj";
 const DEFAULT_LAUNCHER_IDENT: &str = "core/doj-launcher";
@@ -1035,7 +1034,7 @@ mod test {
                                                                         .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.habitat.sh");
+            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.dojo.invalid");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 
@@ -1057,7 +1056,7 @@ mod test {
                                                           .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.habitat.sh");
+            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.dojo.invalid");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 

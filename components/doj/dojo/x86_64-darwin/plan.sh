@@ -2,7 +2,7 @@
 source ../plan.sh
 
 pkg_name=doj
-pkg_maintainer="The Dojo Maintainers <humans@habitat.sh>"
+pkg_maintainer="Jamie Stormbreaker <jamie@reset.dev>"
 # There is no true equivalent here (yet), so dependency arrays will be empty.
 pkg_deps=()
 pkg_build_deps=()
@@ -24,9 +24,7 @@ do_prepare() {
   export CARGO_TARGET_DIR="$DOJ_CACHE_SRC_PATH/$pkg_dirname"
   build_line "Setting CARGO_TARGET_DIR=$CARGO_TARGET_DIR"
 
-  # Our dependencies are coming from an Omnibus toolchain in
-  # https://github.com/habitat-sh/release-engineering/tree/master/components/bootstrap/x86_64-darwin/mac-bootstrapper
-  # (private for now, but will be opened soon)
+  # Our dependencies are coming from an Omnibus toolchain installed in /opt/doj-bundle.
   la_ldflags="-L/opt/doj-bundle/embedded/lib -lz"
   la_ldflags="$la_ldflags -L/opt/doj-bundle/embedded/lib -llzma"
   la_ldflags="$la_ldflags -L/opt/doj-bundle/embedded/lib -lbz2"
