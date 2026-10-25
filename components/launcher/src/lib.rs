@@ -20,6 +20,7 @@ extern crate log;
 extern crate winapi;
 
 pub mod error;
+pub mod init;
 pub mod server;
 pub mod service;
 mod sys;

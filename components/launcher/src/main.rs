@@ -15,13 +15,13 @@
 use dojo_common::output::{self,
                           OutputFormat,
                           OutputVerbosity};
-use dojo_launcher::server;
+use dojo_launcher::{init,
+                    server};
 use env_logger;
 use log::{error,
           log,
           Level};
-use std::{env,
-          process};
+use std::env;
 
 fn main() {
     env_logger::init();
@@ -32,12 +32,12 @@ fn main() {
     match server::run(args) {
         Err(err) => {
             error!("Launcher exiting with 1 due to err: {}", err);
-            process::exit(1);
+            init::exit(1);
         }
         Ok(code) => {
             let level = if code == 0 { Level::Info } else { Level::Error };
             log!(level, "Launcher exiting with code {}", code);
-            process::exit(code);
+            init::exit(code);
         }
     }
 }
