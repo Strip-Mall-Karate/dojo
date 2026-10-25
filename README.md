@@ -48,11 +48,18 @@ support/vm/builder payload
 support/vm/boot --payload support/vm/out/payload.cpio.gz
 ```
 
-`--check` boots and checks that the Supervisor's HTTP gateway answers, that the
-Launcher restarts the Supervisor after SIGKILL and after `doj sup term`, and that
-SIGTERM to PID 1 powers the VM off without a kernel panic. `--check-reboot` ends
-with SIGINT to PID 1 (the kernel's Ctrl-Alt-Del) and expects a reboot. `support/vm/builder test <package>...` runs a package's tests and
-format check in the builder. `support/vm/builder stop` stops it.
+The VM has one NIC, `eth0`, on QEMU's user-mode network: init leases its
+address (10.0.2.15) and default route with DHCP, which is how the Supervisor
+finds its own address, and the VM can reach out through the Mac but nothing
+reaches in.
+
+`--check` boots and checks that `eth0` has an address, that the Supervisor's
+HTTP gateway answers and it found its own address, that the Launcher restarts
+the Supervisor after SIGKILL and after `doj sup term`, and that SIGTERM to PID 1
+powers the VM off without a kernel panic. `--check-reboot` ends with SIGINT to
+PID 1 (the kernel's Ctrl-Alt-Del) and expects a reboot. `support/vm/builder
+test <package>...` runs a package's tests and format check in the builder.
+`support/vm/builder stop` stops it.
 
 ## License
 

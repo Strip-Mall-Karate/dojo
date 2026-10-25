@@ -37,7 +37,8 @@ in
         done
         cp ${./init} root/init
         cp ${./check} root/bin/check
-        chmod 0755 root/init root/bin/check
+        cp ${./lease} root/bin/lease
+        chmod 0755 root/init root/bin/check root/bin/lease
         mkdir -p root/etc
         echo "root:x:0:0:root:/root:/bin/sh" > root/etc/passwd
         echo "root:x:0:" > root/etc/group

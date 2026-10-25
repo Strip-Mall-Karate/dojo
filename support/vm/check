@@ -37,6 +37,12 @@ supervisor_up() {
 [ "$(cat /proc/1/comm)" = doj-launch ] || fail "PID 1 is $(cat /proc/1/comm), not doj-launch"
 report "pid1=doj-launch"
 
+# init leased eth0 before starting this script; the Supervisor finds its own
+# address through that NIC's default route.
+address=$(ip -4 -o addr show dev eth0 | grep -o 'inet [0-9.]*' | grep -o '[0-9.]*$')
+[ -n "${address}" ] || fail "eth0 has no address"
+report "eth0=${address}"
+
 first=$(supervisor_up none) || fail "the Supervisor's HTTP gateway did not answer"
 report "supervisor=${first}"
 

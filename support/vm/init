@@ -1,5 +1,5 @@
 #!/bin/sh
-# Stage 0 init: mounts the kernel filesystems, brings up loopback and execs
+# Stage 0 init: mounts the kernel filesystems, brings the network up and execs
 # doj-launch, which runs as PID 1 and starts doj-sup. An image without
 # doj-launch hands the console to a shell instead.
 
@@ -11,6 +11,12 @@ ip link set lo up
 hostname dojo
 
 echo "dojo: booted $(uname -srm)"
+
+# eth0 is QEMU's user-mode network. Its DHCP lease brings a default route,
+# which the Supervisor needs to find its own address. udhcpc -n gives up after
+# its retries rather than wait forever, so a VM without a NIC still boots.
+ip link set eth0 up
+udhcpc -i eth0 -s /bin/lease -n -q || echo "dojo: no DHCP lease on eth0"
 
 if grep -qw dojo.check /proc/cmdline; then
   /bin/check &

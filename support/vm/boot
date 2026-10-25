@@ -4,6 +4,8 @@
 # exits 0 only if it did and the VM then powered off cleanly; --check-reboot
 # ends with a reboot instead. --payload adds a gzipped cpio archive
 # (doj-launch, doj-sup and their libraries) on top of the initramfs.
+#
+# The VM has eth0 on QEMU's user-mode network, which needs no privilege.
 set -euo pipefail
 
 usage() {
@@ -60,17 +62,20 @@ append="console=ttyAMA0 panic=-1"
 args=(
   -machine virt -accel hvf -cpu host -smp 4 -m 2048
   -kernel "${kernel}" -initrd "${initrd}"
-  -nographic -no-reboot
+  -no-reboot
+  # eth0: QEMU's user-mode network needs no privilege, leases an address from
+  # its own DHCP server and routes out through the Mac.
+  -netdev user,id=net0 -device virtio-net-pci,netdev=net0
 )
 
 if ! "${check}"; then
-  "${qemu}" "${args[@]}" -append "${append}"
+  "${qemu}" "${args[@]}" -append "${append}" -nographic
   exit
 fi
 
 log="${work}/check.log"
 status=0
-"$(build coreutils)/bin/timeout" 120 "${qemu}" "${args[@]}" -append "${append} quiet ${check_args}" </dev/null >"${log}" 2>&1 || status=$?
+"$(build coreutils)/bin/timeout" 120 "${qemu}" "${args[@]}" -nographic -append "${append} quiet ${check_args}" </dev/null >"${log}" 2>&1 || status=$?
 cat "${log}"
 if [[ "${status}" -ne 0 ]]; then
   echo "boot: QEMU exited ${status} (124 is the 120 second deadline)" >&2
@@ -78,6 +83,11 @@ if [[ "${status}" -ne 0 ]]; then
 fi
 if ! grep -q 'dojo: check ok' "${log}"; then
   echo "boot: the VM shut down without reporting success" >&2
+  exit 1
+fi
+# The Supervisor says so when it has no route out and falls back to 127.0.0.1.
+if grep -q 'IP Address lookup failed' "${log}"; then
+  echo "boot: the Supervisor did not find its own address" >&2
   exit 1
 fi
 if grep -q 'Kernel panic' "${log}" || ! grep -q "${ending}" "${log}"; then
