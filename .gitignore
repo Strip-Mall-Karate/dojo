@@ -20,3 +20,4 @@ test/builder-api/node_modules
 test/builder-api/services.log
 tmp/
 /support/vm/out/
+/components/plan/target

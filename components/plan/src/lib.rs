@@ -1,0 +1,177 @@
+// Copyright (c) 2026 Strip Mall Karate Company
+//
+// Licensed under the MIT license. See LICENSE in the repository root.
+
+//! Loads Dojo plans written in Fennel.
+//!
+//! Loading is the first of a plan's two stages. It compiles `plan.fnl`, runs
+//! it in a sandbox that cannot touch the machine, and checks the table it
+//! returns. Reading a plan's metadata needs nothing more; the build stage
+//! calls the phase functions the loaded table holds.
+
+mod fennel;
+mod sandbox;
+mod schema;
+
+use std::{fmt,
+          fs,
+          io,
+          path::{Path,
+                 PathBuf}};
+
+use mlua::{Lua,
+           Table,
+           Value};
+
+pub use crate::schema::{Metadata,
+                        PHASES,
+                        TARGETS};
+
+/// The file a plan directory holds.
+pub const PLAN_FILE: &str = "plan.fnl";
+
+/// Plan formats Dojo no longer reads, named in the error for a directory
+/// that still holds one.
+const OLD_PLAN_FILES: &[&str] = &["plan.lua", "plan.sh", "plan.ps1"];
+
+/// Why a plan did not load.
+#[derive(Debug)]
+pub enum Error {
+    /// The plan file exists but could not be read.
+    Read(PathBuf, io::Error),
+    /// The directory holds no `plan.fnl`. `old` names a file in a format
+    /// Dojo no longer reads, if there is one.
+    Missing {
+        dir: PathBuf,
+        old: Option<&'static str>,
+    },
+    /// Fennel refused the source.
+    Compile(String),
+    /// The compiled plan failed while it ran, or ran past its limits.
+    Run(String),
+    /// The plan's table does not fit the schema.
+    Invalid(String),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Read(path, error) => write!(f, "cannot read {}: {error}", path.display()),
+            Error::Missing { dir,
+                             old: Some(old), } => {
+                write!(f,
+                       "{} has {old} but no {PLAN_FILE}; plans are written in Fennel now",
+                       dir.display())
+            }
+            Error::Missing { dir, old: None } => {
+                write!(f, "{} has no {PLAN_FILE}", dir.display())
+            }
+            Error::Compile(message) | Error::Run(message) => f.write_str(message),
+            Error::Invalid(message) => write!(f, "{PLAN_FILE}: {message}"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+/// A loaded plan: its checked metadata, and the Lua state that holds its
+/// phase functions for the build stage.
+pub struct Plan {
+    metadata: Metadata,
+    _table:   Table,
+    _lua:     Lua,
+}
+
+impl Plan {
+    /// Loads the plan in `dir`.
+    ///
+    /// # Errors
+    ///
+    /// Fails when `dir` has no readable `plan.fnl`, or as [`Plan::from_source`] does.
+    pub fn load(dir: impl AsRef<Path>) -> Result<Plan, Error> {
+        let dir = dir.as_ref();
+        let path = dir.join(PLAN_FILE);
+        let source = match fs::read_to_string(&path) {
+            Ok(source) => source,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                let old = OLD_PLAN_FILES.iter()
+                                        .copied()
+                                        .find(|old| dir.join(old).is_file());
+                return Err(Error::Missing { dir: dir.to_path_buf(),
+                                            old });
+            }
+            Err(error) => return Err(Error::Read(path, error)),
+        };
+        Plan::from_source(&source)
+    }
+
+    /// Loads a plan from its Fennel source.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Compile`] when Fennel refuses the source, [`Error::Run`] when the
+    /// compiled plan fails or passes its limits, and [`Error::Invalid`] when its
+    /// table does not fit the schema.
+    pub fn from_source(source: &str) -> Result<Plan, Error> {
+        let lua_source =
+            fennel::compile(source, PLAN_FILE).map_err(|e| {
+                                                  Error::Compile(message(&e, Stage::Compile))
+                                              })?;
+        let lua = Lua::new();
+        let env = sandbox::environment(&lua).map_err(|e| Error::Run(message(&e, Stage::Run)))?;
+        sandbox::limit(&lua,
+                       sandbox::PLAN_MEMORY,
+                       sandbox::PLAN_INSTRUCTIONS,
+                       "the plan").map_err(|e| Error::Run(message(&e, Stage::Run)))?;
+        let value: Value = lua.load(lua_source)
+                              .set_name(format!("@{PLAN_FILE}"))
+                              .set_environment(env)
+                              .eval()
+                              .map_err(|e| Error::Run(message(&e, Stage::Run)))?;
+        let Value::Table(table) = value else {
+            return Err(Error::Invalid(format!("returns a {}, not a table", value.type_name())));
+        };
+        let metadata = Metadata::parse(&table)?;
+        Ok(Plan { metadata,
+                  _table: table,
+                  _lua: lua })
+    }
+
+    /// The plan's checked metadata.
+    pub fn metadata(&self) -> &Metadata { &self.metadata }
+}
+
+/// The message of a Lua error without mlua's wrapping or the Lua stack
+/// traceback, which shows the sandbox's internals rather than the plan.
+/// Memory errors carry no message from Lua, so they get one here.
+fn message(error: &mlua::Error, stage: Stage) -> String {
+    match error {
+        mlua::Error::RuntimeError(message) | mlua::Error::SyntaxError { message, .. } => {
+            let message = message.split("\nstack traceback:")
+                                 .next()
+                                 .unwrap_or_default();
+            message.trim_end().to_string()
+        }
+        mlua::Error::MemoryError(_) => {
+            match stage {
+                Stage::Compile => {
+                    format!("compiling the plan ran out of memory (the limit is {} MiB)",
+                            sandbox::COMPILE_MEMORY >> 20)
+                }
+                Stage::Run => {
+                    format!("the plan ran out of memory (the limit is {} MiB)",
+                            sandbox::PLAN_MEMORY >> 20)
+                }
+            }
+        }
+        mlua::Error::CallbackError { cause, .. } => message(cause, stage),
+        other => other.to_string(),
+    }
+}
+
+/// Which part of loading an error came from.
+#[derive(Clone, Copy)]
+enum Stage {
+    Compile,
+    Run,
+}

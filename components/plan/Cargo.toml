@@ -1,0 +1,27 @@
+[package]
+name = "dojo-plan"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+authors = []
+license = "MIT"
+description = "Loads Dojo plans written in Fennel"
+
+# Not a member of the root workspace: that builds with the Rust pinned in
+# rust-toolchain, and mlua needs 1.88 or newer.
+[workspace]
+
+[[bin]]
+name = "doj-plan-build"
+path = "src/main.rs"
+
+[dependencies]
+mlua = { version = "0.12.2", features = ["lua55", "vendored"] }
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+
+[lints.rust]
+warnings = "deny"
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
