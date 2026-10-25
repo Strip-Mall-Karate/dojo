@@ -33,6 +33,9 @@ See [BUILDING.md](BUILDING.md).
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+New work in Dojo is MIT licensed: see [LICENSE](LICENSE). The files Dojo inherited
+from the 0.79.1 tree stay under the Apache License 2.0 with Dojo's changes to them: see
+[LICENSE-APACHE](LICENSE-APACHE) and [NOTICE](NOTICE).
 
 Copyright (c) 2016 Chef Software Inc. and/or applicable contributors
+Copyright (c) 2026 Strip Mall Karate Company
