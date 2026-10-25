@@ -53,13 +53,13 @@ use crate::{census::{CensusGroup,
                      ElectionStatus,
                      MemberId},
             manager::Sys};
-use habitat_butterfly::rumor::service::SysInfo;
-use habitat_common::templating::{config::Cfg,
-                                 package::{Env,
-                                           Pkg}};
-use habitat_core::{package::PackageIdent,
-                   service::{ServiceBind,
-                             ServiceGroup}};
+use dojo_butterfly::rumor::service::SysInfo;
+use dojo_common::templating::{config::Cfg,
+                              package::{Env,
+                                        Pkg}};
+use dojo_core::{package::PackageIdent,
+                service::{ServiceBind,
+                          ServiceGroup}};
 use serde::{ser::SerializeMap,
             Serialize,
             Serializer};
@@ -79,9 +79,7 @@ use toml;
 /// Serde `Serialize` implementation (and those of its members), so
 /// change this with care.
 ///
-/// User-facing documentation is available at
-/// https://www.habitat.sh/docs/reference/#template-data; update that
-/// as required.
+/// User-facing documentation describes this data; update it as required.
 #[derive(Clone, Debug, Serialize)]
 pub struct RenderContext<'a> {
     sys:  SystemInfo<'a>,
@@ -570,10 +568,10 @@ mod tests {
     use serde_json;
     use tempfile::TempDir;
 
-    use habitat_butterfly::rumor::service::SysInfo;
-    use habitat_common::templating::{config::PackageConfigPaths,
-                                     TemplateRenderer};
-    use habitat_core::package::PackageIdent;
+    use dojo_butterfly::rumor::service::SysInfo;
+    use dojo_common::templating::{config::PackageConfigPaths,
+                                  TemplateRenderer};
+    use dojo_core::package::PackageIdent;
 
     use crate::{manager::service::Cfg,
                 test_helpers::*};
@@ -636,7 +634,7 @@ two = 2
 
     /// Create a basic SvcMember struct for use in tests
     fn default_svc_member<'a>() -> SvcMember<'a> {
-        let ident = PackageIdent::new("core", "test_pkg", Some("1.0.0"), Some("20180321150416"));
+        let ident = PackageIdent::new("karate", "test_pkg", Some("1.0.0"), Some("20180321150416"));
         SvcMember { member_id: Cow::Owned("MEMBER_ID".into()),
                     pkg: Cow::Owned(Some(ident)),
                     application: Cow::Owned(None),
@@ -669,7 +667,7 @@ two = 2
     /// things on a mutable reference.
     fn default_render_context<'a>() -> RenderContext<'a> {
         let system_info =
-            SystemInfo { version:           Cow::Owned("I AM A HABITAT VERSION".into()),
+            SystemInfo { version:           Cow::Owned("I AM A DOJO VERSION".into()),
                          member_id:         Cow::Owned("MEMBER_ID".into()),
                          ip:                Cow::Owned(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
                          hostname:          Cow::Owned("MY_HOSTNAME".into()),
@@ -681,7 +679,7 @@ two = 2
                          ctl_gateway_port:  Cow::Owned(5679),
                          permanent:         Cow::Owned(false), };
 
-        let ident = PackageIdent::new("core", "test_pkg", Some("1.0.0"), Some("20180321150416"));
+        let ident = PackageIdent::new("karate", "test_pkg", Some("1.0.0"), Some("20180321150416"));
 
         let deps = vec![PackageIdent::new("test", "pkg1", Some("1.0.0"), Some("20180321150416")),
                         PackageIdent::new("test", "pkg2", Some("2.0.0"), Some("20180321150416")),
@@ -719,8 +717,8 @@ two = 2
                             svc_var_path:    Cow::Owned("var_path".into()),
                             svc_pid_file:    Cow::Owned("pid_file".into()),
                             svc_run:         Cow::Owned("svc_run".into()),
-                            svc_user:        Cow::Owned("hab".into()),
-                            svc_group:       Cow::Owned("hab".into()), };
+                            svc_user:        Cow::Owned("doj".into()),
+                            svc_group:       Cow::Owned("doj".into()), };
 
         let group: ServiceGroup = "foo.default".parse().unwrap();
 

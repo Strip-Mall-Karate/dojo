@@ -3,7 +3,7 @@
 load 'helpers'
 
 setup() {
-    reset_hab_root
+    reset_doj_root
     start_supervisor
 }
 
@@ -11,56 +11,56 @@ teardown() {
     stop_supervisor
 }
 
-@test "hab svc status: when no supervisor is running" {
+@test "doj svc status: when no supervisor is running" {
     stop_supervisor
 
-    run ${hab} svc status
+    run ${doj} svc status
     assert_failure 1
     assert_output --partial "Unable to contact the Supervisor."
 }
 
-@test "hab svc status: when no services are running" {
-    run ${hab} svc status
+@test "doj svc status: when no services are running" {
+    run ${doj} svc status
     assert_success
     assert_output --partial "No services loaded"
 }
 
-@test "hab svc status: for a single running service" {
-    run ${hab} svc load core/redis
+@test "doj svc status: for a single running service" {
+    run ${doj} svc load karate/redis
 
     wait_for_service_to_run redis
 
     sleep 3 # give the services.dat file time to be
     # written... otherwise the state can show as down
 
-    run ${hab} svc status core/redis
+    run ${doj} svc status karate/redis
     assert_success
 
     # OUTPUT:
     # package                           type        desired  state  elapsed (s)  pid   group
-    # core/redis/4.0.10/20180801003001  standalone  up       up     3            1016  redis.default
-    assert_line --regexp "core/redis/.*/[0-9]{14}\s+standalone\s+up\s+up\s+.*redis.default"
+    # karate/redis/4.0.10/20180801003001  standalone  up       up     3            1016  redis.default
+    assert_line --regexp "karate/redis/.*/[0-9]{14}\s+standalone\s+up\s+up\s+.*redis.default"
 }
 
-@test "hab svc status: for a single service that is not loaded" {
-    run ${hab} svc load core/redis
+@test "doj svc status: for a single service that is not loaded" {
+    run ${doj} svc load karate/redis
 
     wait_for_service_to_run redis
 
     sleep 3 # give the services.dat file time to be
             # written... otherwise the state can show as down
 
-    run ${hab} svc status core/nginx # nginx != redis
+    run ${doj} svc status karate/nginx # nginx != redis
     assert_failure 1
-    assert_output --partial "Service not loaded, core/nginx"
+    assert_output --partial "Service not loaded, karate/nginx"
 }
 
-@test "hab svc status: for all running services" {
-    run ${hab} svc load core/redis
+@test "doj svc status: for all running services" {
+    run ${doj} svc load karate/redis
     assert_success
 
-    ${hab} pkg install core/runit --binlink # whyyyyy
-    run ${hab} svc load core/nginx
+    ${doj} pkg install karate/runit --binlink # whyyyyy
+    run ${doj} svc load karate/nginx
     assert_success
 
     wait_for_service_to_run redis
@@ -68,9 +68,9 @@ teardown() {
 
     sleep 3 # let services.dat get written
 
-    run ${hab} svc status
+    run ${doj} svc status
     assert_success
 
-    assert_line --regexp "core/redis/.*/[0-9]{14}\s+standalone\s+up\s+up\s+.*redis.default"
-    assert_line --regexp "core/nginx/.*/[0-9]{14}\s+standalone\s+up\s+up\s+.*nginx.default"
+    assert_line --regexp "karate/redis/.*/[0-9]{14}\s+standalone\s+up\s+up\s+.*redis.default"
+    assert_line --regexp "karate/nginx/.*/[0-9]{14}\s+standalone\s+up\s+up\s+.*nginx.default"
 }

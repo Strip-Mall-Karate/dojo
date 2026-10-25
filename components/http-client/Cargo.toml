@@ -1,0 +1,28 @@
+[package]
+name = "dojo_http_client"
+version = "0.0.0"
+edition = "2018"
+authors = []
+build = "build.rs"
+workspace = "../../"
+
+[dependencies]
+base64 = "*"
+log = "*"
+httparse = "*"
+# Pending upgrade activities
+hyper = "0.10"
+# Pending upgrade activities
+hyper-openssl = "0.2"
+# Pending upgrade activities
+openssl = "0.9.23"
+serde = "*"
+serde_json = "*"
+url = "*"
+
+[dependencies.dojo_core]
+path = "../core"
+
+[features]
+default = []
+functional = []

@@ -18,11 +18,11 @@
 //!
 //! No ring key or encryption abilities are currently supported.
 
-use self::habitat_butterfly::client::Client as ButterflyClient;
-use habitat_butterfly;
+use self::dojo_butterfly::client::Client as ButterflyClient;
+use dojo_butterfly;
 
-use self::habitat_core::service::ServiceGroup;
-use habitat_core;
+use self::dojo_core::service::ServiceGroup;
+use dojo_core;
 
 use toml;
 

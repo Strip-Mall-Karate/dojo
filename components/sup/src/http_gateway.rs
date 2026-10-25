@@ -31,15 +31,15 @@ use actix_web::{http::{self,
                 HttpResponse,
                 Path,
                 Request};
-use habitat_common::{cli::{LISTEN_HTTP_ADDRESS_ENVVAR,
-                           LISTEN_HTTP_DEFAULT_IP,
-                           LISTEN_HTTP_DEFAULT_PORT},
-                     templating::hooks,
-                     FeatureFlag};
-use habitat_core::{crypto,
-                   env as henv,
-                   env::Config as EnvConfig,
-                   service::ServiceGroup};
+use dojo_common::{cli::{LISTEN_HTTP_ADDRESS_ENVVAR,
+                        LISTEN_HTTP_DEFAULT_IP,
+                        LISTEN_HTTP_DEFAULT_PORT},
+                  templating::hooks,
+                  FeatureFlag};
+use dojo_core::{crypto,
+                env as henv,
+                env::Config as EnvConfig,
+                service::ServiceGroup};
 use prometheus::{self,
                  CounterVec,
                  Encoder,
@@ -70,7 +70,7 @@ use std::{cell::Cell,
           thread};
 
 const APIDOCS: &str = include_str!(concat!(env!("OUT_DIR"), "/api.html"));
-pub const HTTP_THREADS_ENVVAR: &str = "HAB_SUP_HTTP_THREADS";
+pub const HTTP_THREADS_ENVVAR: &str = "DOJ_SUP_HTTP_THREADS";
 pub const HTTP_THREAD_COUNT: usize = 2;
 
 /// Default listening port for the HTTPGateway listener.
@@ -78,11 +78,11 @@ pub const DEFAULT_PORT: u16 = 9631;
 
 lazy_static! {
     static ref HTTP_GATEWAY_REQUESTS: CounterVec =
-        register_counter_vec!("hab_sup_http_gateway_requests_total",
+        register_counter_vec!("doj_sup_http_gateway_requests_total",
                               "Total number of HTTP gateway requests",
                               &["path"]).unwrap();
     static ref HTTP_GATEWAY_REQUEST_DURATION: HistogramVec =
-        register_histogram_vec!("hab_sup_http_gateway_request_duration_seconds",
+        register_histogram_vec!("doj_sup_http_gateway_request_duration_seconds",
                                 "The latency for HTTP gateway requests",
                                 &["path"]).unwrap();
 }
@@ -286,7 +286,7 @@ impl Server {
             // check_for_signal in a reasonable amount of time and the supervisor will not
             // respond to ctrl+c. On Windows, we let the launcher catch ctrl+c and gracefully
             // shut down services. ctrl+c should simply halt the supervisor. The IgnoreSignals
-            // feature is always enabled in the Habitat Windows Service which relies on ctrl+c
+            // feature is always enabled in the Dojo Windows Service which relies on ctrl+c
             // signals to stop the supervisor.
             if feature_flags.contains(FeatureFlag::IGNORE_SIGNALS) {
                 server = server.disable_signals();
@@ -538,11 +538,11 @@ fn service_from_services(service_group: &ServiceGroup, services_json: &str) -> O
 #[cfg(test)]
 mod tests {
     use crate::test_helpers::*;
-    use habitat_butterfly::{member::Member,
-                            server::{Server,
-                                     ServerProxy,
-                                     Suitability},
-                            trace::Trace};
+    use dojo_butterfly::{member::Member,
+                         server::{Server,
+                                  ServerProxy,
+                                  Suitability},
+                         trace::Trace};
     use serde_json;
     use std::{fs::File,
               io::Read,

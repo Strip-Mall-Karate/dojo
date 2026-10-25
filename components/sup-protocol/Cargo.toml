@@ -1,8 +1,8 @@
 [package]
-name = "habitat-sup-protocol"
+name = "dojo-sup-protocol"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = []
 build = "./build.rs"
 workspace = "../../"
 
@@ -10,7 +10,7 @@ workspace = "../../"
 base64 = "*"
 bytes = "*"
 futures = "*"
-habitat_core = { git = "https://github.com/habitat-sh/core.git" }
+dojo_core = { path = "../core" }
 lazy_static = "*"
 log = "*"
 prost = "*"

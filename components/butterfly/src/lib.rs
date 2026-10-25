@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Butterfly is the [SWIM](http://www.cs.cornell.edu/projects/Quicksilver/public_pdfs/SWIM.pdf)
-//! implementation for Habitat, along with a ZeroMQ based gossip protocol.
+//! implementation for Dojo, along with a ZeroMQ based gossip protocol.
 //!
 //! It implements SWIM+Susp+Inf. It uses Newscast-style "heat" tracking to share membership rumors,
 //! while trying to keep UDP packet sizes below 512 bytes. It has the following changes:

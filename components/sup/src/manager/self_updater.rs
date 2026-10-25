@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Encapsulates logic required for updating the Habitat Supervisor
+//! Encapsulates logic required for updating the Dojo Supervisor
 //! itself.
 
 use std::{sync::mpsc::{sync_channel,
@@ -24,17 +24,17 @@ use std::{sync::mpsc::{sync_channel,
 
 use crate::{env,
             util};
-use habitat_common::{command::package::install::InstallSource,
-                     ui::UI};
-use habitat_core::{package::{PackageIdent,
-                             PackageInstall},
-                   ChannelIdent};
+use dojo_common::{command::package::install::InstallSource,
+                  ui::UI};
+use dojo_core::{package::{PackageIdent,
+                          PackageInstall},
+                ChannelIdent};
 use time::{Duration as TimeDuration,
            SteadyTime};
 
-pub const SUP_PKG_IDENT: &str = "core/hab-sup";
+pub const SUP_PKG_IDENT: &str = "karate/doj-sup";
 const DEFAULT_FREQUENCY: i64 = 60_000;
-const FREQUENCY_ENVVAR: &str = "HAB_SUP_UPDATE_MS";
+const FREQUENCY_ENVVAR: &str = "DOJ_SUP_UPDATE_MS";
 
 pub struct SelfUpdater {
     rx:             Receiver<PackageInstall>,

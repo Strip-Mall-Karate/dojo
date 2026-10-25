@@ -238,9 +238,9 @@ impl SrvMessage {
     /// # Example
     ///
     /// ```
-    /// # use habitat_sup_protocol::message::MessageStatic;
-    /// # use habitat_sup_protocol::codec::SrvMessage;
-    /// # use habitat_sup_protocol::net;
+    /// # use dojo_sup_protocol::message::MessageStatic;
+    /// # use dojo_sup_protocol::codec::SrvMessage;
+    /// # use dojo_sup_protocol::net;
     /// # let m = SrvMessage::from(net::NetErr::default());
     /// if m.message_id() == net::NetErr::MESSAGE_ID {
     ///     let msg = m.parse::<net::NetErr>().unwrap();

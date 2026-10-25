@@ -64,7 +64,7 @@ use crate::{error::{Error,
 
 lazy_static! {
     static ref IGNORED_RUMOR_COUNT: IntCounterVec =
-        register_int_counter_vec!("hab_butterfly_ignored_rumor_total",
+        register_int_counter_vec!("doj_butterfly_ignored_rumor_total",
                                   "How many rumors we ignore",
                                   &["rumor"]).unwrap();
 }

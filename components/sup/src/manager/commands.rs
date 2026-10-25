@@ -25,19 +25,19 @@ use crate::{ctl_gateway::CtlRequest,
                       ManagerConfig,
                       ManagerState},
             util};
-use habitat_butterfly as butterfly;
-use habitat_common::{command::package::install::InstallSource,
-                     outputln,
-                     ui::UIWriter};
-use habitat_core::{package::{Identifiable,
-                             PackageIdent,
-                             PackageTarget},
-                   service::ServiceGroup,
-                   ChannelIdent};
-use habitat_sup_protocol::{self as protocol,
-                           net::{self,
-                                 ErrCode,
-                                 NetResult}};
+use dojo_butterfly as butterfly;
+use dojo_common::{command::package::install::InstallSource,
+                  outputln,
+                  ui::UIWriter};
+use dojo_core::{package::{Identifiable,
+                          PackageIdent,
+                          PackageTarget},
+                service::ServiceGroup,
+                ChannelIdent};
+use dojo_sup_protocol::{self as protocol,
+                        net::{self,
+                              ErrCode,
+                              NetResult}};
 use serde_json;
 use std::{fmt,
           fs,

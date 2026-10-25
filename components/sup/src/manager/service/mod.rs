@@ -18,7 +18,7 @@
 // that's more confusing that it probably needs to be.
 
 // TODO (CM): Take a deeper look at the direct consumption of
-// Prost-generated types (habitat_sup_protocol::types::*) in
+// Prost-generated types (dojo_sup_protocol::types::*) in
 // here. Ideally, those would exist only at the periphery of the
 // system, and we'd use separate internal types for our core logic.
 
@@ -49,35 +49,35 @@ use crate::{census::{CensusGroup,
             manager::{FsCfg,
                       GatewayState,
                       Sys}};
+use dojo_butterfly::rumor::service::Service as ServiceRumor;
+pub use dojo_common::templating::{config::{Cfg,
+                                           UserConfigPath},
+                                  package::{Env,
+                                            Pkg,
+                                            PkgProxy}};
+use dojo_common::{outputln,
+                  templating::{config::CfgRenderer,
+                               hooks::Hook}};
+use dojo_core::{crypto::hash,
+                fs::{atomic_write,
+                     svc_hooks_path,
+                     SvcDir,
+                     FS_ROOT_PATH},
+                package::{metadata::Bind,
+                          PackageIdent,
+                          PackageInstall},
+                service::{HealthCheckInterval,
+                          ServiceBind,
+                          ServiceGroup},
+                ChannelIdent};
+use dojo_launcher_client::LauncherCli;
+use dojo_sup_protocol::types::BindingMode;
+pub use dojo_sup_protocol::types::{ProcessState,
+                                   Topology,
+                                   UpdateStrategy};
 use futures::{future,
               Future,
               IntoFuture};
-use habitat_butterfly::rumor::service::Service as ServiceRumor;
-pub use habitat_common::templating::{config::{Cfg,
-                                              UserConfigPath},
-                                     package::{Env,
-                                               Pkg,
-                                               PkgProxy}};
-use habitat_common::{outputln,
-                     templating::{config::CfgRenderer,
-                                  hooks::Hook}};
-use habitat_core::{crypto::hash,
-                   fs::{atomic_write,
-                        svc_hooks_path,
-                        SvcDir,
-                        FS_ROOT_PATH},
-                   package::{metadata::Bind,
-                             PackageIdent,
-                             PackageInstall},
-                   service::{HealthCheckInterval,
-                             ServiceBind,
-                             ServiceGroup},
-                   ChannelIdent};
-use habitat_launcher_client::LauncherCli;
-use habitat_sup_protocol::types::BindingMode;
-pub use habitat_sup_protocol::types::{ProcessState,
-                                      Topology,
-                                      UpdateStrategy};
 use prometheus::{HistogramTimer,
                  HistogramVec};
 use serde::{ser::SerializeStruct,
@@ -103,7 +103,7 @@ pub const GOSSIP_FILE_PERMISSIONS: u32 = 0o640;
 
 lazy_static! {
     static ref HOOK_DURATION: HistogramVec =
-        register_histogram_vec!("hab_sup_hook_duration_seconds",
+        register_histogram_vec!("doj_sup_hook_duration_seconds",
                                 "The time it takes for a hook to run",
                                 &["hook"]).unwrap();
 }
@@ -821,16 +821,16 @@ impl Service {
     }
 
     #[cfg(not(windows))]
-    fn set_hook_permissions<T: AsRef<Path>>(path: T) -> habitat_core::error::Result<()> {
-        use habitat_common::templating::hooks::HOOK_PERMISSIONS;
-        use habitat_core::util::posix_perm;
+    fn set_hook_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
+        use dojo_common::templating::hooks::HOOK_PERMISSIONS;
+        use dojo_core::util::posix_perm;
 
         posix_perm::set_permissions(path.as_ref(), HOOK_PERMISSIONS)
     }
 
     #[cfg(windows)]
-    fn set_hook_permissions<T: AsRef<Path>>(path: T) -> habitat_core::error::Result<()> {
-        use habitat_core::util::win_perm;
+    fn set_hook_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
+        use dojo_core::util::win_perm;
 
         win_perm::harden_path(path.as_ref())
     }
@@ -1019,8 +1019,8 @@ impl Service {
 
     #[cfg(not(windows))]
     fn set_gossip_permissions<T: AsRef<Path>>(&self, path: T) -> bool {
-        use habitat_core::{os::users,
-                           util::posix_perm};
+        use dojo_core::{os::users,
+                        util::posix_perm};
 
         if users::can_run_services_as_svc_user() {
             let result =
@@ -1044,7 +1044,7 @@ impl Service {
 
     #[cfg(windows)]
     fn set_gossip_permissions<T: AsRef<Path>>(&self, path: T) -> bool {
-        use habitat_core::util::win_perm;
+        use dojo_core::util::win_perm;
 
         if let Err(e) = win_perm::harden_path(path.as_ref()) {
             outputln!(preamble self.service_group,
@@ -1155,7 +1155,7 @@ mod tests {
     use crate::{config::GossipListenAddr,
                 http_gateway,
                 test_helpers::*};
-    use habitat_common::types::ListenCtlAddr;
+    use dojo_common::types::ListenCtlAddr;
     use serde_json;
     use std::str::FromStr;
 
@@ -1169,9 +1169,9 @@ mod tests {
                            http_addr);
 
         let ident = if cfg!(target_os = "linux") {
-            PackageIdent::new("core", "tree", Some("1.7.0"), Some("20180609045201"))
+            PackageIdent::new("karate", "tree", Some("1.7.0"), Some("20180609045201"))
         } else if cfg!(target_os = "windows") {
-            PackageIdent::new("core", "7zip", Some("16.04"), Some("20170131110814"))
+            PackageIdent::new("karate", "7zip", Some("16.04"), Some("20170131110814"))
         } else {
             panic!("This is being run on a platform that's not currently supported");
         };

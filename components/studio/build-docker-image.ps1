@@ -7,12 +7,12 @@ function info($message) {
     Write-Host $message
 }
   
-if((Get-Command hab -ErrorAction SilentlyContinue) -eq $null) {
-  Write-Error "   'hab' command must be present on PATH, aborting"
+if((Get-Command doj -ErrorAction SilentlyContinue) -eq $null) {
+  Write-Error "   'doj' command must be present on PATH, aborting"
 }
 
 If (-not (Test-Path env:IMAGE_NAME)) {
-   $imageName = "habitat-docker-registry.bintray.io/win-studio-x86_64-windows"
+   $imageName = "localhost/dojo/win-studio-x86_64-windows"
 } Else {
    $imageName = $env:IMAGE_NAME
 }
@@ -22,11 +22,11 @@ $tmpRoot = mkdir (Join-Path $env:TEMP ([System.IO.Path]::GetRandomFileName()))
 Push-Location $tmpRoot
 try {
     $env:FS_ROOT="$tmpRoot/rootfs"
-    # Ensure that no existing `HAB_BINLINK_DIR` environment variable is present,
+    # Ensure that no existing `DOJ_BINLINK_DIR` environment variable is present,
     # like it would if executed in a Studio instance.
-    $env:HAB_BINLINK_DIR = $null
+    $env:DOJ_BINLINK_DIR = $null
     
-    info "Installing and extracting initial Habitat packages"
+    info "Installing and extracting initial Dojo packages"
     # Generally, we want to use packages that are aligned with the channel
     # set when building the image which is usually unstable or an rc channel
     # in our pipelines. Because the windows-service package is maintained
@@ -34,24 +34,24 @@ try {
     # install from its stable channel
     if(!$InstallHarts) {
         $InstallHarts = @(
-            "core/hab-studio",
-            "core/hab-sup",
-            "core/windows-service"
+            "karate/doj-studio",
+            "karate/doj-sup",
+            "karate/windows-service"
         )
     }
     $InstallHarts | % {
-        Invoke-Expression "hab pkg install $_"
+        Invoke-Expression "doj pkg install $_"
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "hab install failed for $_, aborting"
+            Write-Error "doj install failed for $_, aborting"
         }
     }
-    $studioPath = hab pkg path core/hab-studio
+    $studioPath = doj pkg path karate/doj-studio
     if ($LASTEXITCODE -ne 0) {
-      Write-Error "core/hab-studio must be installed, aborting"
+      Write-Error "karate/doj-studio must be installed, aborting"
     }
     
-    info "Purging container hab cache"
-    Remove-Item "$env:FS_ROOT/hab/cache" -Recurse -Force
+    info "Purging container doj cache"
+    Remove-Item "$env:FS_ROOT/doj/cache" -Recurse -Force
     
     $pathParts = $studioPath.Replace("\", "/").Split("/")
     $ident = [String]::Join("/", $pathParts[-4..-1])
@@ -60,11 +60,11 @@ try {
     
 @"
 FROM microsoft/windowsservercore
-MAINTAINER The Habitat Maintainers <humans@habitat.sh>
+MAINTAINER Strip Mall Karate Company
 ADD rootfs /
 WORKDIR /src
-RUN /hab/pkgs/$ident/bin/hab/hab.exe pkg exec core/windows-service install
-ENTRYPOINT ["/hab/pkgs/$ident/bin/powershell/pwsh.exe", "-ExecutionPolicy", "bypass", "-NoLogo", "-file", "/hab/pkgs/$ident/bin/hab-studio.ps1"]
+RUN /doj/pkgs/$ident/bin/doj/doj.exe pkg exec karate/windows-service install
+ENTRYPOINT ["/doj/pkgs/$ident/bin/powershell/pwsh.exe", "-ExecutionPolicy", "bypass", "-NoLogo", "-file", "/doj/pkgs/$ident/bin/doj-studio.ps1"]
 "@ | Out-File "$tmpRoot/Dockerfile" -Encoding ascii
     
     info "Building Docker image ${imageName}:$version'"

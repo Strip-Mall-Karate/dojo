@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-# cat *.swimtrace | sort | ruby ~/src/habitat/components/swim/bin/trace-sequence.rb >! sequence.txt | java -DPLANTUML_LIMIT_SIZE=81920 -Xmx1024m  -jar ~/Downloads/plantuml.jar -verbose sequence.txt
+# cat *.swimtrace | sort | ruby ~/src/dojo/components/swim/bin/trace-sequence.rb >! sequence.txt | java -DPLANTUML_LIMIT_SIZE=81920 -Xmx1024m  -jar ~/Downloads/plantuml.jar -verbose sequence.txt
 
 output = [];
 actors = {};

@@ -45,33 +45,32 @@ use crate::rootfs;
 // Much of this functionality is duplicated (or slightly modified)
 // from the Docker exporter. This needs to be abstacted out in
 // the future for use with further exporters.
-// https://github.com/habitat-sh/habitat/issues/4522
-const DEFAULT_HAB_IDENT: &str = "core/hab";
-const DEFAULT_LAUNCHER_IDENT: &str = "core/hab-launcher";
-const DEFAULT_SUP_IDENT: &str = "core/hab-sup";
+const DEFAULT_DOJ_IDENT: &str = "karate/doj";
+const DEFAULT_LAUNCHER_IDENT: &str = "karate/doj-launcher";
+const DEFAULT_SUP_IDENT: &str = "karate/doj-sup";
 
-/// The specification for creating a temporary file system build root, based on Habitat packages.
+/// The specification for creating a temporary file system build root, based on Dojo packages.
 ///
 /// When a `BuildSpec` is created, a `BuildRoot` is returned which can be used to produce exported
 /// images, archives, etc.
 #[derive(Debug)]
 pub struct BuildSpec<'a> {
-    /// A string representation of a Habitat Package Identifer for the Habitat CLI package.
-    pub hab: &'a str,
-    /// A string representation of a Habitat Package Identifer for the Habitat Launcher package.
-    pub hab_launcher: &'a str,
-    /// A string representation of a Habitat Package Identifer for the Habitat Supervisor package.
-    pub hab_sup: &'a str,
-    /// The Builder URL which is used to install all service and extra Habitat packages.
+    /// A string representation of a Dojo Package Identifer for the Dojo CLI package.
+    pub doj: &'a str,
+    /// A string representation of a Dojo Package Identifer for the Dojo Launcher package.
+    pub doj_launcher: &'a str,
+    /// A string representation of a Dojo Package Identifer for the Dojo Supervisor package.
+    pub doj_sup: &'a str,
+    /// The Builder URL which is used to install all service and extra Dojo packages.
     pub url: &'a str,
-    /// The Habitat release channel which is used to install all service and extra Habitat
+    /// The Dojo release channel which is used to install all service and extra Dojo
     /// packages.
     pub channel: ChannelIdent,
-    /// The Builder URL which is used to install all base Habitat packages.
+    /// The Builder URL which is used to install all base Dojo packages.
     pub base_pkgs_url: &'a str,
-    /// The Habitat release channel which is used to install all base Habitat packages.
+    /// The Dojo release channel which is used to install all base Dojo packages.
     pub base_pkgs_channel: ChannelIdent,
-    /// A Habitat Package Identifer or local path to a Habitat Artifact file which
+    /// A Dojo Package Identifer or local path to a Dojo Artifact file which
     /// will be installed.
     pub ident_or_archive: &'a str,
 }
@@ -79,10 +78,10 @@ pub struct BuildSpec<'a> {
 impl<'a> BuildSpec<'a> {
     /// Creates a `BuildSpec` from cli arguments.
     pub fn new_from_cli_matches(m: &'a clap::ArgMatches<'_>, default_url: &'a str) -> Self {
-        BuildSpec { hab:               m.value_of("HAB_PKG").unwrap_or(DEFAULT_HAB_IDENT),
-                    hab_launcher:      m.value_of("HAB_LAUNCHER_PKG")
+        BuildSpec { doj:               m.value_of("DOJ_PKG").unwrap_or(DEFAULT_DOJ_IDENT),
+                    doj_launcher:      m.value_of("DOJ_LAUNCHER_PKG")
                                         .unwrap_or(DEFAULT_LAUNCHER_IDENT),
-                    hab_sup:           m.value_of("HAB_SUP_PKG").unwrap_or(DEFAULT_SUP_IDENT),
+                    doj_sup:           m.value_of("DOJ_SUP_PKG").unwrap_or(DEFAULT_SUP_IDENT),
                     url:               m.value_of("BLDR_URL").unwrap_or(&default_url),
                     channel:           m.value_of("CHANNEL")
                                         .map(ChannelIdent::from)
@@ -156,16 +155,16 @@ impl<'a> BuildSpec<'a> {
     }
 
     fn install_base_pkgs(&self, ui: &mut UI, rootfs: &Path) -> Result<BasePkgIdents> {
-        let hab = self.install_base_pkg(ui, self.hab, rootfs)?;
-        let sup = self.install_base_pkg(ui, self.hab_sup, rootfs)?;
-        let launcher = self.install_base_pkg(ui, self.hab_launcher, rootfs)?;
+        let doj = self.install_base_pkg(ui, self.doj, rootfs)?;
+        let sup = self.install_base_pkg(ui, self.doj_sup, rootfs)?;
+        let launcher = self.install_base_pkg(ui, self.doj_launcher, rootfs)?;
         let busybox = if cfg!(target_os = "linux") {
             Some(self.install_base_pkg(ui, BUSYBOX_IDENT, rootfs)?)
         } else {
             None
         };
 
-        Ok(BasePkgIdents { hab,
+        Ok(BasePkgIdents { doj,
                            sup,
                            launcher,
                            busybox })
@@ -239,8 +238,8 @@ impl<'a> BuildSpec<'a> {
 /// The package identifiers for installed base packages.
 #[derive(Debug)]
 struct BasePkgIdents {
-    /// Installed package identifer for the Habitat CLI package.
-    pub hab: PackageIdent,
+    /// Installed package identifer for the Dojo CLI package.
+    pub doj: PackageIdent,
     /// Installed package identifer for the Supervisor package.
     pub sup: PackageIdent,
     /// Installed package identifer for the Launcher package.

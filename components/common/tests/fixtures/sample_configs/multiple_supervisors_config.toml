@@ -2,24 +2,24 @@
 
 [cfg]
 
-[hab]
+[doj]
 version = "0.0.0"
 
 [pkg]
 exposes = []
-ident = "core/testplan/0.1.0/20170208180805"
+ident = "karate/testplan/0.1.0/20170208180805"
 name = "testplan"
 origin = "core"
-path = "/hab/pkgs/core/testplan/0.1.0/20170208180805"
+path = "/doj/pkgs/karate/testplan/0.1.0/20170208180805"
 release = "20170208180805"
-svc_config_path = "/hab/svc/testplan/config"
-svc_data_path = "/hab/svc/testplan/data"
-svc_files_path = "/hab/svc/testplan/files"
-svc_group = "hab"
-svc_path = "/hab/svc/testplan"
-svc_static_path = "/hab/svc/testplan/static"
-svc_user = "hab"
-svc_var_path = "/hab/svc/testplan/var"
+svc_config_path = "/doj/svc/testplan/config"
+svc_data_path = "/doj/svc/testplan/data"
+svc_files_path = "/doj/svc/testplan/files"
+svc_group = "doj"
+svc_path = "/doj/svc/testplan"
+svc_static_path = "/doj/svc/testplan/static"
+svc_user = "doj"
+svc_var_path = "/doj/svc/testplan/var"
 version = "0.1.0"
 
 [[pkg.deps]]

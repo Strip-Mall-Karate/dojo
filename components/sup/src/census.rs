@@ -14,21 +14,21 @@
 
 use crate::error::{Error,
                    SupError};
-use habitat_butterfly::{member::{Health,
-                                 Member,
-                                 MemberList},
-                        rumor::{election::{Election as ElectionRumor,
-                                           ElectionStatus as ElectionStatusRumor,
-                                           ElectionUpdate as ElectionUpdateRumor},
-                                service::{Service as ServiceRumor,
-                                          SysInfo},
-                                service_config::ServiceConfig as ServiceConfigRumor,
-                                service_file::ServiceFile as ServiceFileRumor,
-                                RumorStore}};
-use habitat_common::outputln;
-use habitat_core::{self,
-                   package::PackageIdent,
-                   service::ServiceGroup};
+use dojo_butterfly::{member::{Health,
+                              Member,
+                              MemberList},
+                     rumor::{election::{Election as ElectionRumor,
+                                        ElectionStatus as ElectionStatusRumor,
+                                        ElectionUpdate as ElectionUpdateRumor},
+                             service::{Service as ServiceRumor,
+                                       SysInfo},
+                             service_config::ServiceConfig as ServiceConfigRumor,
+                             service_file::ServiceFile as ServiceFileRumor,
+                             RumorStore}};
+use dojo_common::outputln;
+use dojo_core::{self,
+                package::PackageIdent,
+                service::ServiceGroup};
 use serde::{ser::SerializeStruct,
             Serialize,
             Serializer};
@@ -556,9 +556,7 @@ impl Serialize for CensusGroup {
 // NOTE: This is exposed to users in templates. Any public member is
 // accessible to users, so change this interface with care.
 //
-// User-facing documentation is available at
-// https://www.habitat.sh/docs/reference/#template-data; update that
-// as required.
+// User-facing documentation describes this data; update it as required.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct CensusMember {
     pub member_id: MemberId,
@@ -723,7 +721,7 @@ impl<'a> Serialize for CensusMemberProxy<'a> {
     }
 }
 
-fn service_group_from_str(sg: &str) -> Result<ServiceGroup, habitat_core::Error> {
+fn service_group_from_str(sg: &str) -> Result<ServiceGroup, dojo_core::Error> {
     ServiceGroup::from_str(sg).map_err(|e| {
                                   outputln!("Malformed service group; cannot populate \
                                              configuration data. Aborting.: {}",
@@ -736,20 +734,20 @@ fn service_group_from_str(sg: &str) -> Result<ServiceGroup, habitat_core::Error>
 mod tests {
     use super::*;
     use crate::test_helpers::*;
-    use habitat_butterfly::{member::{Health,
-                                     MemberList},
-                            rumor::{election::{self,
-                                               Election as ElectionRumor,
-                                               ElectionUpdate as ElectionUpdateRumor},
-                                    service::{Service as ServiceRumor,
-                                              SysInfo},
-                                    service_config::ServiceConfig as ServiceConfigRumor,
-                                    service_file::ServiceFile as ServiceFileRumor,
-                                    RumorStore}};
-    use habitat_common::cli::FS_ROOT;
-    use habitat_core::{fs::cache_key_path,
-                       package::ident::PackageIdent,
-                       service::ServiceGroup};
+    use dojo_butterfly::{member::{Health,
+                                  MemberList},
+                         rumor::{election::{self,
+                                            Election as ElectionRumor,
+                                            ElectionUpdate as ElectionUpdateRumor},
+                                 service::{Service as ServiceRumor,
+                                           SysInfo},
+                                 service_config::ServiceConfig as ServiceConfigRumor,
+                                 service_file::ServiceFile as ServiceFileRumor,
+                                 RumorStore}};
+    use dojo_common::cli::FS_ROOT;
+    use dojo_core::{fs::cache_key_path,
+                    package::ident::PackageIdent,
+                    service::ServiceGroup};
     use serde_json;
 
     #[test]

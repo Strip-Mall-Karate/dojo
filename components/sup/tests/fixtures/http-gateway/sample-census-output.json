@@ -12,7 +12,7 @@
           "cfg": {
             "port": 80,
             "ssl-port": 443,
-            "url": "https://bldr.habitat.sh"
+            "url": "https://bldr.karate.company"
           },
           "confirmed": false,
           "departed": false,
@@ -28,7 +28,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-api-proxy",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828215018",
             "version": "7590"
           },
@@ -39,7 +39,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.9",
             "gossip_port": 9638,
-            "hostname": "api-proxy.habitat.dev",
+            "hostname": "api-proxy.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.6"
@@ -83,7 +83,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-api",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906202535",
             "version": "7602"
           },
@@ -94,7 +94,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.8",
             "gossip_port": 9638,
-            "hostname": "api.habitat.dev",
+            "hostname": "api.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.26.0.8"
@@ -120,7 +120,7 @@
             "client_id": "hahano",
             "client_secret": "justkidding",
             "enabled": true,
-            "redirect_url": "https://bldr.habitat.sh/",
+            "redirect_url": "https://bldr.karate.company/",
             "webhook_secret": "nowayjose"
           },
           "log_level": "info",
@@ -128,13 +128,13 @@
             "client_id": "fakeclientidyo",
             "client_secret": "topsekret",
             "provider": "github",
-            "redirect_url": "https://bldr.habitat.sh/",
+            "redirect_url": "https://bldr.karate.company/",
             "token_url": "https://github.com/login/oauth/access_token",
             "userinfo_url": "https://api.github.com/user"
           },
           "s3": {
             "backend": "aws",
-            "bucket_name": "habitat-builder-artifact-store.live",
+            "bucket_name": "dojo-builder-artifact-store.live",
             "endpoint": "us-west-2",
             "key_id": "justkidding",
             "secret_key": "password123"
@@ -200,7 +200,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-datastore",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828215240",
             "version": "7590"
           },
@@ -211,7 +211,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.3",
             "gossip_port": 9638,
-            "hostname": "datastore.habitat.dev",
+            "hostname": "datastore.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.4"
@@ -257,7 +257,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-jobsrv",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906201133",
             "version": "7602"
           },
@@ -268,7 +268,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.7",
             "gossip_port": 9638,
-            "hostname": "jobsrv.habitat.dev",
+            "hostname": "jobsrv.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.9"
@@ -310,7 +310,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-minio",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828222034",
             "version": "0.1.0"
           },
@@ -321,7 +321,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.12",
             "gossip_port": 9638,
-            "hostname": "minio.habitat.dev",
+            "hostname": "minio.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.12"
@@ -363,7 +363,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-originsrv",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906201133",
             "version": "7602"
           },
@@ -374,7 +374,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.11",
             "gossip_port": 9638,
-            "hostname": "originsrv.habitat.dev",
+            "hostname": "originsrv.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.5"
@@ -418,7 +418,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-router",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180828220555",
             "version": "7590"
           },
@@ -429,7 +429,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.4",
             "gossip_port": 9638,
-            "hostname": "router.habitat.dev",
+            "hostname": "router.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.26.0.4"
@@ -471,7 +471,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-sessionsrv",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180906201133",
             "version": "7602"
           },
@@ -482,7 +482,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.2",
             "gossip_port": 9638,
-            "hostname": "sessionsrv.habitat.dev",
+            "hostname": "sessionsrv.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.25.0.8"
@@ -524,7 +524,7 @@
           "persistent": true,
           "pkg": {
             "name": "builder-worker",
-            "origin": "habitat",
+            "origin": "dojo",
             "release": "20180905020415",
             "version": "7598"
           },
@@ -535,7 +535,7 @@
             "ctl_gateway_port": 9632,
             "gossip_ip": "172.26.0.6",
             "gossip_port": 9638,
-            "hostname": "worker.habitat.dev",
+            "hostname": "worker.dojo.test",
             "http_gateway_ip": "0.0.0.0",
             "http_gateway_port": 9631,
             "ip": "172.26.0.6"

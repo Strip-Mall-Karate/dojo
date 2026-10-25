@@ -25,28 +25,28 @@ If($Features) {
 # Set cargo test invocation
 $CargoTestCommand = "cargo test $FeatureString -- --nocapture $TestOptions"
 
-choco install habitat -y
+choco install dojo -y
 
 # TODO: these should be in a shared script?
 Write-Host "--- Installing required prerequisites"
-hab pkg install core/cacerts
-hab pkg install core/libarchive
-hab pkg install core/libsodium
-hab pkg install core/openssl
-hab pkg install core/protobuf
-hab pkg install core/xz
-hab pkg install core/zeromq
-hab pkg install core/zlib
+doj pkg install karate/cacerts
+doj pkg install karate/libarchive
+doj pkg install karate/libsodium
+doj pkg install karate/openssl
+doj pkg install karate/protobuf
+doj pkg install karate/xz
+doj pkg install karate/zeromq
+doj pkg install karate/zlib
 
 # Set up some path variables for ease of use later
-$cacertsDir     = & hab pkg path core/cacerts
-$libarchiveDir  = & hab pkg path core/libarchive
-$libsodiumDir   = & hab pkg path core/libsodium
-$opensslDir     = & hab pkg path core/openssl
-$protobufDir    = & hab pkg path core/protobuf
-$xzDir          = & hab pkg path core/xz
-$zeromqDir      = & hab pkg path core/zeromq
-$zlibDir        = & hab pkg path core/zlib
+$cacertsDir     = & doj pkg path karate/cacerts
+$libarchiveDir  = & doj pkg path karate/libarchive
+$libsodiumDir   = & doj pkg path karate/libsodium
+$opensslDir     = & doj pkg path karate/openssl
+$protobufDir    = & doj pkg path karate/protobuf
+$xzDir          = & doj pkg path karate/xz
+$zeromqDir      = & doj pkg path karate/zeromq
+$zlibDir        = & doj pkg path karate/zlib
 
 # Set some required variables
 $env:SODIUM_LIB_DIR             = "$libsodiumDir\lib"

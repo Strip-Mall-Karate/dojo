@@ -16,9 +16,9 @@ use crate::{error::{Error,
                     Result},
             manager::file_watcher::{default_file_watcher,
                                     Callbacks}};
-use habitat_butterfly::member::Member;
-use habitat_common::{cli::GOSSIP_DEFAULT_PORT,
-                     outputln};
+use dojo_butterfly::member::Member;
+use dojo_common::{cli::GOSSIP_DEFAULT_PORT,
+                  outputln};
 use std::{fs::File,
           io::{BufRead,
                BufReader},
@@ -151,8 +151,8 @@ impl PeerWatcher {
 #[cfg(test)]
 mod tests {
     use super::PeerWatcher;
-    use habitat_butterfly::member::Member;
-    use habitat_common::cli::GOSSIP_DEFAULT_PORT;
+    use dojo_butterfly::member::Member;
+    use dojo_common::cli::GOSSIP_DEFAULT_PORT;
     use std::{fs::{File,
                    OpenOptions},
               io::Write};

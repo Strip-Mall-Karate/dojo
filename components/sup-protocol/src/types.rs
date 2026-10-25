@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Generic types shared between the Supervisor and other components in the Habitat software
+//! Generic types shared between the Supervisor and other components in the Dojo software
 //! ecosystem.
 //!
 //! Note: See `protocols/types.proto` for type level documentation for generated types.

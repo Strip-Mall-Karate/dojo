@@ -4,10 +4,10 @@
 
 <#
 .SYNOPSIS
-Builds Habitat components for Windows
+Builds Dojo components for Windows
 
 .DESCRIPTION
-This script builds habitat components and ensures that all necesary prerequisites are installed.
+This script builds dojo components and ensures that all necesary prerequisites are installed.
 #>
 
 param (
@@ -33,9 +33,9 @@ if(!$env:ChocolateyInstall) {
     $env:ChocolateyInstall = "$env:ProgramData\Chocolatey"
 }
 # Set Environment Variables for the build
-$ChocolateyHabitatLibDir = "$env:ChocolateyInstall\lib\habitat_native_dependencies\builds\lib"
-$ChocolateyHabitatIncludeDir = "$env:ChocolateyInstall\lib\habitat_native_dependencies\builds\include"
-$ChocolateyHabitatBinDir = "C:\ProgramData\chocolatey\lib\habitat_native_dependencies\builds\bin"
+$ChocolateyDojoLibDir = "$env:ChocolateyInstall\lib\dojo_native_dependencies\builds\lib"
+$ChocolateyDojoIncludeDir = "$env:ChocolateyInstall\lib\dojo_native_dependencies\builds\include"
+$ChocolateyDojoBinDir = "C:\ProgramData\chocolatey\lib\dojo_native_dependencies\builds\bin"
 
 ## Helper Functions
 function New-PathString([string]$StartingPath, [string]$Path) {
@@ -75,15 +75,11 @@ function Invoke-Configure {
         choco upgrade chocolatey --confirm | Out-Null
     }
 
-    # We need the native library dependencies for `hab`
-    # Until we have habitat packages on Windows, there is
-    # a chocolatey package hosted in MyGet with the native
-    # dependencies built.
-    if ((choco list habitat_native_dependencies --local-only) -match '^1 packages installed\.$') {
-        choco upgrade habitat_native_dependencies --confirm -s https://www.myget.org/F/habitat/api/v2  --allowemptychecksums
-    }
-    else {
-        choco install habitat_native_dependencies --confirm -s https://www.myget.org/F/habitat/api/v2  --allowemptychecksums
+    # We need the native library dependencies for `doj`. Dojo publishes no
+    # package feed for them, so they have to be built and installed locally.
+    if (!((choco list dojo_native_dependencies --local-only) -match '^1 packages installed\.$')) {
+        Write-Error "dojo_native_dependencies is not installed. Dojo has no package feed for it; build and install it locally first."
+        exit 1
     }
 
     if(!(Get-Command git -ErrorAction SilentlyContinue)) {
@@ -92,13 +88,13 @@ function Invoke-Configure {
     }
     choco install libzmq_vc120 --version 4.2.3 --confirm -s https://www.nuget.org/api/v2/ --allowemptychecksums
 
-    Copy-Item $env:ChocolateyInstall\lib\libzmq_vc120\build\native\bin\libzmq-x64-v120-mt-4_2_3_0.imp.lib $ChocolateyHabitatLibDir\zmq.lib -Force
-    Copy-Item $env:ChocolateyInstall\lib\libzmq_vc120\build\native\bin\libzmq-x64-v120-mt-4_2_3_0.dll $ChocolateyHabitatBinDir\libzmq.dll -Force
+    Copy-Item $env:ChocolateyInstall\lib\libzmq_vc120\build\native\bin\libzmq-x64-v120-mt-4_2_3_0.imp.lib $ChocolateyDojoLibDir\zmq.lib -Force
+    Copy-Item $env:ChocolateyInstall\lib\libzmq_vc120\build\native\bin\libzmq-x64-v120-mt-4_2_3_0.dll $ChocolateyDojoBinDir\libzmq.dll -Force
 
     choco install libsodium_vc120 --version 1.0.12 --confirm -s https://www.nuget.org/api/v2/
     
-    Copy-Item $env:ChocolateyInstall\lib\libsodium_vc120\build\native\bin\libsodium-x64-v120-mt-1_0_12_0.imp.lib $ChocolateyHabitatLibDir\sodium.lib -Force
-    Copy-Item $env:ChocolateyInstall\lib\libsodium_vc120\build\native\bin\libsodium-x64-v120-mt-1_0_12_0.dll $ChocolateyHabitatBinDir\libsodium.dll -Force
+    Copy-Item $env:ChocolateyInstall\lib\libsodium_vc120\build\native\bin\libsodium-x64-v120-mt-1_0_12_0.imp.lib $ChocolateyDojoLibDir\sodium.lib -Force
+    Copy-Item $env:ChocolateyInstall\lib\libsodium_vc120\build\native\bin\libsodium-x64-v120-mt-1_0_12_0.dll $ChocolateyDojoBinDir\libsodium.dll -Force
     
     if (-not (Test-AppVeyor)) {
         # We need the Visual C 2013 Runtime for the Win32 ABI Rust
@@ -194,16 +190,16 @@ if (-not (Test-AppVeyor)) {
 }
 
 $env:PATH                       = New-PathString -StartingPath $env:PATH    -Path 'C:\Program Files\7-Zip'
-$env:PATH                       = New-PathString -StartingPath $env:PATH    -Path $ChocolateyHabitatBinDir
-$env:LIB                        = New-PathString -StartingPath $env:LIB     -Path $ChocolateyHabitatLibDir
-$env:INCLUDE                    = New-PathString -StartingPath $env:INCLUDE -Path $ChocolateyHabitatIncludeDir
-$env:SODIUM_LIB_DIR             = $ChocolateyHabitatLibDir
-$env:LIBARCHIVE_INCLUDE_DIR     = $ChocolateyHabitatIncludeDir
-$env:LIBARCHIVE_LIB_DIR         = $ChocolateyHabitatLibDir
+$env:PATH                       = New-PathString -StartingPath $env:PATH    -Path $ChocolateyDojoBinDir
+$env:LIB                        = New-PathString -StartingPath $env:LIB     -Path $ChocolateyDojoLibDir
+$env:INCLUDE                    = New-PathString -StartingPath $env:INCLUDE -Path $ChocolateyDojoIncludeDir
+$env:SODIUM_LIB_DIR             = $ChocolateyDojoLibDir
+$env:LIBARCHIVE_INCLUDE_DIR     = $ChocolateyDojoIncludeDir
+$env:LIBARCHIVE_LIB_DIR         = $ChocolateyDojoLibDir
 $env:OPENSSL_LIBS               = 'ssleay32:libeay32'
-$env:OPENSSL_LIB_DIR            = $ChocolateyHabitatLibDir
-$env:OPENSSL_INCLUDE_DIR        = $ChocolateyHabitatIncludeDir
-$env:LIBZMQ_PREFIX              = Split-Path $ChocolateyHabitatLibDir -Parent
+$env:OPENSSL_LIB_DIR            = $ChocolateyDojoLibDir
+$env:OPENSSL_INCLUDE_DIR        = $ChocolateyDojoIncludeDir
+$env:LIBZMQ_PREFIX              = Split-Path $ChocolateyDojoLibDir -Parent
 
 Write-RustToolVersion
 

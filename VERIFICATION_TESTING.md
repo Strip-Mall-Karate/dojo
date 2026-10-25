@@ -1,6 +1,6 @@
 ## PR Verification Testing
 
-All components of habitat are tested when PRs are created. The helper scripts are designed to run against a single component (such as `common`), in an environment that has habitat and rust preinstalled.
+All components of dojo are tested when PRs are created. The helper scripts are designed to run against a single component (such as `common`), in an environment that has dojo and rust preinstalled.
 
 #### Linux
 ```

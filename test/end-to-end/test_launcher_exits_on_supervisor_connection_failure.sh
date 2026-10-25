@@ -3,25 +3,25 @@
 # A simple test that the launcher doesn't hang if the IPC connection to the
 # supervisor doesn't complete in a timely manner. To override and test
 # locally-built code, set overrides in the environment of the script.
-# See https://github.com/habitat-sh/habitat/blob/master/BUILDING.md#testing-changes
+# See https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
 
 set -eou pipefail
 
-if pgrep hab-launch &>/dev/null; then
+if pgrep doj-launch &>/dev/null; then
 	echo "Error: launcher process is already running"
 	exit 1
 fi
 
 TESTING_FS_ROOT=$(mktemp -d)
 export TESTING_FS_ROOT
-export HAB_LAUNCH_SUP_CONNECT_TIMEOUT_SECS=2
-export HAB_FEAT_BOOT_FAIL=1
+export DOJ_LAUNCH_SUP_CONNECT_TIMEOUT_SECS=2
+export DOJ_FEAT_BOOT_FAIL=1
 sup_log=$(mktemp)
 
 echo -n "Starting launcher with root $TESTING_FS_ROOT (logging to $sup_log)..."
-hab sup run &> "$sup_log" &
+doj sup run &> "$sup_log" &
 launcher_pid=$!
-trap 'pgrep hab-launch &>/dev/null && pkill -9 hab-launch' INT TERM EXIT
+trap 'pgrep doj-launch &>/dev/null && pkill -9 doj-launch' INT TERM EXIT
 
 retries=0
 max_retries=5

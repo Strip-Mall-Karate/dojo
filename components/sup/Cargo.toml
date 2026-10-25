@@ -1,16 +1,16 @@
 [package]
-name = "habitat_sup"
+name = "dojo_sup"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = []
 build = "./build.rs"
 workspace = "../../"
 
 [lib]
-name = "habitat_sup"
+name = "dojo_sup"
 
 [[bin]]
-name = "hab-sup"
+name = "doj-sup"
 path = "src/main.rs"
 doc = false
 
@@ -31,13 +31,13 @@ cpu-time = "*"
 env_logger = "*"
 futures = "*"
 glob = "*"
-hab = { path = "../hab" }
-habitat_butterfly = { path = "../butterfly", default-features = false }
-habitat_common = { path = "../common" }
-habitat_core = { git = "https://github.com/habitat-sh/core.git" }
-habitat_api_client = { path = "../builder-api-client" }
-habitat-launcher-client = { path = "../launcher-client" }
-habitat-sup-protocol = { path = "../sup-protocol", default-features = false }
+doj = { path = "../doj" }
+dojo_butterfly = { path = "../butterfly", default-features = false }
+dojo_common = { path = "../common" }
+dojo_core = { path = "../core" }
+dojo_api_client = { path = "../builder-api-client" }
+dojo-launcher-client = { path = "../launcher-client" }
+dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
 lazy_static = "*"
 libc = "*"
 log = "*"
@@ -78,12 +78,12 @@ ctrlc = "*"
 winapi =  { version = "*", features = ["tlhelp32"] }
 
 [dev-dependencies]
-# Pending upgrade activities in https://github.com/habitat-sh/core/issues/72
+# Pending upgrade activities
 hyper = "0.10"
 json = "*"
 
-[dev-dependencies.habitat_core]
-git = "https://github.com/habitat-sh/core.git"
+[dev-dependencies.dojo_core]
+path = "../core"
 
 [features]
 default = []

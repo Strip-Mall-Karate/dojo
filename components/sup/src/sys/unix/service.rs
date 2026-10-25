@@ -18,10 +18,10 @@
 // perhaps refactoring some of this a bit.
 
 use crate::sys::ShutdownMethod;
-use habitat_core::os::process::{is_alive,
-                                signal,
-                                Pid,
-                                Signal};
+use dojo_core::os::process::{is_alive,
+                             signal,
+                             Pid,
+                             Signal};
 use libc::{self,
            pid_t};
 use std::{ops::Neg,

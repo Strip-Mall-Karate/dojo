@@ -1,14 +1,14 @@
 [package]
-name = "habitat_api_client"
+name = "dojo_api_client"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = []
 workspace = "../../"
 
 [dependencies]
 broadcast = "*"
 chrono = "*"
-# Pending upgrade activities in https://github.com/habitat-sh/core/issues/72
+# Pending upgrade activities
 hyper = "0.10"
 hyper-openssl = "*"
 log = "*"
@@ -21,8 +21,8 @@ serde_json = "*"
 tee = "*"
 url = "*"
 
-[dependencies.habitat_core]
-git = "https://github.com/habitat-sh/core.git"
+[dependencies.dojo_core]
+path = "../core"
 
-[dependencies.habitat_http_client]
-git = "https://github.com/habitat-sh/core.git"
+[dependencies.dojo_http_client]
+path = "../http-client"

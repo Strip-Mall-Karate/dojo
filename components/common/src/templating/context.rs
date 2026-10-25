@@ -70,9 +70,7 @@ use crate::hcore::package::PackageIdent;
 /// Serde `Serialize` implementation (and those of its members), so
 /// change this with care.
 ///
-/// User-facing documentation is available at
-/// https://www.habitat.sh/docs/reference/#template-data; update that
-/// as required.
+/// User-facing documentation describes this data; update it as required.
 #[derive(Clone, Debug, Serialize)]
 pub struct RenderContext<'a> {
     pkg: Package<'a>,
@@ -287,7 +285,7 @@ two = 2
     /// If you want to modify parts of it, it's easier to change
     /// things on a mutable reference.
     fn default_render_context<'a>() -> RenderContext<'a> {
-        let ident = PackageIdent::new("core", "test_pkg", Some("1.0.0"), Some("20180321150416"));
+        let ident = PackageIdent::new("karate", "test_pkg", Some("1.0.0"), Some("20180321150416"));
 
         let deps = vec![PackageIdent::new("test", "pkg1", Some("1.0.0"), Some("20180321150416")),
                         PackageIdent::new("test", "pkg2", Some("2.0.0"), Some("20180321150416")),
@@ -326,8 +324,8 @@ two = 2
                             svc_var_path:            Cow::Owned("var_path".into()),
                             svc_pid_file:            Cow::Owned("pid_file".into()),
                             svc_run:                 Cow::Owned("svc_run".into()),
-                            svc_user:                Cow::Owned("hab".into()),
-                            svc_group:               Cow::Owned("hab".into()), };
+                            svc_user:                Cow::Owned("doj".into()),
+                            svc_group:               Cow::Owned("doj".into()), };
 
         // Not using _tmp_dir, but need it to prevent it from being
         // dropped before we make the Cfg
@@ -390,6 +388,6 @@ two = 2
 
         let output = render("{{pkg.origin}}", &ctx);
 
-        assert_eq!(output, "core");
+        assert_eq!(output, "karate");
     }
 }

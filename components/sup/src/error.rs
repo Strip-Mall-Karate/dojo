@@ -36,22 +36,22 @@
 //! Also included in this module is `Result<T>`, a type alias for `Result<T, SupError>`. Use
 //! it instead of the longer `Result` form.
 
+use dojo_api_client;
+use dojo_butterfly;
+use dojo_common::{self,
+                  output::{self,
+                           OutputContext,
+                           OutputVerbosity,
+                           StructuredOutput},
+                  PROGRAM_NAME};
+use dojo_core::{self,
+                os::process::Pid,
+                package::{self,
+                          Identifiable}};
+use dojo_launcher_client;
+use dojo_sup_protocol;
 use futures::sync::oneshot;
 use glob;
-use habitat_api_client;
-use habitat_butterfly;
-use habitat_common::{self,
-                     output::{self,
-                              OutputContext,
-                              OutputVerbosity,
-                              StructuredOutput},
-                     PROGRAM_NAME};
-use habitat_core::{self,
-                   os::process::Pid,
-                   package::{self,
-                             Identifiable}};
-use habitat_launcher_client;
-use habitat_sup_protocol;
 use nitox;
 use notify;
 use rustls;
@@ -116,9 +116,9 @@ pub enum Error {
     BindTimeout(String),
     LockPoisoned,
     TestBootFail,
-    ButterflyError(habitat_butterfly::error::Error),
+    ButterflyError(dojo_butterfly::error::Error),
     CtlSecretIo(PathBuf, io::Error),
-    APIClient(habitat_api_client::Error),
+    APIClient(dojo_api_client::Error),
     EnvJoinPathsError(env::JoinPathsError),
     ExecCommandNotFound(String),
     EventError(nitox::NatsError),
@@ -126,8 +126,8 @@ pub enum Error {
     FileNotFound(String),
     FileWatcherFileIsRoot,
     GroupNotFound(String),
-    HabitatCommon(habitat_common::Error),
-    HabitatCore(habitat_core::Error),
+    DojoCommon(dojo_common::Error),
+    DojoCore(dojo_core::Error),
     InvalidBinds(Vec<String>),
     InvalidCertFile(PathBuf),
     InvalidKeyFile(PathBuf),
@@ -138,13 +138,13 @@ pub enum Error {
     InvalidUpdateStrategy(String),
     Io(io::Error),
     IPFailed,
-    Launcher(habitat_launcher_client::Error),
+    Launcher(dojo_launcher_client::Error),
     MissingRequiredBind(Vec<String>),
     MissingRequiredIdent,
     NameLookup(io::Error),
-    NetErr(habitat_sup_protocol::net::NetErr),
+    NetErr(dojo_sup_protocol::net::NetErr),
     NetParseError(net::AddrParseError),
-    NoActiveMembers(habitat_core::service::ServiceGroup),
+    NoActiveMembers(dojo_core::service::ServiceGroup),
     NoLauncher,
     NoSuchBind(String),
     NotifyCreateError(notify::Error),
@@ -190,8 +190,8 @@ impl fmt::Display for SupError {
                                 the system, this Supervisor cannot be started (if we did, we \
                                 would risk the services on this machine behaving badly without \
                                 our knowledge.) If you know that the services on this system are \
-                                safe, and want them to rejoin the habitat ring, you need to:\n\n  \
-                                rm -rf /hab/sup/default/MEMBER_ID /hab/sup/default/data\n\n This \
+                                safe, and want them to rejoin the dojo ring, you need to:\n\n  rm \
+                                -rf /doj/sup/default/MEMBER_ID /doj/sup/default/data\n\n This \
                                 will cause the Supervisor to join the ring as a new member.\n\n \
                                 If you are in doubt, it is better to consider the services \
                                 managed by this Supervisor as unsafe to run."
@@ -231,8 +231,8 @@ impl fmt::Display for SupError {
             Error::EventError(ref err) => err.to_string(),
             Error::EventStreamError(ref err) => err.to_string(),
             Error::Permissions(ref err) => err.to_string(),
-            Error::HabitatCommon(ref err) => err.to_string(),
-            Error::HabitatCore(ref err) => err.to_string(),
+            Error::DojoCommon(ref err) => err.to_string(),
+            Error::DojoCore(ref err) => err.to_string(),
             Error::EnvJoinPathsError(ref err) => err.to_string(),
             Error::FileNotFound(ref e) => format!("File not found at: {}", e),
             Error::FileWatcherFileIsRoot => "Watched file is root".to_string(),
@@ -256,13 +256,13 @@ impl fmt::Display for SupError {
                 format!("Missing required bind(s), {}", e.join(", "))
             }
             Error::MissingRequiredIdent => {
-                "Missing required ident field: (example: ident = \"core/redis\")".to_string()
+                "Missing required ident field: (example: ident = \"karate/redis\")".to_string()
             }
             Error::NameLookup(ref e) => format!("Error resolving a name or IP address: {}", e),
             Error::NetErr(ref err) => err.to_string(),
             Error::NetParseError(ref e) => format!("Can't parse ip:port: {}", e),
             Error::NoActiveMembers(ref g) => format!("No active members in service group {}", g),
-            Error::NoLauncher => "Supervisor must be run from `hab-launch`".to_string(),
+            Error::NoLauncher => "Supervisor must be run from `doj-launch`".to_string(),
             Error::NoSuchBind(ref b) => format!("No such bind: {}", b),
             Error::NotifyCreateError(ref e) => format!("Notify create error: {}", e),
             Error::NotifyError(ref e) => format!("Notify error: {}", e),
@@ -284,13 +284,13 @@ impl fmt::Display for SupError {
             }
             Error::ProcessLockCorrupt => "Unable to decode contents of process lock".to_string(),
             Error::ProcessLocked(ref pid) => {
-                format!("Unable to start Habitat Supervisor because another instance is already \
+                format!("Unable to start Dojo Supervisor because another instance is already \
                          running with the pid {}.",
                         pid)
             }
             Error::ProcessLockIO(ref path, ref err) => {
-                format!("Unable to start Habitat Supervisor because we weren't able to write or \
-                         read to a process lock at {}, {}",
+                format!("Unable to start Dojo Supervisor because we weren't able to write or read \
+                         to a process lock at {}, {}",
                         path.display(),
                         err)
             }
@@ -363,8 +363,8 @@ impl error::Error for SupError {
             Error::EventStreamError(_) => "event streaming error", // underlying NATS error
             // doesn't implement Error
             Error::GroupNotFound(_) => "No matching GID for group found",
-            Error::HabitatCommon(ref err) => err.description(),
-            Error::HabitatCore(ref err) => err.description(),
+            Error::DojoCommon(ref err) => err.description(),
+            Error::DojoCore(ref err) => err.description(),
             Error::EnvJoinPathsError(ref err) => err.description(),
             Error::FileNotFound(_) => "File not found",
             Error::FileWatcherFileIsRoot => "Watched file is root",
@@ -385,13 +385,13 @@ impl error::Error for SupError {
                 "A service to start without specifying a service group for all required binds"
             }
             Error::MissingRequiredIdent => {
-                "Missing required ident field: (example: ident = \"core/redis\")"
+                "Missing required ident field: (example: ident = \"karate/redis\")"
             }
             Error::NetErr(ref err) => err.description(),
             Error::NetParseError(_) => "Can't parse IP:port",
             Error::NameLookup(_) => "Error resolving a name or IP address",
             Error::NoActiveMembers(_) => "Group has no active members",
-            Error::NoLauncher => "Supervisor must be run from `hab-launch`",
+            Error::NoLauncher => "Supervisor must be run from `doj-launch`",
             Error::NoSuchBind(_) => "No such bind found for this service",
             Error::NotifyCreateError(_) => "Notify create error",
             Error::NotifyError(_) => "Notify error",
@@ -405,9 +405,7 @@ impl error::Error for SupError {
             Error::PidFileCorrupt(_) => "Unable to decode contents of PID file",
             Error::PidFileIO(..) => "Unable to read or write to PID file",
             Error::ProcessLockCorrupt => "Unable to decode contents of process lock",
-            Error::ProcessLocked(_) => {
-                "Another instance of the Habitat Supervisor is already running"
-            }
+            Error::ProcessLocked(_) => "Another instance of the Dojo Supervisor is already running",
             Error::ProcessLockIO(..) => "Unable to read or write to a process lock",
             Error::RecvError(_) => "A channel failed to receive a response",
             Error::ServiceDeserializationError(_) => "Can't deserialize service status",
@@ -435,13 +433,13 @@ impl From<rustls::TLSError> for SupError {
     fn from(err: rustls::TLSError) -> SupError { sup_error!(Error::TLSError(err)) }
 }
 
-impl From<habitat_api_client::Error> for SupError {
-    fn from(err: habitat_api_client::Error) -> SupError { sup_error!(Error::APIClient(err)) }
+impl From<dojo_api_client::Error> for SupError {
+    fn from(err: dojo_api_client::Error) -> SupError { sup_error!(Error::APIClient(err)) }
 }
 
-impl From<SupError> for habitat_sup_protocol::net::NetErr {
-    fn from(err: SupError) -> habitat_sup_protocol::net::NetErr {
-        habitat_sup_protocol::net::err(habitat_sup_protocol::net::ErrCode::Internal, err)
+impl From<SupError> for dojo_sup_protocol::net::NetErr {
+    fn from(err: SupError) -> dojo_sup_protocol::net::NetErr {
+        dojo_sup_protocol::net::err(dojo_sup_protocol::net::ErrCode::Internal, err)
     }
 }
 
@@ -449,22 +447,22 @@ impl From<net::AddrParseError> for SupError {
     fn from(err: net::AddrParseError) -> SupError { sup_error!(Error::NetParseError(err)) }
 }
 
-impl From<habitat_butterfly::error::Error> for SupError {
-    fn from(err: habitat_butterfly::error::Error) -> SupError {
+impl From<dojo_butterfly::error::Error> for SupError {
+    fn from(err: dojo_butterfly::error::Error) -> SupError {
         sup_error!(Error::ButterflyError(err))
     }
 }
 
-impl From<habitat_common::Error> for SupError {
-    fn from(err: habitat_common::Error) -> SupError { sup_error!(Error::HabitatCommon(err)) }
+impl From<dojo_common::Error> for SupError {
+    fn from(err: dojo_common::Error) -> SupError { sup_error!(Error::DojoCommon(err)) }
 }
 
 impl From<glob::PatternError> for SupError {
     fn from(err: glob::PatternError) -> SupError { sup_error!(Error::SpecWatcherGlob(err)) }
 }
 
-impl From<habitat_core::Error> for SupError {
-    fn from(err: habitat_core::Error) -> SupError { sup_error!(Error::HabitatCore(err)) }
+impl From<dojo_core::Error> for SupError {
+    fn from(err: dojo_core::Error) -> SupError { sup_error!(Error::DojoCore(err)) }
 }
 
 impl From<ffi::NulError> for SupError {
@@ -479,8 +477,8 @@ impl From<env::JoinPathsError> for SupError {
     fn from(err: env::JoinPathsError) -> SupError { sup_error!(Error::EnvJoinPathsError(err)) }
 }
 
-impl From<habitat_launcher_client::Error> for SupError {
-    fn from(err: habitat_launcher_client::Error) -> SupError { sup_error!(Error::Launcher(err)) }
+impl From<dojo_launcher_client::Error> for SupError {
+    fn from(err: dojo_launcher_client::Error) -> SupError { sup_error!(Error::Launcher(err)) }
 }
 
 impl From<string::FromUtf8Error> for SupError {
@@ -507,8 +505,8 @@ impl From<toml::ser::Error> for SupError {
     fn from(err: toml::ser::Error) -> Self { sup_error!(Error::TomlEncode(err)) }
 }
 
-impl From<habitat_sup_protocol::net::NetErr> for SupError {
-    fn from(err: habitat_sup_protocol::net::NetErr) -> Self { sup_error!(Error::NetErr(err)) }
+impl From<dojo_sup_protocol::net::NetErr> for SupError {
+    fn from(err: dojo_sup_protocol::net::NetErr) -> Self { sup_error!(Error::NetErr(err)) }
 }
 
 impl From<oneshot::Canceled> for SupError {

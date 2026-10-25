@@ -25,37 +25,37 @@ use std::{fs::{self,
 use crate::hcore::{os::users,
                    package::PackageInstall};
 
+pub mod doj_root;
 pub mod fixture_root;
-pub mod hab_root;
 pub mod test_butterfly;
 pub mod test_sup;
 
 // Re-export the key structs of this package for ergonomics.
-pub use self::{fixture_root::FixtureRoot,
-               hab_root::HabRoot,
+pub use self::{doj_root::DojRoot,
+               fixture_root::FixtureRoot,
                test_sup::TestSup};
 
 /// Sleep for the specified number of seconds!
 pub fn sleep_seconds(seconds: u64) { thread::sleep(Duration::from_secs(seconds)) }
 
-/// Copy fixture package files from `fixture_root` over to `hab_root`
+/// Copy fixture package files from `fixture_root` over to `doj_root`
 /// in the appropriate places for the Supervisor to find them.
 pub fn setup_package_files(origin_name: &str,
                            package_name: &str,
                            service_group: &str,
                            fixture_root: &FixtureRoot,
-                           hab_root: &HabRoot) {
+                           doj_root: &DojRoot) {
     let origin_name = origin_name.to_string();
     let package_name = package_name.to_string();
     let service_group = service_group.to_string();
 
     // Ensure the directory for the spec files exists
-    let spec_dir = hab_root.spec_dir(&service_group);
+    let spec_dir = doj_root.spec_dir(&service_group);
     fs::create_dir_all(spec_dir).expect("could not create spec directory");
 
     // Copy the spec file over
     let spec_source = fixture_root.spec_path(&package_name);
-    let spec_destination = hab_root.spec_path(&package_name, &service_group);
+    let spec_destination = doj_root.spec_path(&package_name, &service_group);
     assert!(spec_source.exists(),
             format!("Missing a spec file at {:?}", spec_source));
     fs::copy(&spec_source, &spec_destination).unwrap_or_else(|_| {
@@ -65,20 +65,20 @@ pub fn setup_package_files(origin_name: &str,
 
     // Copy the expanded package directory over
     let expanded_fixture_dir = fixture_root.expanded_package_dir(&package_name);
-    let hab_pkg_path = hab_root.pkg_path(&origin_name, &package_name);
-    copy_dir(&expanded_fixture_dir, &hab_pkg_path);
-    write_default_svc_user_and_group_metafiles(&hab_root, &origin_name, &package_name);
+    let doj_pkg_path = doj_root.pkg_path(&origin_name, &package_name);
+    copy_dir(&expanded_fixture_dir, &doj_pkg_path);
+    write_default_svc_user_and_group_metafiles(&doj_root, &origin_name, &package_name);
 
     let install =
-        PackageInstall::load(&hab_root.pkg_ident(&origin_name, &package_name),
-                             Some(hab_root.as_ref())).unwrap_or_else(|_| {
+        PackageInstall::load(&doj_root.pkg_ident(&origin_name, &package_name),
+                             Some(doj_root.as_ref())).unwrap_or_else(|_| {
                                                          panic!("Could not load package {:?}/{:?}",
                                                                 &origin_name, &package_name)
                                                      });
     if let Ok(tdeps) = install.tdeps() {
         for dependency in tdeps.iter() {
             let fixture_dir = fixture_root.expanded_package_dir(&dependency.name);
-            let pkg_path = hab_root.pkg_path(&dependency.origin, &dependency.name);
+            let pkg_path = doj_root.pkg_path(&dependency.origin, &dependency.name);
             copy_dir(&fixture_dir, &pkg_path);
         }
     }
@@ -126,12 +126,12 @@ pub fn copy_dir<S, D>(source_dir: S, dest_dir: D)
 /// In an effort to execute a package when running test suites as a non-root user, the current
 /// username and the user's primary groupname will be used. If a fixture contains one or both of
 /// these metafiles, default values will *not* be used.
-fn write_default_svc_user_and_group_metafiles<S, T>(hab_root: &HabRoot, pkg_origin: S, pkg_name: T)
+fn write_default_svc_user_and_group_metafiles<S, T>(doj_root: &DojRoot, pkg_origin: S, pkg_name: T)
     where S: AsRef<Path>,
           T: AsRef<Path>
 {
-    let svc_user_metafile = hab_root.svc_user_path(&pkg_origin, &pkg_name);
-    let svc_group_metafile = hab_root.svc_group_path(&pkg_origin, &pkg_name);
+    let svc_user_metafile = doj_root.svc_user_path(&pkg_origin, &pkg_name);
+    let svc_group_metafile = doj_root.svc_group_path(&pkg_origin, &pkg_name);
 
     if !svc_user_metafile.is_file() {
         write_metafile(svc_user_metafile,

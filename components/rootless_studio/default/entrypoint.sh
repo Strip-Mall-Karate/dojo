@@ -1,24 +1,24 @@
 #!/bin/bash
 
-hab pkg exec core/hab-backline mkdir -m 1777 -p /tmp
-hab pkg exec core/hab-backline mkdir -m 0750 -p /root
-hab pkg exec core/hab-backline mkdir -m 0755 -p /usr/bin
+doj pkg exec karate/doj-backline mkdir -m 1777 -p /tmp
+doj pkg exec karate/doj-backline mkdir -m 0750 -p /root
+doj pkg exec karate/doj-backline mkdir -m 0755 -p /usr/bin
 
-source /etc/habitat-studio/import_keys.sh
-source /etc/habitat-studio/environment.sh
+source /etc/dojo-studio/import_keys.sh
+source /etc/dojo-studio/environment.sh
 
 declare -a secrets
 readarray -t secrets < <(load_secrets)
 
 case "$1" in
   enter)
-    hab pkg exec core/hab-backline env STUDIO_ENTER=true "${secrets[@]}" bash --login +h;;
+    doj pkg exec karate/doj-backline env STUDIO_ENTER=true "${secrets[@]}" bash --login +h;;
   build)
     shift
-    hab pkg exec core/hab-backline env "${secrets[@]}" /bin/build "$@";;
+    doj pkg exec karate/doj-backline env "${secrets[@]}" /bin/build "$@";;
   run)
     shift
-    hab pkg exec core/hab-backline env "${secrets[@]}" bash --login -c "$@";;
+    doj pkg exec karate/doj-backline env "${secrets[@]}" bash --login -c "$@";;
   *)
     echo "Unknown Studio Command" && exit 1;;
 esac

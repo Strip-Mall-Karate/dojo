@@ -55,37 +55,37 @@ use crate::{census::{CensusRing,
             http_gateway,
             VERSION};
 use cpu_time::ProcessTime;
+use dojo_butterfly::{member::Member,
+                     server::{timing::Timing,
+                              ServerProxy,
+                              Suitability},
+                     trace::Trace};
+use dojo_common::{outputln,
+                  types::ListenCtlAddr,
+                  FeatureFlag};
+use dojo_core::{crypto::SymKey,
+                env::{self,
+                      Config},
+                fs::FS_ROOT_PATH,
+                os::{process::{self,
+                               Pid,
+                               Signal},
+                     signals::{self,
+                               SignalEvent}},
+                package::{Identifiable,
+                          PackageIdent,
+                          PackageInstall},
+                service::ServiceGroup,
+                util::ToI64,
+                ChannelIdent};
+use dojo_launcher_client::{LauncherCli,
+                           LAUNCHER_LOCK_CLEAN_ENV,
+                           LAUNCHER_PID_ENV};
+use dojo_sup_protocol;
 use futures::{future,
               prelude::*,
               sync::{mpsc,
                      oneshot}};
-use habitat_butterfly::{member::Member,
-                        server::{timing::Timing,
-                                 ServerProxy,
-                                 Suitability},
-                        trace::Trace};
-use habitat_common::{outputln,
-                     types::ListenCtlAddr,
-                     FeatureFlag};
-use habitat_core::{crypto::SymKey,
-                   env::{self,
-                         Config},
-                   fs::FS_ROOT_PATH,
-                   os::{process::{self,
-                                  Pid,
-                                  Signal},
-                        signals::{self,
-                                  SignalEvent}},
-                   package::{Identifiable,
-                             PackageIdent,
-                             PackageInstall},
-                   service::ServiceGroup,
-                   util::ToI64,
-                   ChannelIdent};
-use habitat_launcher_client::{LauncherCli,
-                              LAUNCHER_LOCK_CLEAN_ENV,
-                              LAUNCHER_PID_ENV};
-use habitat_sup_protocol;
 use num_cpus;
 #[cfg(unix)]
 use proc_self;
@@ -140,18 +140,18 @@ static LOGKEY: &'static str = "MR";
 
 lazy_static! {
     static ref RUN_LOOP_DURATION: HistogramVec =
-        register_histogram_vec!("hab_sup_run_loop_duration_seconds",
+        register_histogram_vec!("doj_sup_run_loop_duration_seconds",
                                 "The time it takes for one tick of a run loop",
                                 &["loop"]).unwrap();
     static ref FILE_DESCRIPTORS: IntGauge = register_int_gauge!(
-        "hab_sup_open_file_descriptors_total",
+        "doj_sup_open_file_descriptors_total",
         "A count of the total number of open file descriptors. Unix only"
     ).unwrap();
     static ref MEMORY_STATS: IntGaugeVec =
-        register_int_gauge_vec!("hab_sup_memory_allocations_bytes",
+        register_int_gauge_vec!("doj_sup_memory_allocations_bytes",
                                 "Memory allocation statistics",
                                 &["category"]).unwrap();
-    static ref CPU_TIME: IntGauge = register_int_gauge!("hab_sup_cpu_time_nanoseconds",
+    static ref CPU_TIME: IntGauge = register_int_gauge!("doj_sup_cpu_time_nanoseconds",
                                                         "CPU time of the supervisor process in \
                                                          nanoseconds").unwrap();
 }
@@ -175,7 +175,7 @@ enum ShutdownMode {
     /// shutting down).
     Normal,
     /// When the Supervisor has been manually departed from the
-    /// Habitat network. All services should come down, as well.
+    /// Dojo network. All services should come down, as well.
     Departed,
     /// A Supervisor is updating itself, or is otherwise simply
     /// restarting. Services _do not_ get shut down.
@@ -238,7 +238,7 @@ pub struct TLSConfig {
 
 impl ManagerConfig {
     pub fn sup_root(&self) -> PathBuf {
-        habitat_sup_protocol::sup_root(self.custom_state_path.as_ref())
+        dojo_sup_protocol::sup_root(self.custom_state_path.as_ref())
     }
 }
 
@@ -258,7 +258,7 @@ impl FromStr for GatewayAuthToken {
 }
 
 impl env::Config for GatewayAuthToken {
-    const ENVVAR: &'static str = "HAB_SUP_GATEWAY_AUTH_TOKEN";
+    const ENVVAR: &'static str = "DOJ_SUP_GATEWAY_AUTH_TOKEN";
 }
 
 /// Once a formerly-busy service is no longer doing something
@@ -343,7 +343,7 @@ pub struct GatewayState {
 
 pub struct Manager {
     pub state:    Arc<ManagerState>,
-    butterfly:    habitat_butterfly::Server,
+    butterfly:    dojo_butterfly::Server,
     census_ring:  CensusRing,
     fs_cfg:       Arc<FsCfg>,
     launcher:     LauncherCli,
@@ -440,14 +440,14 @@ impl Manager {
         let mut gateway_state = GatewayState::default();
         gateway_state.auth_token = gateway_auth_token.0;
 
-        let server = habitat_butterfly::Server::new(sys.gossip_listen(),
-                                                    sys.gossip_listen(),
-                                                    member,
-                                                    Trace::default(),
-                                                    cfg.ring_key,
-                                                    None,
-                                                    Some(&fs_cfg.data_path),
-                                                    Box::new(SuitabilityLookup(services.clone())))?;
+        let server = dojo_butterfly::Server::new(sys.gossip_listen(),
+                                                 sys.gossip_listen(),
+                                                 member,
+                                                 Trace::default(),
+                                                 cfg.ring_key,
+                                                 None,
+                                                 Some(&fs_cfg.data_path),
+                                                 Box::new(SuitabilityLookup(services.clone())))?;
         outputln!("Supervisor Member-ID {}", sys.member_id);
         for peer_addr in &cfg.gossip_peers {
             let mut peer = Member::default();
@@ -607,8 +607,8 @@ impl Manager {
             if let Ok(package) =
                 PackageInstall::load(&service.pkg.ident, Some(Path::new(&*FS_ROOT_PATH)))
             {
-                if let Err(err) = habitat_common::command::package::install::check_install_hooks(
-                    &mut habitat_common::ui::UI::with_sinks(),
+                if let Err(err) = dojo_common::command::package::install::check_install_hooks(
+                    &mut dojo_common::ui::UI::with_sinks(),
                     &package,
                     Path::new(&*FS_ROOT_PATH),
                 ) {
@@ -666,7 +666,7 @@ impl Manager {
     // but changing it in the absence of other necessity seems like too much risk for the
     // expected reward.
     #[allow(clippy::cyclomatic_complexity)]
-    pub fn run(mut self, svc: Option<habitat_sup_protocol::ctl::SvcLoad>) -> Result<()> {
+    pub fn run(mut self, svc: Option<dojo_sup_protocol::ctl::SvcLoad>) -> Result<()> {
         let main_hist = RUN_LOOP_DURATION.with_label_values(&["sup"]);
         let service_hist = RUN_LOOP_DURATION.with_label_values(&["service"]);
         let mut next_cpu_measurement = SteadyTime::now();
@@ -804,7 +804,7 @@ impl Manager {
             track_memory_stats();
 
             if self.feature_flags.contains(FeatureFlag::TEST_EXIT) {
-                if let Ok(exit_file_path) = env::var("HAB_FEAT_TEST_EXIT") {
+                if let Ok(exit_file_path) = env::var("DOJ_FEAT_TEST_EXIT") {
                     if let Ok(mut exit_code_file) = File::open(&exit_file_path) {
                         let mut buffer = String::new();
                         exit_code_file.read_to_string(&mut buffer)
@@ -1206,7 +1206,7 @@ impl Manager {
     /// services until they're done with what they're doing.  (For
     /// example, consider stopping a service that takes 10 seconds to
     /// shut down (including post-stop hook execution), but then
-    /// executing `hab svc start SERVICE` 2 seconds into that 10
+    /// executing `doj svc start SERVICE` 2 seconds into that 10
     /// seconds.)
     ///
     /// As more service operations (e.g., hooks) become asynchronous,
@@ -1523,7 +1523,7 @@ impl FromStr for TokioThreadCount {
 }
 
 impl env::Config for TokioThreadCount {
-    const ENVVAR: &'static str = "HAB_TOKIO_THREAD_COUNT";
+    const ENVVAR: &'static str = "DOJ_TOKIO_THREAD_COUNT";
 }
 
 impl Into<usize> for TokioThreadCount {
@@ -1754,9 +1754,9 @@ impl Future for CtlHandler {
 #[cfg(test)]
 mod test {
     use super::*;
-    use habitat_common::cli::FS_ROOT;
-    use habitat_core::fs::cache_key_path;
-    use habitat_sup_protocol::STATE_PATH_PREFIX;
+    use dojo_common::cli::FS_ROOT;
+    use dojo_core::fs::cache_key_path;
+    use dojo_sup_protocol::STATE_PATH_PREFIX;
     use std::path::PathBuf;
 
     mod reconciliation_flag {
@@ -1827,9 +1827,9 @@ mod test {
 
     mod tokio_thread_count {
         use super::*;
-        use habitat_common::locked_env_var;
+        use dojo_common::locked_env_var;
 
-        locked_env_var!(HAB_TOKIO_THREAD_COUNT, lock_thread_count);
+        locked_env_var!(DOJ_TOKIO_THREAD_COUNT, lock_thread_count);
 
         #[test]
         fn default_is_number_of_cpus() {
@@ -1862,7 +1862,7 @@ mod test {
         //! what is currently running.
 
         use super::super::*;
-        use habitat_sup_protocol::types::UpdateStrategy;
+        use dojo_sup_protocol::types::UpdateStrategy;
 
         /// Helper function for generating a basic spec from an
         /// identifier string
@@ -1880,33 +1880,35 @@ mod test {
         /// current specs, we shouldn't have anything to change.
         #[test]
         fn identical_specs_yield_no_changes() {
-            let specs = vec![new_spec("core/foo"), new_spec("core/bar")];
+            let specs = vec![new_spec("karate/foo"), new_spec("karate/bar")];
             assert!(Manager::specs_to_operations(specs.clone(), specs.clone()).is_empty());
         }
 
         #[test]
         fn missing_spec_on_disk_means_stop() {
-            let running = vec![new_spec("core/foo")];
+            let running = vec![new_spec("karate/foo")];
             let on_disk = vec![];
 
             let operations = Manager::specs_to_operations(running, on_disk);
             assert_eq!(operations.len(), 1);
-            assert_eq!(operations[0], ServiceOperation::Stop(new_spec("core/foo")));
+            assert_eq!(operations[0],
+                       ServiceOperation::Stop(new_spec("karate/foo")));
         }
 
         #[test]
         fn missing_active_spec_means_start() {
             let running = vec![];
-            let on_disk = vec![new_spec("core/foo")];
+            let on_disk = vec![new_spec("karate/foo")];
 
             let operations = Manager::specs_to_operations(running, on_disk);
             assert_eq!(operations.len(), 1);
-            assert_eq!(operations[0], ServiceOperation::Start(new_spec("core/foo")));
+            assert_eq!(operations[0],
+                       ServiceOperation::Start(new_spec("karate/foo")));
         }
 
         #[test]
         fn down_spec_on_disk_means_stop_running_service() {
-            let spec = new_spec("core/foo");
+            let spec = new_spec("karate/foo");
 
             let running = vec![spec.clone()];
 
@@ -1927,7 +1929,7 @@ mod test {
         fn down_spec_on_disk_with_no_running_service_yields_no_changes() {
             let running = vec![];
             let down_spec = {
-                let mut s = new_spec("core/foo");
+                let mut s = new_spec("karate/foo");
                 s.desired_state = DesiredState::Down;
                 s
             };
@@ -1939,7 +1941,7 @@ mod test {
 
         #[test]
         fn modified_spec_on_disk_means_restart() {
-            let running_spec = new_spec("core/foo");
+            let running_spec = new_spec("karate/foo");
 
             let on_disk_spec = {
                 let mut s = running_spec.clone();
@@ -1971,11 +1973,11 @@ mod test {
         fn multiple_operations_can_be_determined_at_once() {
             // Nothing should happen with this; it's already how it
             // needs to be.
-            let svc_1_running = new_spec("core/foo");
+            let svc_1_running = new_spec("karate/foo");
             let svc_1_on_disk = svc_1_running.clone();
 
             // Should get shut down.
-            let svc_2_running = new_spec("core/bar");
+            let svc_2_running = new_spec("karate/bar");
             let svc_2_on_disk = {
                 let mut s = svc_2_running.clone();
                 s.desired_state = DesiredState::Down;
@@ -1983,7 +1985,7 @@ mod test {
             };
 
             // Should get restarted.
-            let svc_3_running = new_spec("core/baz");
+            let svc_3_running = new_spec("karate/baz");
             let svc_3_on_disk = {
                 let mut s = svc_3_running.clone();
                 s.update_strategy = UpdateStrategy::AtOnce;
@@ -1992,16 +1994,16 @@ mod test {
 
             // Nothing should happen with this; it's already down.
             let svc_4_on_disk = {
-                let mut s = new_spec("core/quux");
+                let mut s = new_spec("karate/quux");
                 s.desired_state = DesiredState::Down;
                 s
             };
 
             // This should get started
-            let svc_5_on_disk = new_spec("core/wat");
+            let svc_5_on_disk = new_spec("karate/wat");
 
             // This should get shut down
-            let svc_6_running = new_spec("core/lolwut");
+            let svc_6_running = new_spec("karate/lolwut");
 
             let running = vec![svc_1_running.clone(),
                                svc_2_running.clone(),
@@ -2027,7 +2029,7 @@ mod test {
             // `expected_operations`, but we can't, since that would
             // mean we'd need a total ordering on `PackageIdent`,
             // which we can't do, since identifiers of different
-            // packages (say, `core/foo` and `core/bar`) are not
+            // packages (say, `karate/foo` and `karate/bar`) are not
             // comparable.
             //
             // Instead, we'll just do the verification one at a time.

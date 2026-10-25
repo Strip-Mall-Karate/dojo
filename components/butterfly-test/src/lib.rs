@@ -13,27 +13,27 @@
 // limitations under the License.
 
 #[macro_use]
-extern crate habitat_butterfly;
+extern crate dojo_butterfly;
 
 #[macro_use]
 extern crate lazy_static;
 
-use habitat_butterfly::{member::{Health,
-                                 Member},
-                        rumor::{departure::Departure,
-                                election::ElectionStatus,
-                                service::{Service,
-                                          SysInfo},
-                                service_config::ServiceConfig,
-                                service_file::ServiceFile},
-                        server::{timing::Timing,
-                                 Server,
-                                 Suitability},
-                        trace::Trace};
-use habitat_core::{crypto::keys::sym_key::SymKey,
-                   package::{Identifiable,
-                             PackageIdent},
-                   service::ServiceGroup};
+use dojo_butterfly::{member::{Health,
+                              Member},
+                     rumor::{departure::Departure,
+                             election::ElectionStatus,
+                             service::{Service,
+                                       SysInfo},
+                             service_config::ServiceConfig,
+                             service_file::ServiceFile},
+                     server::{timing::Timing,
+                              Server,
+                              Suitability},
+                     trace::Trace};
+use dojo_core::{crypto::keys::sym_key::SymKey,
+                package::{Identifiable,
+                          PackageIdent},
+                service::ServiceGroup};
 use std::{net::{IpAddr,
                 Ipv4Addr,
                 SocketAddr},

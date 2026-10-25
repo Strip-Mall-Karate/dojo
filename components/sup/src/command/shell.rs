@@ -14,9 +14,9 @@
 
 use crate::error::{Error,
                    Result};
-use habitat_common::{outputln,
-                     util::path};
-use habitat_core::fs::find_command;
+use dojo_common::{outputln,
+                  util::path};
+use dojo_core::fs::find_command;
 use libc;
 use std::{env,
           ffi::CString,

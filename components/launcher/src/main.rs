@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use dojo_common::output::{self,
+                          OutputFormat,
+                          OutputVerbosity};
+use dojo_launcher::server;
 use env_logger;
-use habitat_common::output::{self,
-                             OutputFormat,
-                             OutputVerbosity};
-use habitat_launcher::server;
 use log::{error,
           log,
           Level};
@@ -48,11 +48,11 @@ fn main() {
 /// ourselves.
 fn set_global_logging_options(args: &[String]) {
     // Yeah, this is pretty weird, but it comes out of how the
-    // hab-launch, hab, and hab-sup binaries interact.
+    // doj-launch, doj, and doj-sup binaries interact.
     //
-    // These flags are defined with CLAP on `hab`, so they can be
-    // passed through `hab-launch` (and intercepted here), before
-    // being passed on to `hab-sup`, where they are _also_ defined.
+    // These flags are defined with CLAP on `doj`, so they can be
+    // passed through `doj-launch` (and intercepted here), before
+    // being passed on to `doj-sup`, where they are _also_ defined.
     //
     // What a tangled web we weave!
 

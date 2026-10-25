@@ -38,7 +38,7 @@ impl PackageGraph {
                        graph: StableGraph::new(), }
     }
 
-    /// Construct a `PackageGraph` from all the packages stored in in the habitat `pkgs`
+    /// Construct a `PackageGraph` from all the packages stored in in the dojo `pkgs`
     /// directory
     pub fn from_root_path(fs_root_path: &Path) -> Result<Self> {
         let mut pg = Self::empty();
@@ -46,7 +46,7 @@ impl PackageGraph {
         Ok(pg)
     }
 
-    /// Load a set of packages that are stored in a package_path under a habitat
+    /// Load a set of packages that are stored in a package_path under a dojo
     /// root directory
     fn load(&mut self, fs_root_path: &Path) -> Result<()> {
         let package_path = hfs::pkg_root_path(Some(&fs_root_path));
@@ -272,9 +272,9 @@ mod test {
 
     #[test]
     fn no_deps_graph() {
-        let packages = vec![empty_package_deps(PackageIdent::from_str("core/redis/2.1.0/\
+        let packages = vec![empty_package_deps(PackageIdent::from_str("karate/redis/2.1.0/\
                                                                        20180704142101").unwrap()),
-                            empty_package_deps(PackageIdent::from_str("core/foo/1.0/\
+                            empty_package_deps(PackageIdent::from_str("karate/foo/1.0/\
                                                                        20180704142702").unwrap()),];
 
         let graph = build(&packages);
@@ -284,8 +284,8 @@ mod test {
 
     #[test]
     fn simplest_graph() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),];
 
@@ -301,7 +301,7 @@ mod test {
     fn different_origins_graph() {
         // We have non-standard implementations of `Ord`, `PartialOrd` for `PackageIdent`.  Make
         // sure this doesn't mess with the requirements of `BiMap`
-        let packages = vec![empty_package_deps(PackageIdent::from_str("core/redis/2.1.0/\
+        let packages = vec![empty_package_deps(PackageIdent::from_str("karate/redis/2.1.0/\
                                                                        20180704142101").unwrap()),
                             empty_package_deps(PackageIdent::from_str("mine/redis/2.1.0/\
                                                                        20180704142101").unwrap()),];
@@ -313,10 +313,10 @@ mod test {
 
     #[test]
     fn count_deps_non_existent_package() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/foo/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/foo/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[a.clone()]),
@@ -326,17 +326,17 @@ mod test {
         assert_eq!(graph.node_count(), 4);
         assert_eq!(graph.edge_count(), 4);
 
-        let does_not_exist = PackageIdent::from_str("core/baz").unwrap();
+        let does_not_exist = PackageIdent::from_str("karate/baz").unwrap();
         assert!(graph.count_deps(&does_not_exist).is_none());
         assert!(graph.count_rdeps(&does_not_exist).is_none());
     }
 
     #[test]
     fn count_deps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/foo/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/foo/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[a.clone()]),
@@ -354,10 +354,10 @@ mod test {
 
     #[test]
     fn deps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/foo/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/foo/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[a.clone()]),
@@ -377,10 +377,10 @@ mod test {
 
     #[test]
     fn count_rdeps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/foo/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/foo/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[a.clone()]),
@@ -398,10 +398,10 @@ mod test {
 
     #[test]
     fn rdeps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/foo/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/foo/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[a.clone()]),
@@ -421,10 +421,10 @@ mod test {
 
     #[test]
     fn remove_package_no_rdeps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/foo/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/foo/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[a.clone()]),
@@ -448,8 +448,8 @@ mod test {
 
     #[test]
     fn cant_remove_package_with_rdeps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),];
 
@@ -465,7 +465,7 @@ mod test {
 
     #[test]
     fn ordered_deps_of_empty_deps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
         let packages = vec![empty_package_deps(a.clone())];
 
         let graph = build(&packages);
@@ -478,10 +478,10 @@ mod test {
 
     #[test]
     fn ordered_deps_non_existent_package() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/foo/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/foo/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[a.clone()]),
@@ -491,17 +491,17 @@ mod test {
         assert_eq!(graph.node_count(), 4);
         assert_eq!(graph.edge_count(), 4);
 
-        let does_not_exist = PackageIdent::from_str("core/baz").unwrap();
+        let does_not_exist = PackageIdent::from_str("karate/baz").unwrap();
         assert_eq!(graph.ordered_deps(&does_not_exist), empty_vec());
         assert_eq!(graph.ordered_reverse_deps(&does_not_exist), empty_vec());
     }
 
     #[test]
     fn ordered_deps_are_in_order() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/baz/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/baz/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[b.clone()]),
@@ -518,10 +518,10 @@ mod test {
 
     #[test]
     fn owned_ordered_deps_are_in_order() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/baz/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/baz/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[b.clone()]),
@@ -537,7 +537,7 @@ mod test {
     }
     #[test]
     fn ordered_reverse_deps_of_empty_deps() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
         let packages = vec![empty_package_deps(a.clone())];
 
         let graph = build(&packages);
@@ -550,10 +550,10 @@ mod test {
 
     #[test]
     fn ordered_reverse_deps_are_in_order() {
-        let a = PackageIdent::from_str("core/redis/2.1.0/20180704142101").unwrap();
-        let b = PackageIdent::from_str("core/foo/1.0/20180704142702").unwrap();
-        let c = PackageIdent::from_str("core/bar/1.0/20180704142805").unwrap();
-        let d = PackageIdent::from_str("core/baz/1.0/20180704142805").unwrap();
+        let a = PackageIdent::from_str("karate/redis/2.1.0/20180704142101").unwrap();
+        let b = PackageIdent::from_str("karate/foo/1.0/20180704142702").unwrap();
+        let c = PackageIdent::from_str("karate/bar/1.0/20180704142805").unwrap();
+        let d = PackageIdent::from_str("karate/baz/1.0/20180704142805").unwrap();
         let packages = vec![empty_package_deps(a.clone()),
                             package_deps(b.clone(), &[a.clone()]),
                             package_deps(c.clone(), &[b.clone()]),

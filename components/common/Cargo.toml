@@ -1,9 +1,9 @@
 [package]
-name = "habitat_common"
+name = "dojo_common"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
-build = "../build-habitat.rs"
+authors = []
+build = "../build-dojo.rs"
 workspace = "../../"
 
 [dependencies]
@@ -21,7 +21,7 @@ glob = "*"
 #   "foo.[0]"
 #   See https://github.com/sunng87/handlebars-rust/commit/707f05442ef6f441a1cfc6b13ac180b78cb296db
 handlebars = { version = "= 0.28.3", default-features = false }
-# Pending upgrade activities in https://github.com/habitat-sh/core/issues/72
+# Pending upgrade activities
 hyper = "0.10"
 json = "*"
 lazy_static = "*"
@@ -43,10 +43,10 @@ toml = { version = "*", default-features = false }
 uuid = { version = "*", features = ["v4"] }
 valico = "*"
 
-[dependencies.habitat_core]
-git = "https://github.com/habitat-sh/core.git"
+[dependencies.dojo_core]
+path = "../core"
 
-[dependencies.habitat_api_client]
+[dependencies.dojo_api_client]
 path = "../builder-api-client"
 
 [target.'cfg(windows)'.dependencies]

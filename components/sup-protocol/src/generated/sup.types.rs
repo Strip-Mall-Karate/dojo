@@ -118,7 +118,7 @@ pub enum ProcessState {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum DesiredState {
-    /// The DesiredNone variant allows backwards compatibility of current hab binaries
+    /// The DesiredNone variant allows backwards compatibility of current doj binaries
     /// with older (< 0.61) Supervisors.
     DesiredNone = -1,
     DesiredDown = 0,

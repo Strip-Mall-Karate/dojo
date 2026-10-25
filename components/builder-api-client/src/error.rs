@@ -23,8 +23,8 @@ use hyper;
 use serde_json;
 use url;
 
-use crate::{hab_core,
-            hab_http};
+use crate::{doj_core,
+            doj_http};
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -33,8 +33,8 @@ pub enum Error {
     APIError(hyper::status::StatusCode, String),
     BadResponseBody(io::Error),
     DownloadWrite(PathBuf, io::Error),
-    HabitatCore(hab_core::Error),
-    HabitatHttpClient(hab_http::Error),
+    DojoCore(doj_core::Error),
+    DojoHttpClient(doj_http::Error),
     HyperError(hyper::error::Error),
     IO(io::Error),
     Json(serde_json::Error),
@@ -59,8 +59,8 @@ impl fmt::Display for Error {
                         p.display(),
                         e)
             }
-            Error::HabitatCore(ref e) => format!("{}", e),
-            Error::HabitatHttpClient(ref e) => format!("{}", e),
+            Error::DojoCore(ref e) => format!("{}", e),
+            Error::DojoHttpClient(ref e) => format!("{}", e),
             Error::HyperError(ref err) => format!("{}", err),
             Error::IO(ref e) => format!("{}", e),
             Error::Json(ref e) => format!("{}", e),
@@ -76,8 +76,8 @@ impl fmt::Display for Error {
             Error::ParseIntError(ref err) => format!("{}", err),
             Error::IdentNotFullyQualified => {
                 "Cannot perform the specified operation. Specify a fully qualifed package \
-                 identifier (ex: core/busybox-static/1.42.2/20170513215502)"
-                                                                            .to_string()
+                 identifier (ex: karate/busybox-static/1.42.2/20170513215502)"
+                                                                              .to_string()
             }
             Error::UploadFailed(ref s) => format!("Upload failed: {}", s),
             Error::UrlParseError(ref e) => format!("{}", e),
@@ -95,8 +95,8 @@ impl error::Error for Error {
             Error::APIError(..) => "Received a non-2XX response code from API",
             Error::BadResponseBody(_) => "Failed to read response body",
             Error::DownloadWrite(..) => "Failed to write response contents to file",
-            Error::HabitatCore(ref err) => err.description(),
-            Error::HabitatHttpClient(ref err) => err.description(),
+            Error::DojoCore(ref err) => err.description(),
+            Error::DojoHttpClient(ref err) => err.description(),
             Error::HyperError(ref err) => err.description(),
             Error::IO(ref err) => err.description(),
             Error::Json(ref err) => err.description(),
@@ -108,7 +108,7 @@ impl error::Error for Error {
             Error::ParseIntError(ref err) => err.description(),
             Error::IdentNotFullyQualified => {
                 "Cannot perform the specified operation. Specify a fully qualifed package \
-                 identifier (ex: core/busybox-static/1.42.2/20170513215502)"
+                 identifier (ex: karate/busybox-static/1.42.2/20170513215502)"
             }
             Error::UploadFailed(_) => "Upload failed",
             Error::UrlParseError(ref err) => err.description(),
@@ -119,12 +119,12 @@ impl error::Error for Error {
     }
 }
 
-impl From<hab_core::Error> for Error {
-    fn from(err: hab_core::Error) -> Error { Error::HabitatCore(err) }
+impl From<doj_core::Error> for Error {
+    fn from(err: doj_core::Error) -> Error { Error::DojoCore(err) }
 }
 
-impl From<hab_http::Error> for Error {
-    fn from(err: hab_http::Error) -> Error { Error::HabitatHttpClient(err) }
+impl From<doj_http::Error> for Error {
+    fn from(err: doj_http::Error) -> Error { Error::DojoHttpClient(err) }
 }
 
 impl From<hyper::error::Error> for Error {

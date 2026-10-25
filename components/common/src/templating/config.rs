@@ -37,7 +37,7 @@ use std::{self,
 use toml;
 
 static LOGKEY: &'static str = "CF";
-static ENV_VAR_PREFIX: &'static str = "HAB";
+static ENV_VAR_PREFIX: &'static str = "DOJ";
 /// The maximum TOML table merge depth allowed before failing the operation. The value here is
 /// somewhat arbitrary (stack size cannot be easily computed beforehand and different libc
 /// implementations will impose different size constraints), however a parallel data structure that
@@ -712,7 +712,7 @@ mod test {
         let other = toml_from_str(
                                   r#"
             heat = "hothothot"
-            awesome_things = "habitat"
+            awesome_things = "dojo"
             "#,
         );
         let expected = toml_from_str(
@@ -720,7 +720,7 @@ mod test {
             heat = "hothothot"
             fruit = "apple"
             veggie = "carrot"
-            awesome_things = "habitat"
+            awesome_things = "dojo"
             "#,
         );
         toml_merge(&mut me, &other).unwrap();
@@ -956,7 +956,7 @@ mod test {
         let pkg = TestPkg::new(&concrete_path);
         let mut cfg = Cfg::new(&pkg, None).expect("Could not create config");
         let default_toml = "shards = []\n\n[datastore]\ndatabase = \
-                            \"builder_originsrv\"\npassword = \"\"\nuser = \"hab\"\n";
+                            \"builder_originsrv\"\npassword = \"\"\nuser = \"doj\"\n";
 
         cfg.default = Some(toml::from_str(default_toml).unwrap());
         assert_eq!(default_toml, toml::to_string(&cfg).unwrap());
@@ -995,7 +995,7 @@ mod test {
 
     #[test]
     fn can_parse_toml_environment_config() {
-        test_expected_successful_environment_parsing("HAB_TESTING_TOML",
+        test_expected_successful_environment_parsing("DOJ_TESTING_TOML",
                                                      "testing-toml",
                                                      "port = 1234",
                                                      "port = 1234");
@@ -1003,7 +1003,7 @@ mod test {
 
     #[test]
     fn can_parse_json_environment_config() {
-        test_expected_successful_environment_parsing("HAB_TESTING_JSON",
+        test_expected_successful_environment_parsing("DOJ_TESTING_JSON",
                                                      "testing-json",
                                                      "{\"port\": 1234}",
                                                      "port = 1234");
@@ -1011,7 +1011,7 @@ mod test {
 
     #[test]
     fn parse_environment_config_that_is_neither_toml_nor_json_fails() {
-        let key = "HAB_TESTING_TRASH";
+        let key = "DOJ_TESTING_TRASH";
         let config = "{\"port: 1234 what even is this!!!!?! =";
 
         env::set_var(key, &config);

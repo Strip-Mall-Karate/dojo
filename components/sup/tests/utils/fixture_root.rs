@@ -22,7 +22,7 @@
 //!
 //! Currently our fixtures are limited to testing packages. We have
 //! `*.spec` files and package directories, which you can think of as
-//! minimal expanded Habitat artifacts.
+//! minimal expanded Dojo artifacts.
 //!
 //! For example, the current fixtures for the `compilation` test suite
 //! are as follows:

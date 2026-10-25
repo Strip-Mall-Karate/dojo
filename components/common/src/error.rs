@@ -46,7 +46,7 @@ pub enum Error {
     /// Occurs when a file that should exist does not or could not be read.
     FileNotFound(String),
     GossipFileRelativePath(String),
-    HabitatCore(hcore::Error),
+    DojoCore(hcore::Error),
     InstallHookFailed(PackageIdent),
     InvalidInstallHookMode(String),
     /// Occurs when making lower level IO calls.
@@ -111,7 +111,7 @@ impl fmt::Display for Error {
                 format!("Path for gossip file cannot have relative components (eg: ..): {}",
                         s)
             }
-            Error::HabitatCore(ref e) => format!("{}", e),
+            Error::DojoCore(ref e) => format!("{}", e),
             Error::InstallHookFailed(ref ident) => {
                 format!("Install hook exited unsuccessfully: {}", ident)
             }
@@ -176,7 +176,7 @@ impl error::Error for Error {
             Error::GossipFileRelativePath(_) => {
                 "Path for gossip file cannot have relative components (eg: ..)"
             }
-            Error::HabitatCore(ref err) => err.description(),
+            Error::DojoCore(ref err) => err.description(),
             Error::InstallHookFailed(_) => "Install hook exited unsuccessfully",
             Error::InvalidInstallHookMode(_) => "Invalid InstallHookMode",
             Error::IO(ref err) => err.description(),
@@ -215,7 +215,7 @@ impl From<handlebars::TemplateFileError> for Error {
 }
 
 impl From<hcore::Error> for Error {
-    fn from(err: hcore::Error) -> Self { Error::HabitatCore(err) }
+    fn from(err: hcore::Error) -> Self { Error::DojoCore(err) }
 }
 
 impl From<io::Error> for Error {

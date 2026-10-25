@@ -15,9 +15,9 @@
 //! Encapsulates code to perform the equivalent of `chmod -R g=u` on a
 //! directory.
 //!
-//! This is needed in order to ensure that the `/hab` directory in a
+//! This is needed in order to ensure that the `/doj` directory in a
 //! BuildRoot is constructed such that the root group has write
-//! permissions, allowing containerized Habitat services to run as
+//! permissions, allowing containerized Dojo services to run as
 //! non-root users, which is necessary for running in platforms like
 //! OpenShift and various HPC situations.
 //!
@@ -25,14 +25,14 @@
 //! Dockerfile to perform an `ADD` or `COPY` command while also
 //! setting permissions on those files, we must set the permissions on
 //! the files _before_ they are pulled into the container. We could
-//! add a `RUN chmod -R g=u /hab` in the Dockerfile, but that
+//! add a `RUN chmod -R g=u /doj` in the Dockerfile, but that
 //! essentially doubles the size of any container, due to how Docker's
 //! layered filesystem works. The approach here takes more code, but
 //! results in a better experience for end-users.
 //!
 //! Also note that this is currently a no-op on Windows, since
 //! permissions work differently over there, and we don't have
-//! non-root Habitat supervisors there either.
+//! non-root Dojo supervisors there either.
 
 use std::{fs,
           os::unix::fs::PermissionsExt,

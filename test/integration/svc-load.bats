@@ -3,7 +3,7 @@
 load 'helpers'
 
 setup() {
-    reset_hab_root
+    reset_doj_root
     start_supervisor
 }
 
@@ -11,60 +11,60 @@ teardown() {
     stop_supervisor
 }
 
-@test "hab svc load: a bad topology value is rejected" {
-    run ${hab} svc load --topology=beelzebub core/redis
+@test "doj svc load: a bad topology value is rejected" {
+    run ${doj} svc load --topology=beelzebub karate/redis
     assert_failure
     [[ "${output}" =~ "'beelzebub' isn't a valid value for '--topology <TOPOLOGY>'" ]]
 }
 
-@test "hab svc load: a bad strategy value is rejected" {
-    run ${hab} svc load --strategy=beelzebub core/redis
+@test "doj svc load: a bad strategy value is rejected" {
+    run ${doj} svc load --strategy=beelzebub karate/redis
     assert_failure
     [[ "${output}" =~ "Invalid value for '--strategy <STRATEGY>'" ]]
 }
 
-@test "hab svc load: origin/name (standalone service)" {
-    run ${hab} svc load core/redis
+@test "doj svc load: origin/name (standalone service)" {
+    run ${doj} svc load karate/redis
     assert_success
 
     wait_for_service_to_run redis
 
-    latest_redis=$(latest_from_builder core/redis stable)
+    latest_redis=$(latest_from_builder karate/redis stable)
     assert_package_and_deps_installed "${latest_redis}"
 
     assert_spec_exists_for redis
 
-    assert_spec_value redis ident core/redis
+    assert_spec_value redis ident karate/redis
     assert_spec_value redis group default
     assert_spec_value redis channel stable
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy none
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 }
 
-@test "hab svc load: origin/name/version (standalone service)" {
-    run ${hab} svc load core/redis/3.2.4
+@test "doj svc load: origin/name/version (standalone service)" {
+    run ${doj} svc load karate/redis/3.2.4
     assert_success
 
     wait_for_service_to_run redis
 
-    latest_redis=$(latest_from_builder core/redis/3.2.4 stable)
+    latest_redis=$(latest_from_builder karate/redis/3.2.4 stable)
     assert_package_and_deps_installed "${latest_redis}"
     assert_spec_exists_for redis
 
-    assert_spec_value redis ident core/redis/3.2.4
+    assert_spec_value redis ident karate/redis/3.2.4
     assert_spec_value redis group default
     assert_spec_value redis channel stable
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy none
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 }
 
-@test "hab svc load: origin/name/version/release (standalone service)" {
-    desired_version="core/redis/3.2.3/20160920131015"
-    run ${hab} svc load "${desired_version}"
+@test "doj svc load: origin/name/version/release (standalone service)" {
+    desired_version="karate/redis/3.2.3/20160920131015"
+    run ${doj} svc load "${desired_version}"
     assert_success
 
     wait_for_service_to_run redis
@@ -78,17 +78,17 @@ teardown() {
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy none
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 }
 
-@test "hab svc load: local hart file (standalone service)" {
+@test "doj svc load: local hart file (standalone service)" {
     # First, grab a hart file!
-    desired_version="core/redis/3.2.4/20170514150022"
+    desired_version="karate/redis/3.2.4/20170514150022"
     hart_path=$(download_hart_for "${desired_version}")
 
-    run ${hab} pkg install "${hart_path}"
+    run ${doj} pkg install "${hart_path}"
     assert_success
-    run ${hab} svc load "${desired_version}"
+    run ${doj} svc load "${desired_version}"
     assert_success
 
     wait_for_service_to_run redis
@@ -102,16 +102,16 @@ teardown() {
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy none
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 }
 
-@test "hab svc load: prefer local packages over pulling from Builder" {
-    desired_version="core/redis/3.2.3/20160920131015"
+@test "doj svc load: prefer local packages over pulling from Builder" {
+    desired_version="karate/redis/3.2.3/20160920131015"
     # Pre-install this older package. Loading the service should not cause a
     # newer package to be installed.
-    run ${hab} pkg install "${desired_version}"
+    run ${doj} pkg install "${desired_version}"
 
-    run ${hab} svc load "core/redis"
+    run ${doj} svc load "karate/redis"
     assert_success
 
     wait_for_service_to_run redis
@@ -120,92 +120,92 @@ teardown() {
     assert_spec_exists_for redis
 }
 
-@test "hab svc load: change spec with --force (standalone service)" {
-    run ${hab} svc load core/redis
+@test "doj svc load: change spec with --force (standalone service)" {
+    run ${doj} svc load karate/redis
     assert_success
 
     wait_for_service_to_run redis
 
     # Assert the default values in the service spec
-    assert_spec_value redis ident core/redis
+    assert_spec_value redis ident karate/redis
     assert_spec_value redis group default
     assert_spec_value redis channel stable
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy none
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 
     # Now, "reload" and change a few settings (chosen here arbitrarily)
-    run ${hab} svc load --force --channel=unstable --strategy=at-once core/redis
+    run ${doj} svc load --force --channel=unstable --strategy=at-once karate/redis
     assert_success
 
     # Assert the spec values after the update
-    assert_spec_value redis ident core/redis
+    assert_spec_value redis ident karate/redis
     assert_spec_value redis group default
     assert_spec_value redis channel unstable # <-- changed!
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy at-once # <-- changed!
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 }
 
-@test "hab svc load: loading an existing service without --force is an error" {
-    run ${hab} svc load core/redis
+@test "doj svc load: loading an existing service without --force is an error" {
+    run ${doj} svc load karate/redis
     assert_success
 
     wait_for_service_to_run redis
 
     # Assert the contents of the spec file; we'll compare again later
-    assert_spec_value redis ident core/redis
+    assert_spec_value redis ident karate/redis
     assert_spec_value redis group default
     assert_spec_value redis channel stable
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy none
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 
     # Now, try to load again, but without --force
-    run ${hab} svc load --channel=unstable --strategy=at-once core/redis
+    run ${doj} svc load --channel=unstable --strategy=at-once karate/redis
     assert_failure
 
     # Check that the spec file values didn't change
-    assert_spec_value redis ident core/redis
+    assert_spec_value redis ident karate/redis
     assert_spec_value redis group default
     assert_spec_value redis channel stable
     assert_spec_value redis topology standalone
     assert_spec_value redis update_strategy none
     assert_spec_value redis desired_state up
-    assert_spec_value redis bldr_url "https://bldr.habitat.sh"
+    assert_spec_value redis bldr_url "https://bldr.karate.company"
 }
 
-@test "hab svc load: application and environment are properly set in a spec" {
-    run ${hab} svc load --application=myapp --environment=prod core/redis
+@test "doj svc load: application and environment are properly set in a spec" {
+    run ${doj} svc load --application=myapp --environment=prod karate/redis
     assert_success
 
     wait_for_service_to_run redis
 
-    assert_spec_value redis ident core/redis
+    assert_spec_value redis ident karate/redis
     assert_spec_value redis application_environment "myapp.prod"
     # TODO (CM): Need a way to assert a missing value in a spec so I
     # can add those above?
 }
 
-@test "hab svc load: spec idents can change when force-loading using a different ident" {
-    vsn="core/redis/3.2.3/20160920131015"
+@test "doj svc load: spec idents can change when force-loading using a different ident" {
+    vsn="karate/redis/3.2.3/20160920131015"
 
     stop_supervisor
 
-    HAB_UPDATE_STRATEGY_FREQUENCY_MS=5000 background ${hab} run
+    DOJ_UPDATE_STRATEGY_FREQUENCY_MS=5000 background ${doj} run
     retry 5 1 launcher_is_alive
 
-    run ${hab} svc load "${vsn}"
+    run ${doj} svc load "${vsn}"
     assert_success
     wait_for_service_to_run redis
     initial_pid=$(pid_of_service redis)
 
     assert_spec_value redis ident "${vsn}"
 
-    run ${hab} svc load --channel=unstable --strategy=at-once --force core/redis
+    run ${doj} svc load --channel=unstable --strategy=at-once --force karate/redis
     assert_success
 
     # loading causes a restart anyway
@@ -213,14 +213,14 @@ teardown() {
     new_pid=$(pid_of_service redis)
 
     # The ident should have changed (among other things)
-    assert_spec_value redis ident core/redis
+    assert_spec_value redis ident karate/redis
     assert_spec_value redis channel unstable
     assert_spec_value redis update_strategy at-once
 
     # Wait for the new version to be installed
     wait_for_service_to_restart redis "${new_pid}"
 
-    latest_redis=$(latest_from_builder core/redis unstable)
+    latest_redis=$(latest_from_builder karate/redis unstable)
     assert_package_and_deps_installed "${latest_redis}"
 
     updated_running_version=$(current_running_version_for redis)

@@ -5,7 +5,7 @@
 #
 # To override and test locally-built code, set overrides in the environment of
 # the script.
-# See https://github.com/habitat-sh/habitat/blob/master/BUILDING.md#testing-changes
+# See https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
 
 set -eou pipefail
 
@@ -15,7 +15,7 @@ create_sup_binary_stub() {
 
     cat <<EOF > "$binary"
 #!/bin/bash
-echo "hab-sup $version"
+echo "doj-sup $version"
 EOF
 
     chmod +x "$binary"
@@ -31,7 +31,7 @@ launcher_exits_with_error() {
     sup_log=$(mktemp)
 
     echo -n "Starting launcher with supervisor version \"$version\" (logging to $sup_log)..."
-    HAB_SUP_BINARY="$sup_binary" hab sup run &> "$sup_log" &
+    DOJ_SUP_BINARY="$sup_binary" doj sup run &> "$sup_log" &
     launcher_pid=$!
 
     retries=0
@@ -51,10 +51,10 @@ launcher_exits_with_error() {
     ! wait "$launcher_pid"
 }
 
-trap 'pgrep hab-launch &>/dev/null && pkill -9 hab-launch' INT TERM EXIT
+trap 'pgrep doj-launch &>/dev/null && pkill -9 doj-launch' INT TERM EXIT
 
 incompatible_version="0.55.0/20180321222338"
-if HAB_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$incompatible_version"; then
+if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$incompatible_version"; then
     echo "Success! Launcher exited with error"
     echo
 else
@@ -62,16 +62,16 @@ else
     exit 1
 fi
 
-if HAB_LAUNCH_NO_SUP_VERSION_CHECK=1 launcher_exits_with_error "$incompatible_version"; then
+if DOJ_LAUNCH_NO_SUP_VERSION_CHECK=1 launcher_exits_with_error "$incompatible_version"; then
     echo "Failure! Expected launcher remain running"
     exit 1
 else
-    echo "Success! Setting HAB_LAUNCH_NO_SUP_VERSION_CHECK skips version check"
+    echo "Success! Setting DOJ_LAUNCH_NO_SUP_VERSION_CHECK skips version check"
     echo
 fi
 
 compatible_version="0.56.0/20180530235935"
-if HAB_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$compatible_version"; then
+if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$compatible_version"; then
     echo "Failure! Expected launcher remain running"
     exit 1
 else
@@ -80,7 +80,7 @@ else
 fi
 
 dev_version="0.62.0-dev"
-if HAB_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$dev_version"; then
+if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$dev_version"; then
     echo "Failure! Expected launcher remain running"
     exit 1
 else
@@ -89,7 +89,7 @@ else
 fi
 
 invalid_version="one-point-twenty-one"
-if HAB_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$invalid_version"; then
+if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$invalid_version"; then
     echo "Success! Launcher exited with error"
     echo
 else

@@ -39,11 +39,11 @@ use self::tty::StdStream;
 use crate::error::{Error,
                    Result};
 
-pub const NONINTERACTIVE_ENVVAR: &str = "HAB_NONINTERACTIVE";
+pub const NONINTERACTIVE_ENVVAR: &str = "DOJ_NONINTERACTIVE";
 
-pub const NOCOLORING_ENVVAR: &str = "HAB_NOCOLORING";
+pub const NOCOLORING_ENVVAR: &str = "DOJ_NOCOLORING";
 
-pub const GLYPH_STYLE_ENVVAR: &str = "HAB_GLYPH_STYLE";
+pub const GLYPH_STYLE_ENVVAR: &str = "DOJ_GLYPH_STYLE";
 
 #[derive(Clone, Copy)]
 pub enum Color {
@@ -598,7 +598,7 @@ impl UIReader for UI {
         let editor = env::var("EDITOR").map_err(Error::EditorEnv)?;
 
         let mut tmp_file_path = env::temp_dir();
-        tmp_file_path.push(format!("_hab_{}.tmp", Uuid::new_v4()));
+        tmp_file_path.push(format!("_doj_{}.tmp", Uuid::new_v4()));
 
         let mut tmp_file = File::create(&tmp_file_path)?;
 

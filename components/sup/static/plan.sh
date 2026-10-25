@@ -1,13 +1,13 @@
 # shellcheck disable=2034
 PLAN_CONTEXT=$(dirname "$PLAN_CONTEXT") source ../plan.sh
 
-pkg_name=hab-sup-static
-pkg_maintainer="The Habitat Maintainers <humans@habitat.sh>"
-pkg_deps=(core/busybox-static)
+pkg_name=doj-sup-static
+pkg_maintainer="Strip Mall Karate Company"
+pkg_deps=(karate/busybox-static)
 pkg_build_deps=(
-  core/musl core/zlib-musl core/xz-musl core/bzip2-musl core/libarchive-musl
-  core/openssl-musl core/libsodium-musl
-  core/coreutils core/cacerts core/rust core/gcc
+  karate/musl karate/zlib-musl karate/xz-musl karate/bzip2-musl karate/libarchive-musl
+  karate/openssl-musl karate/libsodium-musl
+  karate/coreutils karate/cacerts karate/rust karate/gcc
 )
 
 do_begin() {

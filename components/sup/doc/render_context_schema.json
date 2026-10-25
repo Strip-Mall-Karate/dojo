@@ -1,26 +1,26 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "Schema for all the data Habitat makes available in rendered templates",
+    "description": "Schema for all the data Dojo makes available in rendered templates",
     "type": "object",
     "definitions": {
         "package_identifier": {
             "type": "object",
-            "description": "A Habitat package identifier, split apart into its constituent components",
+            "description": "A Dojo package identifier, split apart into its constituent components",
             "properties": {
                 "origin": {
-                    "description": "The origin of the Habitat package",
+                    "description": "The origin of the Dojo package",
                     "type": "string"
                 },
                 "name": {
-                    "description": "The name of the Habitat package",
+                    "description": "The name of the Dojo package",
                     "type": "string"
                 },
                 "version": {
-                    "description": "The version of the Habitat package",
+                    "description": "The version of the Dojo package",
                     "type": "string"
                 },
                 "release": {
-                    "description": "The release of the Habitat package",
+                    "description": "The release of the Dojo package",
                     "type": "string"
                 }
             },
@@ -158,7 +158,7 @@
                     "type": "boolean"
                 },
                 "service": {
-                    "description": "The name of the service. If the service is running from the package `core/redis`, the value will be `redis`.",
+                    "description": "The name of the service. If the service is running from the package `karate/redis`, the value will be `redis`.",
                     "type": "string"
                 },
                 "group": {
@@ -224,23 +224,23 @@
             "type": "object",
             "properties": {
                 "ident": {
-                    "description": "The fully-qualified identifier of the running package, e.g., `core/redis/3.2.4/20170514150022`",
+                    "description": "The fully-qualified identifier of the running package, e.g., `karate/redis/3.2.4/20170514150022`",
                     "type": "string"
                 },
                 "origin": {
-                    "description": "The origin of the Habitat package",
+                    "description": "The origin of the Dojo package",
                     "type": "string"
                 },
                 "name": {
-                    "description": "The name of the Habitat package",
+                    "description": "The name of the Dojo package",
                     "type": "string"
                 },
                 "version": {
-                    "description": "The version of the Habitat package",
+                    "description": "The version of the Dojo package",
                     "type": "string"
                 },
                 "release": {
-                    "description": "The release of the Habitat package",
+                    "description": "The release of the Dojo package",
                     "type": "string"
                 },
                 "deps": {
@@ -268,39 +268,39 @@
                     "additionalProperties": { "type": "string" }
                 },
                 "path" : {
-                    "description": "The location where the package is installed locally, e.g., `/hab/pkgs/core/redis/3.2.4/20170514150022`. Note that this is _not_ a `PATH` environment variable; for that, please see the `env` key above.",
+                    "description": "The location where the package is installed locally, e.g., `/doj/pkgs/karate/redis/3.2.4/20170514150022`. Note that this is _not_ a `PATH` environment variable; for that, please see the `env` key above.",
                     "type": "string"
                 },
                 "svc_path" : {
-                    "description": "The root location of the source files for the Habitat service, e.g., `/hab/svc/redis`.",
+                    "description": "The root location of the source files for the Dojo service, e.g., `/doj/svc/redis`.",
                     "type": "string"
                 },
                 "svc_config_path" : {
-                    "description": "The location of any templated configuration files for the Habitat service, e.g., `/hab/svc/redis/config`.",
+                    "description": "The location of any templated configuration files for the Dojo service, e.g., `/doj/svc/redis/config`.",
                     "type": "string"
                 },
                 "svc_data_path" : {
-                    "description": "The location of any data files for the Habitat service, e.g., `/hab/svc/redis/data`.",
+                    "description": "The location of any data files for the Dojo service, e.g., `/doj/svc/redis/data`.",
                     "type": "string"
                 },
                 "svc_files_path" : {
-                    "description": "The location of any gossiped configuration files for the Habitat service, e.g., `/hab/svc/redis/files`.",
+                    "description": "The location of any gossiped configuration files for the Dojo service, e.g., `/doj/svc/redis/files`.",
                     "type": "string"
                 },
                 "svc_static_path" : {
-                    "description": "The location of any static content for the Habitat service, e.g., `/hab/svc/redis/static`.",
+                    "description": "The location of any static content for the Dojo service, e.g., `/doj/svc/redis/static`.",
                     "type": "string"
                 },
                 "svc_var_path" : {
-                    "description": "The location of any variable state data for the Habitat service, e.g., `/hab/svc/redis/var`.",
+                    "description": "The location of any variable state data for the Dojo service, e.g., `/doj/svc/redis/var`.",
                     "type": "string"
                 },
                 "svc_pid_file" : {
-                    "description": "The location of the Habitat service pid file, e.g., `/hab/svc/redis/PID`.",
+                    "description": "The location of the Dojo service pid file, e.g., `/doj/svc/redis/PID`.",
                     "type": "string"
                 },
                 "svc_run" : {
-                    "description": "The location of the rendered run hook for the Habitat service, e.g., `/hab/svc/redis/run`.",
+                    "description": "The location of the rendered run hook for the Dojo service, e.g., `/doj/svc/redis/run`.",
                     "type": "string"
                 },
                 "svc_user" : {
@@ -345,7 +345,7 @@
             "type": "object",
             "properties": {
                 "service": {
-                    "description": "The name of the service. If the service is running from the package `core/redis`, the value will be `redis`.",
+                    "description": "The name of the service. If the service is running from the package `karate/redis`, the value will be `redis`.",
                     "type": "string"
                 },
                 "group": {

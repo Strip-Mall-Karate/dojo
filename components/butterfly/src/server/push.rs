@@ -20,7 +20,7 @@
 use std::{thread,
           time::Duration};
 
-use habitat_core::util::ToI64;
+use dojo_core::util::ToI64;
 use prometheus::{IntCounterVec,
                  IntGaugeVec};
 use time::SteadyTime;
@@ -41,11 +41,11 @@ const FANOUT: usize = 5;
 
 lazy_static! {
     static ref GOSSIP_MESSAGES_SENT: IntCounterVec =
-        register_int_counter_vec!("hab_butterfly_gossip_messages_sent_total",
+        register_int_counter_vec!("doj_butterfly_gossip_messages_sent_total",
                                   "Total number of gossip messages sent",
                                   &["type", "mode"]).unwrap();
     static ref GOSSIP_BYTES_SENT: IntGaugeVec =
-        register_int_gauge_vec!("hab_butterfly_gossip_sent_bytes",
+        register_int_gauge_vec!("doj_butterfly_gossip_sent_bytes",
                                 "Gossip message size sent in bytes",
                                 &["type", "mode"]).unwrap();
 }

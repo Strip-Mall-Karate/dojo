@@ -300,7 +300,7 @@ impl<'a> DockerImage {
     }
 }
 
-/// A temporary file system build root for building a Docker image, based on Habitat packages.
+/// A temporary file system build root for building a Docker image, based on Dojo packages.
 pub struct DockerBuildRoot(BuildRoot);
 
 impl DockerBuildRoot {
@@ -415,7 +415,7 @@ impl DockerBuildRoot {
         let json = json!({
             "busybox_shell": busybox_shell,
             "path": ctx.env_path(),
-            "sup_bin": format!("{} sup", ctx.bin_path().join("hab").display()),
+            "sup_bin": format!("{} sup", ctx.bin_path().join("doj").display()),
             "primary_svc_ident": ctx.primary_svc_ident().to_string(),
         });
         let init = ctx.rootfs().join("init.sh");
@@ -434,9 +434,9 @@ impl DockerBuildRoot {
                 .to_string_lossy()
                 .as_ref(),
             "path": ctx.env_path(),
-            "hab_path": util::pkg_path_for(
-                &PackageIdent::from_str("core/hab")?,
-                ctx.rootfs())?.join("bin/hab")
+            "doj_path": util::pkg_path_for(
+                &PackageIdent::from_str("karate/doj")?,
+                ctx.rootfs())?.join("bin/doj")
                 .to_string_lossy()
                 .replace("\\", "/"),
             "exposes": ctx.svc_exposes().join(" "),

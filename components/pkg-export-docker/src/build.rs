@@ -42,9 +42,9 @@ use crate::{accounts::{EtcGroupEntry,
             util};
 use clap;
 #[cfg(unix)]
-use failure::SyncFailure;
+use doj;
 #[cfg(unix)]
-use hab;
+use failure::SyncFailure;
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
 #[cfg(windows)]
@@ -59,38 +59,37 @@ use tempfile::TempDir;
 // Much of this functionality is duplicated (or slightly modified)
 // in the tar exporter. This needs to be abstacted out in
 // the future for use with further exporters.
-// https://github.com/habitat-sh/habitat/issues/4522
 
-const DEFAULT_HAB_IDENT: &str = "core/hab";
-const DEFAULT_LAUNCHER_IDENT: &str = "core/hab-launcher";
-const DEFAULT_SUP_IDENT: &str = "core/hab-sup";
+const DEFAULT_DOJ_IDENT: &str = "karate/doj";
+const DEFAULT_LAUNCHER_IDENT: &str = "karate/doj-launcher";
+const DEFAULT_SUP_IDENT: &str = "karate/doj-sup";
 const DEFAULT_USER_AND_GROUP_ID: u32 = 42;
 
-const DEFAULT_HAB_UID: u32 = 84;
-const DEFAULT_HAB_GID: u32 = 84;
+const DEFAULT_DOJ_UID: u32 = 84;
+const DEFAULT_DOJ_GID: u32 = 84;
 
-/// The specification for creating a temporary file system build root, based on Habitat packages.
+/// The specification for creating a temporary file system build root, based on Dojo packages.
 ///
 /// When a `BuildSpec` is created, a `BuildRoot` is returned which can be used to produce exported
 /// images, archives, etc.
 #[derive(Debug)]
 pub struct BuildSpec<'a> {
-    /// A string representation of a Habitat Package Identifer for the Habitat CLI package.
-    pub hab: &'a str,
-    /// A string representation of a Habitat Package Identifer for the Habitat Launcher package.
-    pub hab_launcher: &'a str,
-    /// A string representation of a Habitat Package Identifer for the Habitat Supervisor package.
-    pub hab_sup: &'a str,
-    /// The Builder URL which is used to install all service and extra Habitat packages.
+    /// A string representation of a Dojo Package Identifer for the Dojo CLI package.
+    pub doj: &'a str,
+    /// A string representation of a Dojo Package Identifer for the Dojo Launcher package.
+    pub doj_launcher: &'a str,
+    /// A string representation of a Dojo Package Identifer for the Dojo Supervisor package.
+    pub doj_sup: &'a str,
+    /// The Builder URL which is used to install all service and extra Dojo packages.
     pub url: &'a str,
-    /// The Habitat release channel which is used to install all service and extra Habitat
+    /// The Dojo release channel which is used to install all service and extra Dojo
     /// packages.
     pub channel: ChannelIdent,
-    /// The Builder URL which is used to install all base Habitat packages.
+    /// The Builder URL which is used to install all base Dojo packages.
     pub base_pkgs_url: &'a str,
-    /// The Habitat release channel which is used to install all base Habitat packages.
+    /// The Dojo release channel which is used to install all base Dojo packages.
     pub base_pkgs_channel: ChannelIdent,
-    /// A list of either Habitat Package Identifiers or local paths to Habitat Artifact files which
+    /// A list of either Dojo Package Identifiers or local paths to Dojo Artifact files which
     /// will be installed.
     pub idents_or_archives: Vec<&'a str>,
     /// The Builder Auth Token to use in the request
@@ -100,10 +99,10 @@ pub struct BuildSpec<'a> {
 impl<'a> BuildSpec<'a> {
     /// Creates a `BuildSpec` from cli arguments.
     pub fn new_from_cli_matches(m: &'a clap::ArgMatches<'_>, default_url: &'a str) -> Self {
-        BuildSpec { hab:                m.value_of("HAB_PKG").unwrap_or(DEFAULT_HAB_IDENT),
-                    hab_launcher:       m.value_of("HAB_LAUNCHER_PKG")
+        BuildSpec { doj:                m.value_of("DOJ_PKG").unwrap_or(DEFAULT_DOJ_IDENT),
+                    doj_launcher:       m.value_of("DOJ_LAUNCHER_PKG")
                                          .unwrap_or(DEFAULT_LAUNCHER_IDENT),
-                    hab_sup:            m.value_of("HAB_SUP_PKG").unwrap_or(DEFAULT_SUP_IDENT),
+                    doj_sup:            m.value_of("DOJ_SUP_PKG").unwrap_or(DEFAULT_SUP_IDENT),
                     url:                m.value_of("BLDR_URL").unwrap_or(&default_url),
                     channel:            m.value_of("CHANNEL")
                                          .map(ChannelIdent::from)
@@ -145,7 +144,7 @@ impl<'a> BuildSpec<'a> {
         self.create_symlink_to_key_cache(ui, rootfs)?;
         let base_pkgs = self.install_base_pkgs(ui, rootfs)?;
         let user_pkgs = self.install_user_pkgs(ui, rootfs)?;
-        self.chmod_hab_directory(ui, rootfs)?;
+        self.chmod_doj_directory(ui, rootfs)?;
         self.link_binaries(ui, rootfs, &base_pkgs)?;
         self.link_cacerts(ui, rootfs, &base_pkgs)?;
         self.link_user_pkgs(ui, rootfs, &user_pkgs)?;
@@ -195,9 +194,9 @@ impl<'a> BuildSpec<'a> {
     }
 
     fn install_base_pkgs(&self, ui: &mut UI, rootfs: &Path) -> Result<BasePkgIdents> {
-        let hab = self.install_base_pkg(ui, self.hab, rootfs)?;
-        let sup = self.install_base_pkg(ui, self.hab_sup, rootfs)?;
-        let launcher = self.install_base_pkg(ui, self.hab_launcher, rootfs)?;
+        let doj = self.install_base_pkg(ui, self.doj, rootfs)?;
+        let sup = self.install_base_pkg(ui, self.doj_sup, rootfs)?;
+        let launcher = self.install_base_pkg(ui, self.doj_launcher, rootfs)?;
         let busybox = if cfg!(target_os = "linux") {
             Some(self.install_base_pkg(ui, BUSYBOX_IDENT, rootfs)?)
         } else {
@@ -205,7 +204,7 @@ impl<'a> BuildSpec<'a> {
         };
         let cacerts = self.install_base_pkg(ui, CACERTS_IDENT, rootfs)?;
 
-        Ok(BasePkgIdents { hab,
+        Ok(BasePkgIdents { doj,
                            sup,
                            launcher,
                            busybox,
@@ -225,7 +224,7 @@ impl<'a> BuildSpec<'a> {
     fn link_user_pkgs(&self, ui: &mut UI, rootfs: &Path, user_pkgs: &[PackageIdent]) -> Result<()> {
         let dst = util::bin_path();
         for pkg in user_pkgs.iter() {
-            hab::command::pkg::binlink::binlink_all_in_pkg(ui, &pkg, &dst, rootfs, true)
+            doj::command::pkg::binlink::binlink_all_in_pkg(ui, &pkg, &dst, rootfs, true)
                 .map_err(SyncFailure::new)?;
         }
         Ok(())
@@ -234,14 +233,14 @@ impl<'a> BuildSpec<'a> {
     #[cfg(unix)]
     fn link_binaries(&self, ui: &mut UI, rootfs: &Path, base_pkgs: &BasePkgIdents) -> Result<()> {
         let dst = util::bin_path();
-        hab::command::pkg::binlink::binlink_all_in_pkg(ui,
+        doj::command::pkg::binlink::binlink_all_in_pkg(ui,
                                                        &base_pkgs.busybox
                                                                  .clone()
                                                                  .expect("No busybox in idents"),
                                                        &dst,
                                                        rootfs,
                                                        true).map_err(SyncFailure::new)?;
-        hab::command::pkg::binlink::start(ui, &base_pkgs.hab, "hab", &dst, rootfs, true)
+        doj::command::pkg::binlink::start(ui, &base_pkgs.doj, "doj", &dst, rootfs, true)
             .map_err(SyncFailure::new)?;
         Ok(())
     }
@@ -260,7 +259,7 @@ impl<'a> BuildSpec<'a> {
         Ok(())
     }
 
-    /// Perform a recursive `chmod` on the `/hab` directory inside the
+    /// Perform a recursive `chmod` on the `/doj` directory inside the
     /// rootfs (assumes that directory has been created and populated
     /// already).
     ///
@@ -269,11 +268,11 @@ impl<'a> BuildSpec<'a> {
     ///
     /// [`chmod`]: chmod/index.html
     #[cfg(unix)]
-    fn chmod_hab_directory(&self, ui: &mut UI, rootfs: &Path) -> Result<()> {
+    fn chmod_doj_directory(&self, ui: &mut UI, rootfs: &Path) -> Result<()> {
         use crate::chmod;
-        use habitat_common::ui::Glyph;
+        use dojo_common::ui::Glyph;
 
-        let target = rootfs.join("hab");
+        let target = rootfs.join("doj");
         ui.status(Status::Custom(Glyph::CheckMark, "Changing permissions on".into()),
                   format!("{:?}", target))?;
         chmod::recursive_g_equal_u(target)
@@ -348,12 +347,12 @@ impl<'a> BuildSpec<'a> {
     }
 }
 
-/// A temporary file system build root, based on Habitat packages.
+/// A temporary file system build root, based on Dojo packages.
 pub struct BuildRoot {
     /// The temporary directory under which all root file system and other related files and
     /// directories will be created.
     workdir: TempDir,
-    /// The build root context containing information about Habitat packages, `PATH` info, etc.
+    /// The build root context containing information about Dojo packages, `PATH` info, etc.
     ctx: BuildRootContext,
 }
 
@@ -381,10 +380,10 @@ impl BuildRoot {
     }
 }
 
-/// The file system contents, location, Habitat packages, and other context for a build root.
+/// The file system contents, location, Dojo packages, and other context for a build root.
 #[derive(Debug)]
 pub struct BuildRootContext {
-    /// A list of all Habitat service and library packages which were determined from the original
+    /// A list of all Dojo service and library packages which were determined from the original
     /// list in a `BuildSpec`.
     idents: Vec<PkgIdentType>,
     /// List of environment variables that can overload configuration.
@@ -394,7 +393,7 @@ pub struct BuildRootContext {
     /// A string representation of the build root's `PATH` environment variable value (i.e. a
     /// colon-delimited `PATH` string).
     env_path: String,
-    /// The channel name which was used to install all user-provided Habitat service and library
+    /// The channel name which was used to install all user-provided Dojo service and library
     /// packages.
     channel: ChannelIdent,
     /// The path to the root of the file system.
@@ -404,7 +403,7 @@ pub struct BuildRootContext {
 impl BuildRootContext {
     /// Creates a new `BuildRootContext` from a build spec.
     ///
-    /// The root file system path will be used to inspect installed Habitat packages to populate
+    /// The root file system path will be used to inspect installed Dojo packages to populate
     /// metadata, determine primary service, etc.
     ///
     /// # Errors
@@ -443,7 +442,7 @@ impl BuildRootContext {
         tdeps.dedup();
         let environment = tdeps.into_iter()
                                .filter_map(|dep| {
-                                   let key = format!("HAB_{}", dep.to_uppercase());
+                                   let key = format!("DOJ_{}", dep.to_uppercase());
                                    env::var(&key).ok().map(|v| (key, v))
                                })
                                .collect();
@@ -460,7 +459,7 @@ impl BuildRootContext {
         Ok(context)
     }
 
-    /// Returns a list of all provided Habitat packages which contain a runnable service.
+    /// Returns a list of all provided Dojo packages which contain a runnable service.
     pub fn svc_idents(&self) -> Vec<&PackageIdent> {
         self.idents
             .iter()
@@ -473,7 +472,7 @@ impl BuildRootContext {
             .collect()
     }
 
-    /// Returns the first service package from the provided Habitat packages.
+    /// Returns the first service package from the provided Dojo packages.
     pub fn primary_svc_ident(&self) -> &PackageIdent {
         self.svc_idents()
             .first()
@@ -495,7 +494,7 @@ impl BuildRootContext {
     }
 
     /// Returns true if the INSTALL_HOOK feature is toggled
-    pub fn install_hook_feat(&self) -> bool { env::var("HAB_FEAT_INSTALL_HOOK").is_ok() }
+    pub fn install_hook_feat(&self) -> bool { env::var("DOJ_FEAT_INSTALL_HOOK").is_ok() }
 
     /// Returns the list of package port exposes over all service packages.
     pub fn svc_exposes(&self) -> Vec<&str> {
@@ -524,23 +523,23 @@ impl BuildRootContext {
         let pkg = self.primary_svc()?;
         let user_name = pkg.svc_user()
                            .unwrap_or_default()
-                           .unwrap_or_else(|| String::from("hab"));
+                           .unwrap_or_else(|| String::from("doj"));
         let group_name = pkg.svc_group()
                             .unwrap_or_default()
-                            .unwrap_or_else(|| String::from("hab"));
+                            .unwrap_or_else(|| String::from("doj"));
 
-        // TODO: In some cases, packages based on core/nginx and
-        // core/httpd (and possibly others) will not work, because
+        // TODO: In some cases, packages based on karate/nginx and
+        // karate/httpd (and possibly others) will not work, because
         // they specify a SVC_USER of `root`, but implicitly rely on a
-        // `hab` user being present for running lower-privileged
-        // worker processes. Habitat currently doesn't have a way to
+        // `doj` user being present for running lower-privileged
+        // worker processes. Dojo currently doesn't have a way to
         // formally represent this, so until it does, we should make
-        // sure that there is a `hab` user and group present, just in
+        // sure that there is a `doj` user and group present, just in
         // case.
         //
-        // With recent changes to the Supervisor, this hab user must
-        // be in the hab group for these packages to function
-        // properly, but only in the case that the `hab` user is
+        // With recent changes to the Supervisor, this doj user must
+        // be in the doj group for these packages to function
+        // properly, but only in the case that the `doj` user is
         // being used in this back-channel kind of way. In general,
         // there is no requirement that a user be in any specific
         // group. In particular, there is no requirement that
@@ -549,7 +548,7 @@ impl BuildRootContext {
         //
         // When we can represent this multi-user situation better, we
         // should be able to clean up some of this code (because it's
-        // a bit gnarly!) and not have to add an implicit hab user or
+        // a bit gnarly!) and not have to add an implicit doj user or
         // group.
         //
         // NOTE: If this logic ever needs to get ANY more complex, it'd
@@ -560,40 +559,40 @@ impl BuildRootContext {
         // trying to directly manage those files' contents.
 
         // Since we're potentially going to have to create an extra
-        // hab user and/or group, they're going to need
-        // identifiers. If SVC_USER or SVC_GROUP is hab, then we'll
+        // doj user and/or group, they're going to need
+        // identifiers. If SVC_USER or SVC_GROUP is doj, then we'll
         // use the IDs given by the user. On the other hand, if we're
         // adding either one of those on top of SVC_USER/SVC_GROUP,
         // then we'll use a default, incremented by one on the off
         // chance that matches what the user specified on the command
         // line.
-        let hab_uid = if uid == DEFAULT_HAB_UID {
-            DEFAULT_HAB_UID + 1
+        let doj_uid = if uid == DEFAULT_DOJ_UID {
+            DEFAULT_DOJ_UID + 1
         } else {
-            DEFAULT_HAB_UID
+            DEFAULT_DOJ_UID
         };
-        let hab_gid = if gid == DEFAULT_HAB_GID {
-            DEFAULT_HAB_GID + 1
+        let doj_gid = if gid == DEFAULT_DOJ_GID {
+            DEFAULT_DOJ_GID + 1
         } else {
-            DEFAULT_HAB_GID
+            DEFAULT_DOJ_GID
         };
 
         match (user_name.as_ref(), group_name.as_ref()) {
             ("root", "root") => {
                 // SVC_GROUP is SVC_USER's primary group (trivially)
 
-                // Just create a hab user in a hab group for safety
-                users.push(EtcPasswdEntry::new("hab", hab_uid, hab_gid));
-                groups.push(EtcGroupEntry::group_with_users("hab", hab_gid, &["hab"]));
+                // Just create a doj user in a doj group for safety
+                users.push(EtcPasswdEntry::new("doj", doj_uid, doj_gid));
+                groups.push(EtcGroupEntry::group_with_users("doj", doj_gid, &["doj"]));
             }
-            ("root", "hab") => {
+            ("root", "doj") => {
                 // SVC_GROUP is NOT SVC_USER's primary group
 
                 // Currently, this is the anticipated case for nginx
-                // and httpd packages... the lower-privileged hab user
-                // needs to be in the hab group for things to work.
-                users.push(EtcPasswdEntry::new("hab", hab_uid, gid));
-                groups.push(EtcGroupEntry::group_with_users("hab", gid, &["hab"]));
+                // and httpd packages... the lower-privileged doj user
+                // needs to be in the doj group for things to work.
+                users.push(EtcPasswdEntry::new("doj", doj_uid, gid));
+                groups.push(EtcGroupEntry::group_with_users("doj", gid, &["doj"]));
             }
             ("root", _) => {
                 // SVC_GROUP is NOT SVC_USER's primary group
@@ -602,37 +601,37 @@ impl BuildRootContext {
                 // No user is in SVC_GROUP, actually
                 groups.push(EtcGroupEntry::empty_group(&group_name, gid));
 
-                // Just create a hab user in a hab group for safety
-                users.push(EtcPasswdEntry::new("hab", hab_uid, hab_gid));
-                groups.push(EtcGroupEntry::group_with_users("hab", hab_gid, &["hab"]));
+                // Just create a doj user in a doj group for safety
+                users.push(EtcPasswdEntry::new("doj", doj_uid, doj_gid));
+                groups.push(EtcGroupEntry::group_with_users("doj", doj_gid, &["doj"]));
             }
-            ("hab", "hab") => {
-                // If the user explicitly called for hab/hab, give it
+            ("doj", "doj") => {
+                // If the user explicitly called for doj/doj, give it
                 // to them.
                 //
                 // Strictly speaking, SVC_USER does not need to be in
                 // SVC_GROUP, but if we're making a user, we need to
                 // put them in *some* group.
-                users.push(EtcPasswdEntry::new("hab", uid, gid));
-                groups.push(EtcGroupEntry::group_with_users("hab", gid, &["hab"]));
+                users.push(EtcPasswdEntry::new("doj", uid, gid));
+                groups.push(EtcGroupEntry::group_with_users("doj", gid, &["doj"]));
             }
-            ("hab", "root") => {
+            ("doj", "root") => {
                 // SVC_GROUP is NOT SVC_USER's primary group
 
                 // To prevent having to edit the root group entry,
-                // we'll just add the hab user to the hab group to put
+                // we'll just add the doj user to the doj group to put
                 // them someplace.
-                users.push(EtcPasswdEntry::new("hab", uid, hab_gid));
-                groups.push(EtcGroupEntry::group_with_users("hab", hab_gid, &["hab"]));
+                users.push(EtcPasswdEntry::new("doj", uid, doj_gid));
+                groups.push(EtcGroupEntry::group_with_users("doj", doj_gid, &["doj"]));
             }
-            ("hab", _) => {
+            ("doj", _) => {
                 // SVC_GROUP IS SVC_USER's primary group, and there is
-                // NO hab group
+                // NO doj group
 
-                // Again, sticking the hab user into the group because
+                // Again, sticking the doj user into the group because
                 // it needs to go somewhere
-                users.push(EtcPasswdEntry::new("hab", uid, gid));
-                groups.push(EtcGroupEntry::group_with_users(&group_name, gid, &["hab"]));
+                users.push(EtcPasswdEntry::new("doj", uid, gid));
+                groups.push(EtcGroupEntry::group_with_users(&group_name, gid, &["doj"]));
             }
             (..) => {
                 // SVC_GROUP IS SVC_USER's primary group, because it
@@ -640,9 +639,9 @@ impl BuildRootContext {
                 users.push(EtcPasswdEntry::new(&user_name, uid, gid));
                 groups.push(EtcGroupEntry::group_with_users(&group_name, gid, &[&user_name]));
 
-                // Just create a hab user in a hab group for safety
-                users.push(EtcPasswdEntry::new("hab", hab_uid, hab_gid));
-                groups.push(EtcGroupEntry::group_with_users("hab", hab_gid, &["hab"]));
+                // Just create a doj user in a doj group for safety
+                users.push(EtcPasswdEntry::new("doj", doj_uid, doj_gid));
+                groups.push(EtcGroupEntry::group_with_users("doj", doj_gid, &["doj"]));
             }
         }
 
@@ -657,7 +656,7 @@ impl BuildRootContext {
     /// Returns a colon-delimited `PATH` string containing all important program paths.
     pub fn env_path(&self) -> &str { self.env_path.as_str() }
 
-    /// Returns the release channel name used to install all provided Habitat packages.
+    /// Returns the release channel name used to install all provided Dojo packages.
     pub fn channel(&self) -> &ChannelIdent { &self.channel }
 
     /// Returns the root file system which is used to export an image.
@@ -680,8 +679,8 @@ impl BuildRootContext {
 /// The package identifiers for installed base packages.
 #[derive(Debug)]
 struct BasePkgIdents {
-    /// Installed package identifer for the Habitat CLI package.
-    pub hab: PackageIdent,
+    /// Installed package identifer for the Dojo CLI package.
+    pub doj: PackageIdent,
     /// Installed package identifer for the Supervisor package.
     pub sup: PackageIdent,
     /// Installed package identifer for the Launcher package.
@@ -692,7 +691,7 @@ struct BasePkgIdents {
     pub cacerts: PackageIdent,
 }
 
-/// A service identifier representing a Habitat package which contains a runnable service.
+/// A service identifier representing a Dojo package which contains a runnable service.
 #[derive(Debug)]
 struct SvcIdent {
     /// The Package Identifier.
@@ -701,7 +700,7 @@ struct SvcIdent {
     pub exposes: Vec<String>,
 }
 
-/// An enum of service and library Habitat packages.
+/// An enum of service and library Dojo packages.
 ///
 /// A package is considered a service package if it contains a runnable service, via a `run` hook.
 #[derive(Debug)]
@@ -738,9 +737,9 @@ mod test {
     }
 
     fn build_spec<'a>() -> BuildSpec<'a> {
-        BuildSpec { hab:                "hab",
-                    hab_launcher:       "hab_launcher",
-                    hab_sup:            "hab_sup",
+        BuildSpec { doj:                "doj",
+                    doj_launcher:       "doj_launcher",
+                    doj_sup:            "doj_sup",
                     url:                "url",
                     channel:            ChannelIdent::from("channel"),
                     base_pkgs_url:      "base_pkgs_url",
@@ -882,9 +881,9 @@ mod test {
                 rootfs.path().join("bin/sh").read_link().unwrap(),
                 "busybox's sh program is symlinked into /bin"
             );
-            assert_eq!(hcore::fs::pkg_install_path(&base_pkgs.hab, None::<&Path>).join("bin/hab"),
-                       rootfs.path().join("bin/hab").read_link().unwrap(),
-                       "hab program is symlinked into /bin");
+            assert_eq!(hcore::fs::pkg_install_path(&base_pkgs.doj, None::<&Path>).join("bin/doj"),
+                       rootfs.path().join("bin/doj").read_link().unwrap(),
+                       "doj program is symlinked into /bin");
         }
 
         #[cfg(unix)]
@@ -915,25 +914,25 @@ mod test {
         }
 
         fn base_pkgs<P: AsRef<Path>>(rootfs: P) -> BasePkgIdents {
-            BasePkgIdents { hab:      fake_hab_install(&rootfs),
+            BasePkgIdents { doj:      fake_doj_install(&rootfs),
                             sup:      fake_sup_install(&rootfs),
                             launcher: fake_launcher_install(&rootfs),
                             busybox:  Some(fake_busybox_install(&rootfs)),
                             cacerts:  fake_cacerts_install(&rootfs), }
         }
 
-        fn fake_hab_install<P: AsRef<Path>>(rootfs: P) -> PackageIdent {
-            FakePkg::new("acme/hab", rootfs.as_ref()).add_bin("hab")
+        fn fake_doj_install<P: AsRef<Path>>(rootfs: P) -> PackageIdent {
+            FakePkg::new("acme/doj", rootfs.as_ref()).add_bin("doj")
                                                      .install()
         }
 
         fn fake_sup_install<P: AsRef<Path>>(rootfs: P) -> PackageIdent {
-            FakePkg::new("acme/hab-sup", rootfs.as_ref()).add_bin("hab-sup")
+            FakePkg::new("acme/doj-sup", rootfs.as_ref()).add_bin("doj-sup")
                                                          .install()
         }
 
         fn fake_launcher_install<P: AsRef<Path>>(rootfs: P) -> PackageIdent {
-            FakePkg::new("acme/hab-launcher", rootfs.as_ref()).add_bin("hab-launch")
+            FakePkg::new("acme/doj-launcher", rootfs.as_ref()).add_bin("doj-launch")
                                                               .install()
         }
 
@@ -1018,15 +1017,15 @@ mod test {
             let (users, groups) = ctx.svc_users_and_groups().unwrap();
             assert_eq!(2, users.len());
             assert_eq!(users[0].name, "my_user");
-            assert_eq!(users[1].name, "hab");
+            assert_eq!(users[1].name, "doj");
             assert_eq!(2, groups.len());
             assert_eq!(groups[0].name, "my_group");
-            assert_eq!(groups[1].name, "hab");
+            assert_eq!(groups[1].name, "doj");
             // TODO fn: check ctx.svc_exposes()
         }
 
         #[test]
-        fn hab_user_and_group_are_created_even_if_not_explicitly_called_for() {
+        fn doj_user_and_group_are_created_even_if_not_explicitly_called_for() {
             let rootfs = TempDir::new().unwrap();
 
             let _my_package = FakePkg::new("acme/my_pkg", rootfs.path()).set_svc(true)
@@ -1035,19 +1034,20 @@ mod test {
                                                                         .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.habitat.sh");
+            let build_spec =
+                BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 
             let (users, groups) = ctx.svc_users_and_groups().unwrap();
             assert_eq!(1, users.len());
-            assert_eq!(users[0].name, "hab");
+            assert_eq!(users[0].name, "doj");
             assert_eq!(1, groups.len());
-            assert_eq!(groups[0].name, "hab");
+            assert_eq!(groups[0].name, "doj");
         }
 
         #[test]
-        fn hab_user_and_group_are_created_along_with_non_root_users() {
+        fn doj_user_and_group_are_created_along_with_non_root_users() {
             let rootfs = TempDir::new().unwrap();
 
             let _my_package =
@@ -1057,17 +1057,18 @@ mod test {
                                                           .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.habitat.sh");
+            let build_spec =
+                BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 
             let (users, groups) = ctx.svc_users_and_groups().unwrap();
             assert_eq!(2, users.len());
             assert_eq!(users[0].name, "somebody_else");
-            assert_eq!(users[1].name, "hab");
+            assert_eq!(users[1].name, "doj");
             assert_eq!(2, groups.len());
             assert_eq!(groups[0].name, "some_other_group");
-            assert_eq!(groups[1].name, "hab");
+            assert_eq!(groups[1].name, "doj");
         }
     }
 }

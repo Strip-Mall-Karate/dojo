@@ -1,6 +1,6 @@
 # Butterfly
 
-Butterfly is the Habitat gossip protocol. It's an implementation of
+Butterfly is the Dojo gossip protocol. It's an implementation of
 SWIM+Inf+Susp for membership, and a ZeroMQ based newscast-inspired gossip
 protocol.
 
@@ -21,22 +21,22 @@ between members.
 To use it, do the following:
 
 ```
-$ mkdir -p /tmp/habitat-swim-trace
+$ mkdir -p /tmp/dojo-swim-trace
 $ env TRACE_SWIM=1 yourthing
 ```
 
 For example, to get a trace of a particular integration test:
 
 ```
-$ mkdir -p /tmp/habitat-swim-trace
+$ mkdir -p /tmp/dojo-swim-trace
 $ env TRACE_SWIM=1 cargo test --test integration two_members_meshed
 ```
 
-This will result in files populating in the `/tmp/habitat-swim-trace`
+This will result in files populating in the `/tmp/dojo-swim-trace`
 directory. To look at the stream together as plain text:
 
 ```
-$ cat /tmp/habitat-swim-trace/*.swimtrace | sort
+$ cat /tmp/dojo-swim-trace/*.swimtrace | sort
 ```
 
 This will put all the trace files together, ordered by time.
@@ -46,7 +46,7 @@ You can turn this into a UML State Transition diagram by using
 file](http://plantuml.com/download), and then do the following:
 
 ```
-$ cat /tmp/habitat-swim-trace/*.swimtrace | sort | ruby ./bin/trace-sequence.rb > sequence.txt && java -DPLANTUML_LIMIT_SIZE=163840 -Xmx8024m -jar plantuml.jar -verbose sequence.txt
+$ cat /tmp/dojo-swim-trace/*.swimtrace | sort | ruby ./bin/trace-sequence.rb > sequence.txt && java -DPLANTUML_LIMIT_SIZE=163840 -Xmx8024m -jar plantuml.jar -verbose sequence.txt
 ```
 
 Where `plantuml.jar` is the path to `plantuml`, and `./bin/trace-sequence.rb`
@@ -59,4 +59,4 @@ full list of event types in `trace.rs`.
 
 It's named after the swimming stroke. Because it's not just SWIM-ing - get it?
 
-Also, Butterflies are lovely. Who doesn't want a Butterfly in their habitat?
+Also, Butterflies are lovely. Who doesn't want a Butterfly in their dojo?

@@ -26,8 +26,8 @@ use serde::{ser::SerializeStruct,
             Serializer};
 use toml;
 
-use habitat_core::{package::Identifiable,
-                   service::ServiceGroup};
+use dojo_core::{package::Identifiable,
+                service::ServiceGroup};
 
 use crate::{error::{Error,
                     Result},
@@ -231,16 +231,16 @@ mod tests {
     use std::{cmp::Ordering,
               str::FromStr};
 
-    use habitat_core::{package::{Identifiable,
-                                 PackageIdent},
-                       service::ServiceGroup};
+    use dojo_core::{package::{Identifiable,
+                              PackageIdent},
+                    service::ServiceGroup};
 
     use super::Service;
     use crate::rumor::{service::SysInfo,
                        Rumor};
 
     fn create_service(member_id: &str) -> Service {
-        let pkg = PackageIdent::from_str("core/neurosis/1.2.3/20161208121212").unwrap();
+        let pkg = PackageIdent::from_str("karate/neurosis/1.2.3/20161208121212").unwrap();
         let sg = ServiceGroup::new(None, pkg.name(), "production", None).unwrap();
         Service::new(member_id.to_string(), &pkg, sg, SysInfo::default(), None)
     }
@@ -326,7 +326,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn service_package_name_mismatch() {
-        let ident = PackageIdent::from_str("core/overwatch/1.2.3/20161208121212").unwrap();
+        let ident = PackageIdent::from_str("karate/overwatch/1.2.3/20161208121212").unwrap();
         let sg = ServiceGroup::new(None, "counter-strike", "times", Some("ofgrace")).unwrap();
         Service::new("bad-member".to_string(),
                      &ident,
@@ -337,12 +337,11 @@ mod tests {
 
     #[test]
     fn service_cfg_serialization() {
-        let package: PackageIdent = "core/foo/1.0.0/20180701125610".parse().unwrap();
+        let package: PackageIdent = "karate/foo/1.0.0/20180701125610".parse().unwrap();
         let sg = ServiceGroup::new(None, "foo", "default", None).unwrap();
 
         // This map contains a scalar value and a table such that the serialization order
         // would trigger a ValueAfterTable error. This test ensures we avoid it.
-        // See https://github.com/habitat-sh/habitat/issues/5854
         // See https://github.com/alexcrichton/toml-rs/issues/142
         let mut map = toml::value::Table::default();
         let sub_map = toml::value::Table::default();

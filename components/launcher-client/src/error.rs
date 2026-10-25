@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use habitat_launcher_protocol as protocol;
+use dojo_launcher_protocol as protocol;
 use ipc_channel;
 use std::{error,
           fmt,

@@ -23,7 +23,7 @@ use std::{fmt,
           thread,
           time::Duration};
 
-use habitat_core::util::ToI64;
+use dojo_core::util::ToI64;
 use prometheus::{HistogramTimer,
                  HistogramVec,
                  IntCounterVec,
@@ -48,19 +48,19 @@ const PING_RECV_QUEUE_EMPTY_SLEEP_MS: u64 = 10;
 
 lazy_static! {
     static ref SWIM_MESSAGES_SENT: IntCounterVec =
-        register_int_counter_vec!("hab_butterfly_swim_messages_sent_total",
+        register_int_counter_vec!("doj_butterfly_swim_messages_sent_total",
                                   "Total number of SWIM messages sent",
                                   &["type"]).unwrap();
     static ref SWIM_BYTES_SENT: IntGaugeVec =
-        register_int_gauge_vec!("hab_butterfly_swim_sent_bytes",
+        register_int_gauge_vec!("doj_butterfly_swim_sent_bytes",
                                 "SWIM message size sent in bytes",
                                 &["type"]).unwrap();
     static ref SWIM_PROBES_SENT: IntCounterVec =
-        register_int_counter_vec!("hab_butterfly_swim_probes_sent_total",
+        register_int_counter_vec!("doj_butterfly_swim_probes_sent_total",
                                   "Total number of SWIM probes sent",
                                   &["type"]).unwrap();
     static ref SWIM_PROBE_DURATION: HistogramVec =
-        register_histogram_vec!("hab_butterfly_swim_probe_duration_seconds",
+        register_histogram_vec!("doj_butterfly_swim_probe_duration_seconds",
                                 "SWIM probe round trip time",
                                 &["type"]).unwrap();
 }

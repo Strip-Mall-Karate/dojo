@@ -26,18 +26,18 @@ use super::{CtlRequest,
             REQ_TIMEOUT};
 use crate::manager::{commands,
                      ManagerState};
+use dojo_core::crypto;
+use dojo_sup_protocol::{self as protocol,
+                        codec::*,
+                        net::{self,
+                              ErrCode,
+                              NetErr,
+                              NetResult}};
 use futures::{future::{self,
                        Either},
               prelude::*,
               sync::mpsc,
               try_ready};
-use habitat_core::crypto;
-use habitat_sup_protocol::{self as protocol,
-                           codec::*,
-                           net::{self,
-                                 ErrCode,
-                                 NetErr,
-                                 NetResult}};
 use prometheus::{HistogramTimer,
                  HistogramVec,
                  IntCounterVec};
@@ -56,11 +56,11 @@ use tokio_core::{reactor,
                  try_nb};
 
 lazy_static! {
-    static ref RPC_CALLS: IntCounterVec = register_int_counter_vec!("hab_sup_rpc_call_total",
+    static ref RPC_CALLS: IntCounterVec = register_int_counter_vec!("doj_sup_rpc_call_total",
                                                                     "Total number of RPC calls",
                                                                     &["name"]).unwrap();
     static ref RPC_CALL_DURATION: HistogramVec =
-        register_histogram_vec!("hab_sup_rpc_call_request_duration_seconds",
+        register_histogram_vec!("doj_sup_rpc_call_request_duration_seconds",
                                 "The latency for RPC calls",
                                 &["name"]).unwrap();
 }

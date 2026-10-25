@@ -26,7 +26,7 @@ use std::{fs::File,
 
 use byteorder::{ByteOrder,
                 LittleEndian};
-use habitat_core::fs::AtomicWriter;
+use dojo_core::fs::AtomicWriter;
 
 use crate::{error::{Error,
                     Result},

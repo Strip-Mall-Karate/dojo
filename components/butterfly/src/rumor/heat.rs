@@ -25,7 +25,7 @@
 use crate::{error::Error,
             rumor::{RumorKey,
                     RumorType}};
-use habitat_core::env::Config as EnvConfig;
+use dojo_core::env::Config as EnvConfig;
 use std::{collections::HashMap,
           result,
           str::FromStr,
@@ -72,7 +72,7 @@ impl FromStr for RumorShareLimit {
 }
 
 impl EnvConfig for RumorShareLimit {
-    const ENVVAR: &'static str = "HAB_RUMOR_SHARE_LIMIT";
+    const ENVVAR: &'static str = "DOJ_RUMOR_SHARE_LIMIT";
 }
 
 /// Tracks the number of times a given rumor has been sent to each
@@ -207,14 +207,14 @@ mod tests {
                 rumor::{Rumor,
                         RumorKey,
                         RumorType}};
-    use habitat_common::locked_env_var;
+    use dojo_common::locked_env_var;
     use uuid::Uuid;
 
     use crate::{member::Member,
                 rumor::service::{Service,
                                  SysInfo}};
-    use habitat_core::{package::PackageIdent,
-                       service::ServiceGroup};
+    use dojo_core::{package::PackageIdent,
+                    service::ServiceGroup};
 
     // TODO (CM): This FakeRumor implementation is copied from
     // rumor.rs; factor this helper code better.
@@ -258,7 +258,7 @@ mod tests {
         }
     }
 
-    locked_env_var!(HAB_RUMOR_SHARE_LIMIT, lock_rumor_limit);
+    locked_env_var!(DOJ_RUMOR_SHARE_LIMIT, lock_rumor_limit);
 
     /// Helper function that tests that a given rumor is currently
     /// considered "hot" for the given member.
@@ -434,7 +434,7 @@ mod tests {
     }
 
     fn test_service(member_id: &str) -> Service {
-        let package: PackageIdent = "core/foo/1.0.0/20180701125610".parse().unwrap();
+        let package: PackageIdent = "karate/foo/1.0.0/20180701125610".parse().unwrap();
         let sg = ServiceGroup::new(None, "foo", "default", None).unwrap();
         Service::new(member_id, &package, sg, SysInfo::default(), None)
     }

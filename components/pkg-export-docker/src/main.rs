@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use dojo_common as common;
 use env_logger;
-use habitat_common as common;
 
-use habitat_pkg_export_docker as export_docker;
+use dojo_pkg_export_docker as export_docker;
 #[macro_use]
 extern crate log;
 

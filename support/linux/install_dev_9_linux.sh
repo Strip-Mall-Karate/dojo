@@ -35,16 +35,16 @@ rustc --version
 cargo --version
 
 if command -v useradd > /dev/null; then
-  sudo -E useradd --system --no-create-home hab || true
+  sudo -E useradd --system --no-create-home doj || true
 else
-  sudo -E adduser --system hab || true
+  sudo -E adduser --system doj || true
 fi
 if command -v groupadd > /dev/null; then
-  sudo -E groupadd --system hab || true
+  sudo -E groupadd --system doj || true
 else
-  sudo -E addgroup --system hab || true
+  sudo -E addgroup --system doj || true
 fi
 
 sudo sh /tmp/install.sh
-sudo hab install core/busybox-static core/hab-studio
+sudo doj install karate/busybox-static karate/doj-studio
 sudo rm -rf /tmp/install.sh

@@ -17,8 +17,8 @@ use crate::protocol;
 use core::os::process::windows_child::{ChildStderr,
                                        ChildStdout,
                                        ExitStatus};
-use habitat_common::output::{self,
-                             StructuredOutput};
+use dojo_common::output::{self,
+                          StructuredOutput};
 #[cfg(unix)]
 use std::process::{ChildStderr,
                    ChildStdout,

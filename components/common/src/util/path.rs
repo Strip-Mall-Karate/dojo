@@ -20,14 +20,14 @@ use crate::{command::package::install::{self,
                     Result},
             ui,
             PROGRAM_NAME};
-use habitat_core::{fs::{cache_artifact_path,
-                        find_command,
-                        FS_ROOT_PATH},
-                   package::{PackageIdent,
-                             PackageInstall,
-                             PackageTarget},
-                   url::default_bldr_url,
-                   ChannelIdent};
+use dojo_core::{fs::{cache_artifact_path,
+                     find_command,
+                     FS_ROOT_PATH},
+                package::{PackageIdent,
+                          PackageInstall,
+                          PackageTarget},
+                url::default_bldr_url,
+                ChannelIdent};
 use std::{env,
           fs::File,
           io::{prelude::*,
@@ -38,12 +38,12 @@ use std::{env,
 /// The package identifier for the OS specific interpreter which the Supervisor is built with,
 /// or which may be independently installed
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-const INTERPRETER_IDENT: &str = "core/busybox-static";
+const INTERPRETER_IDENT: &str = "karate/busybox-static";
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 const INTERPRETER_COMMAND: &str = "busybox";
 
 #[cfg(target_os = "windows")]
-const INTERPRETER_IDENT: &str = "core/powershell";
+const INTERPRETER_IDENT: &str = "karate/powershell";
 #[cfg(target_os = "windows")]
 const INTERPRETER_COMMAND: &str = "pwsh";
 

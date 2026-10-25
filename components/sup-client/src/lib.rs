@@ -40,10 +40,10 @@
 
 #[macro_use]
 extern crate futures;
-use habitat_sup_protocol as protocol;
+use dojo_sup_protocol as protocol;
 #[macro_use]
 extern crate log;
-use habitat_common as common;
+use dojo_common as common;
 
 use std::{error,
           fmt,
@@ -102,7 +102,7 @@ impl fmt::Display for SrvClientError {
             }
             SrvClientError::CtlSecretNotFound(ref path) => {
                 format!("No Supervisor CtlGateway secret set in `cli.toml` or found at {}. Run \
-                         `hab setup` or run the Supervisor for the first time before attempting \
+                         `doj setup` or run the Supervisor for the first time before attempting \
                          to command the Supervisor.",
                         path.display())
             }
@@ -110,7 +110,7 @@ impl fmt::Display for SrvClientError {
             SrvClientError::Io(ref err) => {
                 format!("Unable to contact the Supervisor.\n\nIf the Supervisor you are \
                          contacting is local, this probably means it is not running. You can run \
-                         a Supervisor in the foreground with:\n\nhab sup run\n\nOr try restarting \
+                         a Supervisor in the foreground with:\n\ndoj sup run\n\nOr try restarting \
                          the Supervisor through your operating system's init process or Windows \
                          service.\n\nOriginal error is:\n\n{}",
                         err)

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Encapsulate running the `hab-sup` executable for tests.
+//! Encapsulate running the `doj-sup` executable for tests.
 
 use std::{collections::HashSet,
           env,
@@ -44,7 +44,7 @@ lazy_static! {
 }
 
 pub struct TestSup {
-    pub hab_root:         PathBuf,
+    pub doj_root:         PathBuf,
     pub origin_name:      String,
     pub package_name:     String,
     pub service_group:    String,
@@ -114,11 +114,11 @@ fn random_port() -> u16 {
 ///
 /// Thus if the current executable is
 ///
-///    /home/me/habitat/target/debug/deps/compilation-ccaf2f45c24e3840
+///    /home/me/dojo/target/debug/deps/compilation-ccaf2f45c24e3840
 ///
-/// and we look for `hab-sup`, we'll find it at
+/// and we look for `doj-sup`, we'll find it at
 ///
-///    /home/me/habitat/target/debug/hab-sup
+///    /home/me/dojo/target/debug/doj-sup
 fn find_exe<B>(binary_name: B) -> PathBuf
     where B: AsRef<Path>
 {
@@ -177,7 +177,7 @@ impl TestSup {
                      control_port)
     }
 
-    /// Bundle up a Habitat Supervisor process along with an
+    /// Bundle up a Dojo Supervisor process along with an
     /// associated Butterfly client for injecting new configuration
     /// values. The Supervisor executable is the one that has been
     /// compiled for the current `cargo test` invocation.
@@ -205,8 +205,8 @@ impl TestSup {
                   -> TestSup
         where R: AsRef<Path>
     {
-        let sup_exe = find_exe("hab-sup");
-        let launcher_exe = find_exe("hab-launch");
+        let sup_exe = find_exe("doj-sup");
+        let launcher_exe = find_exe("doj-launch");
 
         let mut cmd = Command::new(&launcher_exe);
         let listen_host = "0.0.0.0";
@@ -219,9 +219,9 @@ impl TestSup {
             "TESTING_FS_ROOT",
             fs_root.as_ref().to_string_lossy().as_ref(),
         )
-        .env("HAB_SUP_BINARY", &sup_exe)
-        .env("HAB_FEAT_INSTALL_HOOK", "ON")
-        .env(BLDR_URL_ENVVAR, "http://hab.sup.test")
+        .env("DOJ_SUP_BINARY", &sup_exe)
+        .env("DOJ_FEAT_INSTALL_HOOK", "ON")
+        .env(BLDR_URL_ENVVAR, "http://doj.sup.test")
         .arg("run")
         .arg("--listen-gossip")
         .arg(format!("{}:{}", listen_host, butterfly_port))
@@ -240,7 +240,7 @@ impl TestSup {
 
         let bc = test_butterfly::Client::new(&pkg_name, &service_group, butterfly_port);
 
-        TestSup { hab_root: fs_root.as_ref().to_path_buf(),
+        TestSup { doj_root: fs_root.as_ref().to_path_buf(),
                   origin_name: origin,
                   package_name: pkg_name,
                   service_group: service_group.to_string(),
@@ -271,7 +271,7 @@ impl TestSup {
             .expect("Tried to kill Supervisor!");
     }
 
-    /// The equivalent of performing `hab apply` with the given
+    /// The equivalent of performing `doj apply` with the given
     /// configuration.
     pub fn apply_config(&mut self, toml_config: &str) { self.butterfly_client.apply(toml_config) }
 }

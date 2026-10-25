@@ -1,0 +1,34 @@
+[package]
+name = "ipc-channel"
+version = "0.9.0"
+description = "A multiprocess drop-in replacement for Rust channels"
+authors = ["The Servo Project Developers"]
+license = "MIT/Apache-2.0"
+repository = "https://github.com/servo/ipc-channel"
+
+[features]
+force-inprocess = []
+unstable = []
+async = ["futures"]
+win32-trace = []
+
+[dependencies]
+bincode = "0.9"
+lazy_static = "0.2"
+libc = "0.2.12"
+rand = "0.3"
+serde = { version="1.0", features=["rc"] }
+uuid = {version = "0.5", features = ["v4"]}
+fnv = "1.0.3"
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+mio = "0.6.1"
+
+futures = { version = "0.1", optional = true }
+
+[dev-dependencies]
+crossbeam = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = "0.2"
+kernel32-sys = "0.2"

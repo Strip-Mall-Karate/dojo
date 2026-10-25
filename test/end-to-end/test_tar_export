@@ -6,14 +6,14 @@ print_help() {
     program=$(basename "$0")
     echo "$program
 
-Test hab pkg tar export
+Test doj pkg tar export
 
 USAGE:
         $program <PKG_IDENT>
 
 ARGS:
-    <PKG_IDENT>  The origin and name of the package to schedule a job for (eg: core/redis) or
-                 A fully qualified package identifier (ex: core/busybox-static/1.42.2/20170513215502)
+    <PKG_IDENT>  The origin and name of the package to schedule a job for (eg: karate/redis) or
+                 A fully qualified package identifier (ex: karate/busybox-static/1.42.2/20170513215502)
 "
 }
 
@@ -34,7 +34,7 @@ fi
 # Remove tarball if already present
 rm -f ./*.tar.gz
 
-/src/target/debug/hab pkg export tar "$pkg_ident" 
+/src/target/debug/doj pkg export tar "$pkg_ident" 
 
 # Check if tarball is present
 

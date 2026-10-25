@@ -275,7 +275,7 @@ mod tests {
                                   Term},
                        Rumor,
                        RumorStore};
-    use habitat_core::service::ServiceGroup;
+    use dojo_core::service::ServiceGroup;
 
     fn create_election_rumor_store() -> RumorStore<Election> { RumorStore::default() }
 

@@ -1,8 +1,8 @@
 [package]
-name = "habitat-launcher-protocol"
+name = "dojo-launcher-protocol"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = []
 build = "build.rs"
 workspace = "../../"
 

@@ -15,9 +15,9 @@
 use super::spawned_future::SpawnedFuture;
 use crate::sys::{service,
                  ShutdownMethod};
+use dojo_common::outputln;
+use dojo_core::os::process::Pid;
 use futures::sync::oneshot;
-use habitat_common::outputln;
-use habitat_core::os::process::Pid;
 use std::thread;
 
 static LOGKEY: &str = "ST"; // "Service Terminator"

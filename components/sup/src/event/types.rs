@@ -25,8 +25,8 @@
 // convenient and flexible (if perhaps a bit verbose) way to start.
 
 use super::Event;
-use habitat_core::{package::PackageIdent,
-                   service::ServiceGroup};
+use dojo_core::{package::PackageIdent,
+                service::ServiceGroup};
 
 #[derive(Debug)]
 pub struct ServiceStarted<'a> {
@@ -34,7 +34,7 @@ pub struct ServiceStarted<'a> {
     // TODO (CM): I *really* want a FullyQualifiedIdentifier type now
     pub ident: &'a PackageIdent,
     /// The identifier the service was loaded as. This could be (and
-    /// often is) an abbreviated identifier, like "core/redis".
+    /// often is) an abbreviated identifier, like "karate/redis".
     pub spec_ident: &'a PackageIdent,
     /// The service group of the running service
     pub service_group: &'a ServiceGroup,

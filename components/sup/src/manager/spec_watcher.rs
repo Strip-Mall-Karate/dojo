@@ -14,12 +14,12 @@
 
 //! Provides facilities for notifying when any spec files have changed
 //! on disk. This is how we know when to start, stop, or restart
-//! services in response to the various `hab svc` commands.
+//! services in response to the various `doj svc` commands.
 
 use super::spec_dir::SpecDir;
 use crate::error::{Error,
                    Result};
-use habitat_core::env::Config as EnvConfig;
+use dojo_core::env::Config as EnvConfig;
 use notify::{DebouncedEvent,
              RecommendedWatcher,
              RecursiveMode,
@@ -67,7 +67,7 @@ impl FromStr for SpecWatcherDelay {
 }
 
 impl EnvConfig for SpecWatcherDelay {
-    const ENVVAR: &'static str = "HAB_SPEC_WATCHER_DELAY_MS";
+    const ENVVAR: &'static str = "DOJ_SPEC_WATCHER_DELAY_MS";
 }
 
 // TODO (CM): A strong argument could be made for folding the
@@ -155,7 +155,7 @@ impl SpecWatcher {
     /// to receive only those that affect `*.spec` files, so we may
     /// respond to modifications to temporary files, or indeed any
     /// file, within the specs directory (e.g., running `touch
-    /// /hab/sup/default/specs/blahblah` would count as an event). It
+    /// /doj/sup/default/specs/blahblah` would count as an event). It
     /// is possible to perform this filtering, of course, but it's not
     /// clear that the extra code would be worth it.
     pub fn has_events(&self) -> bool {
@@ -172,7 +172,7 @@ impl SpecWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use habitat_common::locked_env_var;
+    use dojo_common::locked_env_var;
     use std::{fs::File,
               io::{Error as IoError,
                    Write},
@@ -180,7 +180,7 @@ mod tests {
               thread};
     use tempfile::TempDir;
 
-    locked_env_var!(HAB_SPEC_WATCHER_DELAY_MS, lock_delay_var);
+    locked_env_var!(DOJ_SPEC_WATCHER_DELAY_MS, lock_delay_var);
 
     fn file_with_content<C>(dir: &TempDir, filename: &str, contents: C) -> StdResult<(), IoError>
         where C: Into<String>
@@ -239,7 +239,7 @@ mod tests {
     /// file in the directory, whether it's a `*.spec` file or not.
     ///
     /// This would, for instance, pick up the temp files that
-    /// operations like `hab svc stop` lay down before renaming them
+    /// operations like `doj svc stop` lay down before renaming them
     /// to their final `*.spec` form.
     #[test]
     fn can_get_events_for_non_spec_files() {

@@ -1,19 +1,19 @@
 # shellcheck disable=2086,2128,2207
-# Copyright:: Copyright (c) 2015-2016 The Habitat Maintainers
+# Copyright:: Copyright (c) 2015-2016 The Dojo Maintainers
 #
-# The terms of the Evaluation Agreement (Habitat) between Chef Software Inc.
+# The terms of the Evaluation Agreement (Dojo) between Chef Software Inc.
 # and the party accessing this file ("Licensee") apply to Licensee's use of
 # the Software until such time that the Software is made available under an
 # open source license such as the Apache 2.0 License.
 
-# This is a bash completion file for the Habitat `hab` command. It requires
+# This is a bash completion file for the Dojo `doj` command. It requires
 # a "newer" version of bash-completion, so if you see an error such as
-# "_get_comp_words_by_ref: command not found", try sourcing the Habitat
+# "_get_comp_words_by_ref: command not found", try sourcing the Dojo
 # bash-completion package via:
-#   source "`hab pkg path core/bash-completion`/etc/profile.d/bash_completion.sh"
+#   source "`doj pkg path karate/bash-completion`/etc/profile.d/bash_completion.sh"
 
-# bash_completion for hab
-_hab()
+# bash_completion for doj
+_doj()
 {
     local cur prev
     _get_comp_words_by_ref cur prev
@@ -29,7 +29,7 @@ _hab()
 
     if [ $COMP_CWORD -eq 1 ]; then
         case $prev in
-            hab)
+            doj)
                 COMPREPLY=( $( compgen -W "apply artifact config file help install origin pkg ring svc setup start studio sup user" -- "$cur" ) )
                 ;;
                    esac
@@ -86,13 +86,13 @@ _hab()
         case "$minus2" in
             origin)
                 case "$prev" in
-                    key) #hab origin key
+                    key) #doj origin key
                         cmds=( "download export generate help import upload" )
                         COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
                     ;;
                 esac
             ;;
-            ring) # hab ring key
+            ring) # doj ring key
                 case "$prev" in
                     key)
                         cmds=( "export generate help import" )
@@ -100,7 +100,7 @@ _hab()
                     ;;
                 esac
             ;;
-            svc) # hab svc key
+            svc) # doj svc key
                 case "$prev" in
                     key)
                         cmds=( "generate help" )
@@ -108,7 +108,7 @@ _hab()
                     ;;
                 esac
             ;;
-            user) # hab user key
+            user) # doj user key
                 case "$prev" in
                     key)
                         cmds=( "generate help" )
@@ -119,4 +119,4 @@ _hab()
         esac
     fi
 }
-complete -F _hab hab
+complete -F _doj doj

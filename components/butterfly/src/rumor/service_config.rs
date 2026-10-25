@@ -25,9 +25,9 @@ use crate::{error::{Error,
             rumor::{Rumor,
                     RumorPayload,
                     RumorType}};
-use habitat_core::{crypto::{keys::box_key_pair::WrappedSealedBox,
-                            BoxKeyPair},
-                   service::ServiceGroup};
+use dojo_core::{crypto::{keys::box_key_pair::WrappedSealedBox,
+                         BoxKeyPair},
+                service::ServiceGroup};
 use std::{cmp::Ordering,
           mem,
           path::Path,
@@ -166,7 +166,7 @@ mod tests {
     use std::{cmp::Ordering,
               str::FromStr};
 
-    use habitat_core::service::ServiceGroup;
+    use dojo_core::service::ServiceGroup;
     use toml;
 
     use super::ServiceConfig;

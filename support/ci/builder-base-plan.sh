@@ -58,6 +58,6 @@ do_builder_prepare() {
   build_line "Setting PLAN_VERSION=$PLAN_VERSION"
 
   # Used by Cargo to use a pristine, isolated directory for all compilation
-  export CARGO_TARGET_DIR="$HAB_CACHE_SRC_PATH/$pkg_dirname"
+  export CARGO_TARGET_DIR="$DOJ_CACHE_SRC_PATH/$pkg_dirname"
   build_line "Setting CARGO_TARGET_DIR=$CARGO_TARGET_DIR"
 }

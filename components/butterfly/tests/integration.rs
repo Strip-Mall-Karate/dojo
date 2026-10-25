@@ -13,14 +13,14 @@
 // limitations under the License.
 
 #[macro_use]
-extern crate habitat_butterfly;
+extern crate dojo_butterfly;
 #[macro_use]
-extern crate habitat_butterfly_test as btest;
+extern crate dojo_butterfly_test as btest;
 
 mod encryption;
 mod rumor;
 
-use habitat_butterfly::member::Health;
+use dojo_butterfly::member::Health;
 
 #[test]
 fn two_members_meshed_confirm_one_member() {

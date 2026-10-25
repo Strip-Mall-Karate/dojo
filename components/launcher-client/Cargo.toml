@@ -1,17 +1,17 @@
 [package]
-name = "habitat-launcher-client"
+name = "dojo-launcher-client"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = []
 workspace = "../../"
 
 [dependencies]
 bincode = "*"
 env_logger = "*"
-habitat_core = { git = "https://github.com/habitat-sh/core.git" }
-habitat-launcher-protocol = { path = "../launcher-protocol" }
-habitat_common = { path = "../common" }
-ipc-channel = { git = "https://github.com/habitat-sh/ipc-channel", branch = "hbt-windows" }
+dojo_core = { path = "../core" }
+dojo-launcher-protocol = { path = "../launcher-protocol" }
+dojo_common = { path = "../common" }
+ipc-channel = { path = "../../vendor/ipc-channel" }
 libc = "*"
 log = "*"
 prost = "*"

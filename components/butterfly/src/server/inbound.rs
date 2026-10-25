@@ -21,7 +21,7 @@ use std::{net::{SocketAddr,
           thread,
           time::Duration};
 
-use habitat_core::util::ToI64;
+use dojo_core::util::ToI64;
 use prometheus::{IntCounterVec,
                  IntGaugeVec};
 
@@ -38,11 +38,11 @@ use crate::{member::Health,
 
 lazy_static! {
     static ref SWIM_MESSAGES_RECEIVED: IntCounterVec =
-        register_int_counter_vec!("hab_butterfly_swim_messages_received_total",
+        register_int_counter_vec!("doj_butterfly_swim_messages_received_total",
                                   "Total number of SWIM messages received",
                                   &["type", "mode"]).unwrap();
     static ref SWIM_BYTES_RECEIVED: IntGaugeVec =
-        register_int_gauge_vec!("hab_butterfly_swim_received_bytes",
+        register_int_gauge_vec!("doj_butterfly_swim_received_bytes",
                                 "SWIM message size received in bytes",
                                 &["type", "mode"]).unwrap();
 }

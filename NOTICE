@@ -1,0 +1,15 @@
+Dojo
+Copyright 2026 Strip Mall Karate Company
+
+Dojo's own work is licensed under the MIT license (see LICENSE).
+
+This product includes software developed by Chef Software Inc. and
+contributors, licensed under the Apache License, Version 2.0 (see
+LICENSE-APACHE). Every file that came from that software stays under the
+Apache License, Version 2.0, with Dojo's changes to it. Their copyright notices
+are kept in the files that carry them. Those files have been modified for Dojo;
+the Git history records each change and who made it.
+
+vendor/ipc-channel is Servo's ipc-channel, licensed under the MIT license or
+the Apache License, Version 2.0 (see vendor/ipc-channel/LICENSE-MIT and
+vendor/ipc-channel/LICENSE-APACHE).
