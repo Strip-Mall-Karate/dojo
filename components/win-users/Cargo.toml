@@ -1,9 +1,9 @@
 [package]
-name = "habitat_win_users"
+name = "dojo_win_users"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
-description = "Habitat library for win32 account api calls"
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
+description = "Dojo library for win32 account api calls"
 workspace = "../../"
 build = "build.rs"
 

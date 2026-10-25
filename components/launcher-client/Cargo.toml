@@ -8,10 +8,10 @@ workspace = "../../"
 [dependencies]
 bincode = "*"
 env_logger = "*"
-dojo_core = { git = "https://github.com/habitat-sh/core.git" }
+dojo_core = { path = "../core" }
 dojo-launcher-protocol = { path = "../launcher-protocol" }
 dojo_common = { path = "../common" }
-ipc-channel = { git = "https://github.com/habitat-sh/ipc-channel", branch = "hbt-windows" }
+ipc-channel = { path = "../../vendor/ipc-channel" }
 libc = "*"
 log = "*"
 prost = "*"

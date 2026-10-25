@@ -1,8 +1,8 @@
 [package]
-name = "habitat_core"
+name = "dojo_core"
 version = "0.0.0"
 edition = "2018"
-authors = ["The Habitat Maintainers <humans@habitat.sh>"]
+authors = ["The Dojo Maintainers <humans@habitat.sh>"]
 workspace = "../../"
 build = "build.rs"
 
@@ -41,7 +41,7 @@ caps = "*"
 
 [target.'cfg(windows)'.dependencies]
 ctrlc = "*"
-habitat_win_users = { path = "../win-users" }
+dojo_win_users = { path = "../win-users" }
 widestring = "*"
 winapi = { version = "*", features = ["dpapi", "ioapiset", "namedpipeapi", "userenv", "winbase", "wincrypt", "winerror"] }
 windows-acl = "*"

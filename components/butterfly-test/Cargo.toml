@@ -13,7 +13,7 @@ time = "*"
 path = "../butterfly"
 
 [dependencies.dojo_core]
-git = "https://github.com/habitat-sh/core.git"
+path = "../core"
 
 [features]
 default = []

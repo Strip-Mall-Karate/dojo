@@ -22,7 +22,7 @@ tee = "*"
 url = "*"
 
 [dependencies.dojo_core]
-git = "https://github.com/habitat-sh/core.git"
+path = "../core"
 
 [dependencies.dojo_http_client]
-git = "https://github.com/habitat-sh/core.git"
+path = "../http-client"

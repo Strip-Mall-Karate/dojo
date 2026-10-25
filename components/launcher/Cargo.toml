@@ -15,9 +15,9 @@ env_logger = "*"
 dojo_common = { path = "../common" }
 # JW TODO: core has external deps that we don't want, libarchive/libsodium. We should either
 # put these things behind a feature flag so we can statically compile the launcher.
-dojo_core = { git = "https://github.com/habitat-sh/core.git" }
+dojo_core = { path = "../core" }
 dojo-launcher-protocol = { path = "../launcher-protocol" }
-ipc-channel = { git = "https://github.com/habitat-sh/ipc-channel", branch = "hbt-windows" }
+ipc-channel = { path = "../../vendor/ipc-channel" }
 libc = "*"
 log = "*"
 prost = "*"

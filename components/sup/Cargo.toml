@@ -34,7 +34,7 @@ glob = "*"
 doj = { path = "../doj" }
 dojo_butterfly = { path = "../butterfly", default-features = false }
 dojo_common = { path = "../common" }
-dojo_core = { git = "https://github.com/habitat-sh/core.git" }
+dojo_core = { path = "../core" }
 dojo_api_client = { path = "../builder-api-client" }
 dojo-launcher-client = { path = "../launcher-client" }
 dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
@@ -83,7 +83,7 @@ hyper = "0.10"
 json = "*"
 
 [dev-dependencies.dojo_core]
-git = "https://github.com/habitat-sh/core.git"
+path = "../core"
 
 [features]
 default = []

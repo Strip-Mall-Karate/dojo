@@ -15,7 +15,7 @@ doc = false
 byteorder = "*"
 bytes = "*"
 env_logger = "*"
-dojo_core = { git = "https://github.com/habitat-sh/core.git" }
+dojo_core = { path = "../core" }
 dojo_common = { path = "../common" }
 log = "*"
 lazy_static = "*"

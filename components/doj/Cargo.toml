@@ -44,7 +44,7 @@ version = "*"
 features = [ "suggestions", "color", "unstable" ]
 
 [dependencies.dojo_core]
-git = "https://github.com/habitat-sh/core.git"
+path = "../core"
 
 [dependencies.dojo_common]
 path = "../common"
@@ -53,7 +53,7 @@ path = "../common"
 path = "../builder-api-client"
 
 [dependencies.dojo_http_client]
-git = "https://github.com/habitat-sh/core.git"
+path = "../http-client"
 
 [dependencies.uuid]
 version = "*"

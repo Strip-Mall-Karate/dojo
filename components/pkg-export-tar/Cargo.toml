@@ -19,7 +19,7 @@ clap = { version = "*", features = ["suggestions", "color", "unstable"] }
 env_logger = "*"
 doj = { path = "../doj" }
 dojo_common = { path = "../common" }
-dojo_core = { git = "https://github.com/habitat-sh/core.git" }
+dojo_core = { path = "../core" }
 # We need to lock here since v0.30.0 bumps to a version of pest that fails to build on Windows.
 handlebars = { version = "0.29.1", default-features = false }
 lazy_static = "*"

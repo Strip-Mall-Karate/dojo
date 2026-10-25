@@ -44,7 +44,7 @@ uuid = { version = "*", features = ["v4"] }
 valico = "*"
 
 [dependencies.dojo_core]
-git = "https://github.com/habitat-sh/core.git"
+path = "../core"
 
 [dependencies.dojo_api_client]
 path = "../builder-api-client"
