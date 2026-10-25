@@ -1,0 +1,75 @@
+# AGENTS.md — Dojo
+
+Guidance for coding agents (Claude Code, Codex and others) changing **this repository**. `README.md`
+says what Dojo is and how to build it; this file is about changing it safely, and leads with what
+the source does not show.
+
+## What this is
+
+Dojo builds software into signed packages and runs them under a Supervisor. It is being grown into
+an operating system: the Launcher (`doj-launch`) is PID 1, a full-machine installer is coming, and a
+**dojo** is a ring of machines whose Supervisors gossip. It is a Strip Mall Karate Company product.
+
+The tree descends from the 0.79.1 release of an Apache-2.0 project by Chef Software Inc. and
+contributors (see `NOTICE` and `LICENSE-APACHE`). Nothing from that project's later releases is
+taken, whatever it fixes: later work was done under other ownership that this product wants nothing
+from. Re-implement instead.
+
+The dated record of decisions is `docs/decisions.md`; the longer account lives on the workq wiki
+page "Dojo" in project SMK (`smk wiki list --match Dojo`).
+
+## Names and licensing
+
+- The product is Dojo; the command is `doj`; binaries are `doj-sup` and `doj-launch`; environment
+  variables are `DOJ_*`; the filesystem root is `/doj`; the package origin is `karate`; Builder is
+  `https://bldr.karate.company` (not running yet; `DOJ_BLDR_URL` overrides it).
+- **The old project's name appears nowhere in the tree**, not in code, comments, docs, fixtures or
+  commit subjects. `NOTICE` shows how to credit its authors without naming it.
+- Inherited files keep their `Copyright (c) 20xx Chef Software Inc.` headers unchanged. New files
+  start with the MIT header in `components/launcher/src/init.rs`. `README.md` says which license
+  covers what; keep it true.
+- A mechanical rename can mint a name a stranger can register (a GitHub owner, a Docker Hub
+  namespace, a package feed). Any renamed hostname or namespace is checked before it ships.
+
+## History
+
+- Contributors' history is kept and never rewritten: no rebase, squash or amend of pushed commits,
+  no author changes. Pull requests land with **merge commits**.
+- Commit subjects are imperative; bodies say why. No AI attribution or co-author lines.
+
+## Toolchain and building
+
+- `rust-toolchain` at the root pins the Rust the tree builds with; `support/vm/guest/env.sh` supplies
+  the C libraries through Nix. Read both before changing a dependency; the lock is built `--locked`.
+- The Dojo VM (`support/vm`, README "The Dojo VM") is the development loop: an arm64 Linux guest
+  under Apple's hypervisor, never emulation. `support/vm/builder` runs the Linux VM that builds
+  the binaries, `boot --payload` boots them with `doj-launch` as PID 1, and `boot --check` and
+  `--check-reboot` are the acceptance checks for anything touching the Launcher, the Supervisor's
+  startup, or the VM scripts. Both checks pass before a PR opens, and a check that cannot fail is
+  not evidence: break it once and show the failure.
+- One builder VM runs per state directory (`DOJO_BUILDER_STATE`) and ssh port; parallel work in
+  separate worktrees (`~/code/dojo-trees/<name>`) needs a builder of its own.
+- The `support/vm/guest` scripts run on any Linux with Nix, not only in the builder VM.
+
+## Testing
+
+- x86_64 proof runs on the local-network Linux machine under the `local-network` skill's rules
+  (a throwaway checkout, a throwaway `GIT_CONFIG_GLOBAL`, `nice -n 15`, delete what you created,
+  confirm no processes remain). The VM proves arm64.
+- **A test run is only as good as the binaries that started.** With OpenSSL 1.0.2 from the old
+  nixpkgs, any test binary that loads libcrypto dies at load with `libdl.so.2: undefined symbol:
+  _dl_catch_error` and cargo exits 127, so seven test binaries (both Supervisor ones, Butterfly,
+  common, both `doj` ones, the Docker exporter) silently never ran for the first months of this
+  fork. Preload the current glibc's `libdl.so.2` (`LD_PRELOAD`) in the test environment, and
+  count the binaries that ran against the ones cargo built before calling a run green.
+- Expected failures that are not regressions: the Supervisor fixtures carry `TARGET x86_64-linux`
+  and cannot load on arm64; `compile_hook_table` and the Supervisor integration tests install
+  `karate/busybox-static` from Builder, which does not exist yet; `dojo_common`'s templating tests
+  want a real, writable `/doj` with packages installed.
+
+## Landing
+
+The repository is `Strip-Mall-Karate/dojo` on GitHub. Finished work opens a pull request against
+`main` (`gh pr create -R Strip-Mall-Karate/dojo`) whose body states what changed and the evidence.
+Merging needs the owner's explicit go-ahead for each pull request; there is no CI, so the PR body
+carries the checks that ran.

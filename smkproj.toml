@@ -1,0 +1,33 @@
+Name = "dojo"
+Description = "Dojo: signed packages, a Supervisor, and the Launcher as PID 1, growing into an operating system whose machines form a ring"
+CodeLanguage = "Rust"
+MasterBranch = "main"
+BaseDir = "."
+Domain = ""
+UnityProject = ""
+Namespace = ""
+Owner = "smk"
+TfStateStorageAccount = ""
+SsmPrefix = ""
+BaseDomain = ""
+# No scaffold: the tree keeps its own Makefile, build scripts and VM tooling under support/.
+Features = []
+BootstrapComplete = true
+BootstrapOnly = []
+Exclusions = []
+[Ci]
+Provider = ""
+[Ci.Settings]
+[Issue]
+Provider = "workq"
+# One project for every repository's work items, as the other smk repositories declare it.
+Project = "SMK"
+Label = "dojo"
+Workspace = "smk"
+[Format]
+Exclude = []
+[License]
+# New work only; inherited files stay under Apache 2.0 (LICENSE-APACHE, NOTICE).
+Kind = "MIT"
+Holder = "Strip Mall Karate Company"
+Year = 2026
