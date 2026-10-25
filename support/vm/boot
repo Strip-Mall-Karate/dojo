@@ -1,20 +1,29 @@
 #!/usr/bin/env bash
 # Boots the Dojo VM on an Apple silicon Mac with the serial console on this
 # terminal (Ctrl-A X quits). --check boots, waits for the init to report and
-# exits 0 only if it did. --payload adds a gzipped cpio archive (doj-launch,
-# doj-sup and their libraries) on top of the initramfs.
+# exits 0 only if it did and the VM then powered off cleanly; --check-reboot
+# ends with a reboot instead. --payload adds a gzipped cpio archive
+# (doj-launch, doj-sup and their libraries) on top of the initramfs.
 set -euo pipefail
 
 usage() {
-  echo "usage: support/vm/boot [--check] [--payload <file.cpio.gz>]" >&2
+  echo "usage: support/vm/boot [--check | --check-reboot] [--payload <file.cpio.gz>]" >&2
   exit 2
 }
 
 check=false
+check_args="dojo.check"
+ending="reboot: Power down"
 payload=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --check) check=true; shift ;;
+    --check-reboot)
+      check=true
+      check_args="dojo.check dojo.reboot"
+      ending="reboot: Restarting system"
+      shift
+      ;;
     --payload)
       [[ $# -ge 2 ]] || usage
       payload="$2"; shift 2 ;;
@@ -61,7 +70,7 @@ fi
 
 log="${work}/check.log"
 status=0
-"$(build coreutils)/bin/timeout" 120 "${qemu}" "${args[@]}" -append "${append} quiet dojo.check" </dev/null >"${log}" 2>&1 || status=$?
+"$(build coreutils)/bin/timeout" 120 "${qemu}" "${args[@]}" -append "${append} quiet ${check_args}" </dev/null >"${log}" 2>&1 || status=$?
 cat "${log}"
 if [[ "${status}" -ne 0 ]]; then
   echo "boot: QEMU exited ${status} (124 is the 120 second deadline)" >&2
@@ -71,7 +80,7 @@ if ! grep -q 'dojo: check ok' "${log}"; then
   echo "boot: the VM shut down without reporting success" >&2
   exit 1
 fi
-if grep -q 'Kernel panic' "${log}" || ! grep -q 'reboot: Power down' "${log}"; then
-  echo "boot: the VM did not power off cleanly" >&2
+if grep -q 'Kernel panic' "${log}" || ! grep -q "${ending}" "${log}"; then
+  echo "boot: the VM did not end cleanly (expected \"${ending}\")" >&2
   exit 1
 fi

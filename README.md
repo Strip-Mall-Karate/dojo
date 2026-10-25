@@ -48,9 +48,10 @@ support/vm/builder payload
 support/vm/boot --payload support/vm/out/payload.cpio.gz
 ```
 
-`--check` boots, waits for the Supervisor's HTTP gateway to answer, sends
-SIGTERM to PID 1, and exits non-zero unless the Launcher powers the VM off
-cleanly. `support/vm/builder test <package>...` runs a package's tests and
+`--check` boots and checks that the Supervisor's HTTP gateway answers, that the
+Launcher restarts the Supervisor after SIGKILL and after `doj sup term`, and that
+SIGTERM to PID 1 powers the VM off without a kernel panic. `--check-reboot` ends
+with SIGINT to PID 1 (the kernel's Ctrl-Alt-Del) and expects a reboot. `support/vm/builder test <package>...` runs a package's tests and
 format check in the builder. `support/vm/builder stop` stops it.
 
 ## License
