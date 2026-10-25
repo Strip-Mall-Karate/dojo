@@ -26,10 +26,10 @@ use super::{hook_timer,
             spawned_future::SpawnedFuture,
             Pkg};
 use crate::error::SupError;
-use futures::{sync::oneshot,
-              IntoFuture};
 use dojo_common::templating::hooks::Hook;
 use dojo_core::service::ServiceGroup;
+use futures::{sync::oneshot,
+              IntoFuture};
 use std::{sync::Arc,
           thread};
 

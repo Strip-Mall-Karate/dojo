@@ -15,7 +15,7 @@
 use crate::error::Result;
 use dojo_common::ui::UI;
 use dojo_core::{package::PackageIdent,
-                   ChannelIdent};
+                ChannelIdent};
 
 pub mod docker;
 pub mod tar;
@@ -99,9 +99,9 @@ mod inner {
     use crate::error::{Error,
                        Result};
     use dojo_common::ui::{UIWriter,
-                             UI};
+                          UI};
     use dojo_core::{package::PackageIdent,
-                       ChannelIdent};
+                    ChannelIdent};
     use std::env;
 
     pub fn format_for(ui: &mut UI, value: &str) -> Result<ExportFormat> {

@@ -17,7 +17,7 @@
 //! This will connect to a given butterfly members `Pull` thread, and inject a rumor.
 
 use dojo_core::{crypto::SymKey,
-                   service::ServiceGroup};
+                service::ServiceGroup};
 use zmq;
 
 use crate::{error::{Error,

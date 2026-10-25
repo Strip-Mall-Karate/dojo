@@ -228,8 +228,8 @@ pub fn verify<P1: ?Sized, P2: ?Sized>(src: &P1, cache_key_path: &P2) -> Result<(
     if computed_hash == expected_hash {
         Ok((pair.name_with_rev(), expected_hash))
     } else {
-        let msg = format!("Dojo artifact is invalid, hashes don't match (expected: {}, \
-                           computed: {})",
+        let msg = format!("Dojo artifact is invalid, hashes don't match (expected: {}, computed: \
+                           {})",
                           expected_hash, computed_hash);
         Err(Error::CryptoError(msg))
     }

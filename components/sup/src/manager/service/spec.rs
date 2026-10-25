@@ -19,15 +19,15 @@ use crate::error::{Error,
                    Result,
                    SupError};
 use dojo_core::{fs::atomic_write,
-                   package::{PackageIdent,
-                             PackageInstall},
-                   service::{ApplicationEnvironment,
-                             HealthCheckInterval,
-                             ServiceBind},
-                   url::DEFAULT_BLDR_URL,
-                   util::{deserialize_using_from_str,
-                          serialize_using_to_string},
-                   ChannelIdent};
+                package::{PackageIdent,
+                          PackageInstall},
+                service::{ApplicationEnvironment,
+                          HealthCheckInterval,
+                          ServiceBind},
+                url::DEFAULT_BLDR_URL,
+                util::{deserialize_using_from_str,
+                       serialize_using_to_string},
+                ChannelIdent};
 use dojo_sup_protocol;
 use serde::{self,
             Deserialize};
@@ -134,7 +134,7 @@ impl IntoServiceSpec for dojo_sup_protocol::ctl::SvcLoad {
                     .iter()
                     .map(|pb: &dojo_sup_protocol::types::ServiceBind| {
                         dojo_core::service::ServiceBind::new(&pb.name,
-                                                                pb.service_group.clone().into())
+                                                             pb.service_group.clone().into())
                     })
                     .collect();
         }
@@ -317,8 +317,8 @@ mod test {
     use tempfile::TempDir;
 
     use dojo_core::{package::PackageIdent,
-                       service::{ApplicationEnvironment,
-                                 HealthCheckInterval}};
+                    service::{ApplicationEnvironment,
+                              HealthCheckInterval}};
 
     use super::*;
     use crate::error::Error::*;

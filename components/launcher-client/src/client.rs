@@ -17,7 +17,7 @@ use crate::error::{Error,
 use dojo_common::types::UserInfo;
 use dojo_core::os::process::Pid;
 use dojo_launcher_protocol::{self as protocol,
-                                Error as ProtocolError};
+                             Error as ProtocolError};
 use ipc_channel::ipc::{IpcOneShotServer,
                        IpcReceiver,
                        IpcSender};

@@ -22,18 +22,18 @@ use super::{terminator,
 use crate::error::{Error,
                    Result,
                    SupError};
-use futures::{future,
-              Future};
 use dojo_common::{outputln,
-                     templating::package::Pkg,
-                     types::UserInfo};
+                  templating::package::Pkg,
+                  types::UserInfo};
 #[cfg(unix)]
 use dojo_core::os::users;
 use dojo_core::{fs,
-                   os::process::{self,
-                                 Pid},
-                   service::ServiceGroup};
+                os::process::{self,
+                              Pid},
+                service::ServiceGroup};
 use dojo_launcher_client::LauncherCli;
+use futures::{future,
+              Future};
 use serde::{ser::SerializeStruct,
             Serialize,
             Serializer};

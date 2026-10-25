@@ -19,21 +19,21 @@ extern crate dojo_butterfly;
 extern crate lazy_static;
 
 use dojo_butterfly::{member::{Health,
-                                 Member},
-                        rumor::{departure::Departure,
-                                election::ElectionStatus,
-                                service::{Service,
-                                          SysInfo},
-                                service_config::ServiceConfig,
-                                service_file::ServiceFile},
-                        server::{timing::Timing,
-                                 Server,
-                                 Suitability},
-                        trace::Trace};
+                              Member},
+                     rumor::{departure::Departure,
+                             election::ElectionStatus,
+                             service::{Service,
+                                       SysInfo},
+                             service_config::ServiceConfig,
+                             service_file::ServiceFile},
+                     server::{timing::Timing,
+                              Server,
+                              Suitability},
+                     trace::Trace};
 use dojo_core::{crypto::keys::sym_key::SymKey,
-                   package::{Identifiable,
-                             PackageIdent},
-                   service::ServiceGroup};
+                package::{Identifiable,
+                          PackageIdent},
+                service::ServiceGroup};
 use std::{net::{IpAddr,
                 Ipv4Addr,
                 SocketAddr},

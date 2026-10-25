@@ -14,13 +14,13 @@
 
 use super::health;
 use dojo_common::{outputln,
-                     templating::{hooks::{self,
-                                          ExitCode,
-                                          Hook,
-                                          HookOutput,
-                                          RenderPair},
-                                  package::Pkg,
-                                  TemplateRenderer}};
+                  templating::{hooks::{self,
+                                       ExitCode,
+                                       Hook,
+                                       HookOutput,
+                                       RenderPair},
+                               package::Pkg,
+                               TemplateRenderer}};
 #[cfg(windows)]
 use dojo_core::os::process::windows_child::ExitStatus;
 use serde::Serialize;
@@ -538,24 +538,24 @@ mod tests {
                 http_gateway,
                 manager::sys::Sys};
     use dojo_butterfly::{member::MemberList,
-                            rumor::{election::{self,
-                                               Election as ElectionRumor,
-                                               ElectionUpdate as ElectionUpdateRumor},
-                                    service::{Service as ServiceRumor,
-                                              SysInfo},
-                                    service_config::ServiceConfig as ServiceConfigRumor,
-                                    service_file::ServiceFile as ServiceFileRumor,
-                                    RumorStore}};
+                         rumor::{election::{self,
+                                            Election as ElectionRumor,
+                                            ElectionUpdate as ElectionUpdateRumor},
+                                 service::{Service as ServiceRumor,
+                                           SysInfo},
+                                 service_config::ServiceConfig as ServiceConfigRumor,
+                                 service_file::ServiceFile as ServiceFileRumor,
+                                 RumorStore}};
     use dojo_common::{cli::FS_ROOT,
-                         templating::{config::Cfg,
-                                      package::Pkg,
-                                      test_helpers::*},
-                         types::ListenCtlAddr};
+                      templating::{config::Cfg,
+                                   package::Pkg,
+                                   test_helpers::*},
+                      types::ListenCtlAddr};
     use dojo_core::{fs::cache_key_path,
-                       package::{PackageIdent,
-                                 PackageInstall},
-                       service::{ServiceBind,
-                                 ServiceGroup}};
+                    package::{PackageIdent,
+                              PackageInstall},
+                    service::{ServiceBind,
+                              ServiceGroup}};
     use std::{fs,
               iter};
     use tempfile::TempDir;

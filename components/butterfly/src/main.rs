@@ -20,9 +20,9 @@ use std::{env,
           time::Duration};
 
 use dojo_butterfly::{member,
-                        server::{self,
-                                 Suitability},
-                        trace};
+                     server::{self,
+                              Suitability},
+                     trace};
 
 #[derive(Debug)]
 struct ZeroSuitability;

@@ -55,11 +55,11 @@ use crate::{census::{CensusGroup,
             manager::Sys};
 use dojo_butterfly::rumor::service::SysInfo;
 use dojo_common::templating::{config::Cfg,
-                                 package::{Env,
-                                           Pkg}};
+                              package::{Env,
+                                        Pkg}};
 use dojo_core::{package::PackageIdent,
-                   service::{ServiceBind,
-                             ServiceGroup}};
+                service::{ServiceBind,
+                          ServiceGroup}};
 use serde::{ser::SerializeMap,
             Serialize,
             Serializer};
@@ -570,7 +570,7 @@ mod tests {
 
     use dojo_butterfly::rumor::service::SysInfo;
     use dojo_common::templating::{config::PackageConfigPaths,
-                                     TemplateRenderer};
+                                  TemplateRenderer};
     use dojo_core::package::PackageIdent;
 
     use crate::{manager::service::Cfg,

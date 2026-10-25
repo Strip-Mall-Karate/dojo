@@ -145,7 +145,7 @@ impl SigKeyPair {
     /// extern crate tempfile;
     ///
     /// use dojo_core::crypto::{keys::PairType,
-    ///                            SigKeyPair};
+    ///                         SigKeyPair};
     /// use std::{fs::File,
     ///           io::Read};
     /// use tempfile::Builder;
@@ -176,7 +176,7 @@ impl SigKeyPair {
     /// extern crate tempfile;
     ///
     /// use dojo_core::crypto::{keys::PairType,
-    ///                            SigKeyPair};
+    ///                         SigKeyPair};
     /// use std::{fs::File,
     ///           io::Read};
     /// use tempfile::Builder;

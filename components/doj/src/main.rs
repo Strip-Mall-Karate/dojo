@@ -61,8 +61,6 @@ use crate::{common::{cli::{cache_key_path_from_matches,
 
 use clap::{ArgMatches,
            Shell};
-use env_logger;
-use futures::prelude::*;
 use doj::{cli,
           command::{self,
                     pkg::list::ListingType},
@@ -78,10 +76,12 @@ use doj::{cli,
           PRODUCT,
           VERSION};
 use dojo_common::{self as common,
-                     FeatureFlag};
+                  FeatureFlag};
 use dojo_core as hcore;
 use dojo_sup_client as sup_client;
 use dojo_sup_protocol as protocol;
+use env_logger;
+use futures::prelude::*;
 use pbr;
 use std::{env,
           ffi::OsString,
@@ -1410,8 +1410,11 @@ fn origin_param_or_env(m: &ArgMatches<'_>) -> Result<String> {
 fn org_param_or_env(m: &ArgMatches<'_>) -> Result<String> {
     match m.value_of("ORG") {
         Some(o) => Ok(o.to_string()),
-        None => henv::var(DOJO_ORG_ENVVAR)
-            .map_err(|_| Error::CryptoCLI("No organization specified".to_string())),
+        None => {
+            henv::var(DOJO_ORG_ENVVAR).map_err(|_| {
+                                          Error::CryptoCLI("No organization specified".to_string())
+                                      })
+        }
     }
 }
 

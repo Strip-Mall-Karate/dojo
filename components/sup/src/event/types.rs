@@ -26,7 +26,7 @@
 
 use super::Event;
 use dojo_core::{package::PackageIdent,
-                   service::ServiceGroup};
+                service::ServiceGroup};
 
 #[derive(Debug)]
 pub struct ServiceStarted<'a> {

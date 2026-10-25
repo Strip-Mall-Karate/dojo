@@ -55,37 +55,37 @@ use crate::{census::{CensusRing,
             http_gateway,
             VERSION};
 use cpu_time::ProcessTime;
+use dojo_butterfly::{member::Member,
+                     server::{timing::Timing,
+                              ServerProxy,
+                              Suitability},
+                     trace::Trace};
+use dojo_common::{outputln,
+                  types::ListenCtlAddr,
+                  FeatureFlag};
+use dojo_core::{crypto::SymKey,
+                env::{self,
+                      Config},
+                fs::FS_ROOT_PATH,
+                os::{process::{self,
+                               Pid,
+                               Signal},
+                     signals::{self,
+                               SignalEvent}},
+                package::{Identifiable,
+                          PackageIdent,
+                          PackageInstall},
+                service::ServiceGroup,
+                util::ToI64,
+                ChannelIdent};
+use dojo_launcher_client::{LauncherCli,
+                           LAUNCHER_LOCK_CLEAN_ENV,
+                           LAUNCHER_PID_ENV};
+use dojo_sup_protocol;
 use futures::{future,
               prelude::*,
               sync::{mpsc,
                      oneshot}};
-use dojo_butterfly::{member::Member,
-                        server::{timing::Timing,
-                                 ServerProxy,
-                                 Suitability},
-                        trace::Trace};
-use dojo_common::{outputln,
-                     types::ListenCtlAddr,
-                     FeatureFlag};
-use dojo_core::{crypto::SymKey,
-                   env::{self,
-                         Config},
-                   fs::FS_ROOT_PATH,
-                   os::{process::{self,
-                                  Pid,
-                                  Signal},
-                        signals::{self,
-                                  SignalEvent}},
-                   package::{Identifiable,
-                             PackageIdent,
-                             PackageInstall},
-                   service::ServiceGroup,
-                   util::ToI64,
-                   ChannelIdent};
-use dojo_launcher_client::{LauncherCli,
-                              LAUNCHER_LOCK_CLEAN_ENV,
-                              LAUNCHER_PID_ENV};
-use dojo_sup_protocol;
 use num_cpus;
 #[cfg(unix)]
 use proc_self;
@@ -441,13 +441,13 @@ impl Manager {
         gateway_state.auth_token = gateway_auth_token.0;
 
         let server = dojo_butterfly::Server::new(sys.gossip_listen(),
-                                                    sys.gossip_listen(),
-                                                    member,
-                                                    Trace::default(),
-                                                    cfg.ring_key,
-                                                    None,
-                                                    Some(&fs_cfg.data_path),
-                                                    Box::new(SuitabilityLookup(services.clone())))?;
+                                                 sys.gossip_listen(),
+                                                 member,
+                                                 Trace::default(),
+                                                 cfg.ring_key,
+                                                 None,
+                                                 Some(&fs_cfg.data_path),
+                                                 Box::new(SuitabilityLookup(services.clone())))?;
         outputln!("Supervisor Member-ID {}", sys.member_id);
         for peer_addr in &cfg.gossip_peers {
             let mut peer = Member::default();
@@ -1891,7 +1891,8 @@ mod test {
 
             let operations = Manager::specs_to_operations(running, on_disk);
             assert_eq!(operations.len(), 1);
-            assert_eq!(operations[0], ServiceOperation::Stop(new_spec("karate/foo")));
+            assert_eq!(operations[0],
+                       ServiceOperation::Stop(new_spec("karate/foo")));
         }
 
         #[test]
@@ -1901,7 +1902,8 @@ mod test {
 
             let operations = Manager::specs_to_operations(running, on_disk);
             assert_eq!(operations.len(), 1);
-            assert_eq!(operations[0], ServiceOperation::Start(new_spec("karate/foo")));
+            assert_eq!(operations[0],
+                       ServiceOperation::Start(new_spec("karate/foo")));
         }
 
         #[test]

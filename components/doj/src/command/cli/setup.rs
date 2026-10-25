@@ -99,8 +99,8 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
     if ask_default_origin(ui)? {
         ui.br()?;
         ui.para("Enter the name of your origin. If you plan to publish your packages publicly, \
-                 we recommend that you select one that is not already in use on the Dojo \
-                 build service found at https://bldr.karate.company/.")?;
+                 we recommend that you select one that is not already in use on the Dojo build \
+                 service found at https://bldr.karate.company/.")?;
         ui.para("Origins must begin with a lowercase letter or number. Allowed characters \
                  include lowercase letters, numbers, _, -. No more than 255 characters.")?;
         let mut origin = prompt_origin(ui)?;
@@ -143,10 +143,10 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
              to Builder, or checking status of your build jobs from the Dojo client will \
              require you to use an access token.")?;
     ui.para("The Dojo Personal Access Token can be generated via the Builder  Profile page \
-             (https://bldr.karate.company/#/profile). Once you have generated your token, you can \
-             enter it here.")?;
-    ui.para("If you would like to save your token for use by the Dojo client, please enter \
-             your access token. Otherwise, just enter No.")?;
+             (https://bldr.karate.company/#/profile). Once you have generated your token, you \
+             can enter it here.")?;
+    ui.para("If you would like to save your token for use by the Dojo client, please enter your \
+             access token. Otherwise, just enter No.")?;
     if ask_default_auth_token(ui)? {
         ui.br()?;
         ui.para("Enter your Dojo Personal Access Token.")?;
@@ -258,8 +258,7 @@ fn prompt_origin(ui: &mut UI) -> Result<String> {
 }
 
 fn ask_default_auth_token(ui: &mut UI) -> Result<bool> {
-    Ok(ui.prompt_yes_no("Set up a default Dojo personal access token?",
-                        Some(true))?)
+    Ok(ui.prompt_yes_no("Set up a default Dojo personal access token?", Some(true))?)
 }
 
 fn ask_default_ctl_secret(ui: &mut UI) -> Result<bool> {
@@ -290,8 +289,7 @@ fn prompt_auth_token(ui: &mut UI) -> Result<String> {
         }
         None => henv::var(AUTH_TOKEN_ENVVAR).ok(),
     };
-    Ok(ui.prompt_ask("Dojo personal access token",
-                     default.as_ref().map(|x| &**x))?)
+    Ok(ui.prompt_ask("Dojo personal access token", default.as_ref().map(|x| &**x))?)
 }
 
 fn prompt_ctl_secret(ui: &mut UI) -> Result<String> {

@@ -20,14 +20,14 @@ use crate::{census::CensusRing,
             util};
 use dojo_butterfly;
 use dojo_common::{outputln,
-                     ui::UI};
+                  ui::UI};
 use dojo_core::{env as henv,
-                   env::Config as EnvConfig,
-                   package::{PackageIdent,
-                             PackageInstall,
-                             PackageTarget},
-                   service::ServiceGroup,
-                   ChannelIdent};
+                env::Config as EnvConfig,
+                package::{PackageIdent,
+                          PackageInstall,
+                          PackageTarget},
+                service::ServiceGroup,
+                ChannelIdent};
 use std::{cmp::{Ordering,
                 PartialOrd},
           collections::HashMap,
@@ -581,7 +581,7 @@ mod tests {
 
     fn worker() -> Worker {
         Worker { current:     "karate/testing/1.0.0/20181109125930".parse()
-                                                                 .expect("Can't parse ident!"),
+                                                                   .expect("Can't parse ident!"),
                  spec_ident:  "karate/testing".parse().expect("Can't parse ident!"),
                  builder_url: String::from("https://bldr.karate.company"),
                  channel:     ChannelIdent::stable(), }

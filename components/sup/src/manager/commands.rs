@@ -27,17 +27,17 @@ use crate::{ctl_gateway::CtlRequest,
             util};
 use dojo_butterfly as butterfly;
 use dojo_common::{command::package::install::InstallSource,
-                     outputln,
-                     ui::UIWriter};
+                  outputln,
+                  ui::UIWriter};
 use dojo_core::{package::{Identifiable,
-                             PackageIdent,
-                             PackageTarget},
-                   service::ServiceGroup,
-                   ChannelIdent};
+                          PackageIdent,
+                          PackageTarget},
+                service::ServiceGroup,
+                ChannelIdent};
 use dojo_sup_protocol::{self as protocol,
-                           net::{self,
-                                 ErrCode,
-                                 NetResult}};
+                        net::{self,
+                              ErrCode,
+                              NetResult}};
 use serde_json;
 use std::{fmt,
           fs,

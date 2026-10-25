@@ -237,7 +237,7 @@ mod test {
 
         let ident_list =
             get_ident_list(&mut ui, &group_status, Some("karate"), false).expect("Error fetching \
-                                                                                ident list");
+                                                                                  ident list");
 
         assert_eq!(ident_list,
                    ["karate/project1/1.0.0/20180101000000",
@@ -258,7 +258,7 @@ mod test {
 
         let ident_list =
             get_ident_list(&mut ui, &group_status, Some("karate"), true).expect("Error fetching \
-                                                                               ident list");
+                                                                                 ident list");
 
         assert_eq!(ident_list,
                    ["karate/project1/1.0.0/20180101000000",

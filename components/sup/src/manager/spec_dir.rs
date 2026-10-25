@@ -1,8 +1,8 @@
 use super::service::spec::ServiceSpec;
 use crate::error::{Error,
                    Result};
-use glob;
 use dojo_common::outputln;
+use glob;
 use std::{error::Error as StdErr,
           ffi::OsStr,
           iter::IntoIterator,

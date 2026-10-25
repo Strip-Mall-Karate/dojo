@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use dojo_butterfly::{member::Health,
-                        rumor::election::ElectionStatus};
+                     rumor::election::ElectionStatus};
 
 use crate::btest;
 

@@ -19,9 +19,9 @@ use crate::{error::{Error,
             outputln};
 #[cfg(windows)]
 use dojo_core::os::process::windows_child::{Child,
-                                               ExitStatus};
+                                            ExitStatus};
 use dojo_core::{crypto,
-                   fs};
+                fs};
 use serde::{Serialize,
             Serializer};
 #[cfg(unix)]
@@ -502,8 +502,8 @@ mod tests {
                             package::Pkg,
                             test_helpers::*};
     use dojo_core::{package::{PackageIdent,
-                                 PackageInstall},
-                       service::ServiceGroup};
+                              PackageInstall},
+                    service::ServiceGroup};
     use tempfile::TempDir;
 
     // Turns out it's useful for Hooks to implement AsRef<Path>, at

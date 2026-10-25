@@ -154,8 +154,8 @@ mod inner {
             None => {
                 ui.warn(format!("Could not find the `{}' command, is it in your PATH?",
                                 SUDO_CMD))?;
-                ui.warn("Running Dojo Studio requires root or administrator privileges. \
-                         Please retry this command as a super user or use a privilege-granting \
+                ui.warn("Running Dojo Studio requires root or administrator privileges. Please \
+                         retry this command as a super user or use a privilege-granting \
                          facility such as sudo.")?;
                 ui.br()?;
                 Err(Error::RootRequired)

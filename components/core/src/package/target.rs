@@ -327,7 +327,7 @@ lazy_static::lazy_static! {
 ///
 /// ```
 /// use dojo_core::package::target::{self,
-///                                     PackageTarget};
+///                                  PackageTarget};
 /// use std::str::FromStr;
 ///
 /// // Package target implements the `FromStr` trait and thus can be parsed from strings

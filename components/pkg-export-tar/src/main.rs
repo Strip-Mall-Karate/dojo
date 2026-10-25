@@ -1,6 +1,6 @@
-use env_logger;
 use dojo_common as common;
 use dojo_pkg_export_tar as export_tar;
+use env_logger;
 #[macro_use]
 extern crate log;
 

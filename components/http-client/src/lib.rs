@@ -39,9 +39,9 @@ mod ssl {
               str::FromStr};
 
     use dojo_core::{env,
-                       fs::cache_ssl_path,
-                       package::{PackageIdent,
-                                 PackageInstall}};
+                    fs::cache_ssl_path,
+                    package::{PackageIdent,
+                              PackageInstall}};
     use openssl::ssl::SslContextBuilder;
 
     use crate::error::Result;

@@ -214,7 +214,7 @@ mod tests {
                 rumor::service::{Service,
                                  SysInfo}};
     use dojo_core::{package::PackageIdent,
-                       service::ServiceGroup};
+                    service::ServiceGroup};
 
     // TODO (CM): This FakeRumor implementation is copied from
     // rumor.rs; factor this helper code better.

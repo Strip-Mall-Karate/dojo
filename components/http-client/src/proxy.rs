@@ -53,7 +53,7 @@ use crate::error::{Error,
 /// extern crate url;
 ///
 /// use dojo_http_client::proxy::{ProxyBasicAuthorization,
-///                                  ProxyInfo};
+///                               ProxyInfo};
 /// use std::str::FromStr;
 /// use url::Url;
 ///

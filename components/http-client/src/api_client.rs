@@ -16,8 +16,8 @@ use std::{path::Path,
           time::Duration};
 
 use dojo_core::{env,
-                   package::PackageTarget,
-                   util::sys};
+                package::PackageTarget,
+                util::sys};
 use hyper::{client::{pool::{Config,
                             Pool},
                      Client as HyperClient,

@@ -406,8 +406,8 @@ impl PackageInstall {
                 }
                 // The `filter()` in this chain is to reject any path entries that do not start
                 // with the package's `installed_path` (aka pkg_prefix). This check is for any
-                // packages built by 0.50.0 (2017-11-30) and later, which produced `PATH` metafiles containing extra
-                // path entries.
+                // packages built by 0.50.0 (2017-11-30) and later, which produced `PATH` metafiles
+                // containing extra path entries.
                 let pkg_prefix = fs::pkg_install_path(self.ident(), None::<&Path>);
                 let v = env::split_paths(&body).filter(|p| p.starts_with(&pkg_prefix))
                                                .collect();

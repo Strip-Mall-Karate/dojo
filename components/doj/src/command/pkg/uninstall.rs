@@ -17,15 +17,15 @@ use super::{ExecutionStrategy,
 use crate::error::{Error,
                    Result};
 use dojo_common::{package_graph::PackageGraph,
-                     ui::{Status,
-                          UIWriter,
-                          UI}};
+                  ui::{Status,
+                       UIWriter,
+                       UI}};
 use dojo_core::{error as herror,
-                   fs as hfs,
-                   package::{list::temp_package_directory,
-                             Identifiable,
-                             PackageIdent,
-                             PackageInstall}};
+                fs as hfs,
+                package::{list::temp_package_directory,
+                          Identifiable,
+                          PackageIdent,
+                          PackageInstall}};
 use std::{fs,
           path::Path,
           str::FromStr};
@@ -185,8 +185,8 @@ fn maybe_delete(ui: &mut UI,
         return Ok(false);
     }
 
-    // The excludes list could be looser than the fully qualified idents.  E.g. if karate/redis is on
-    // the exclude list then we should exclude karate/redis/1.1.0/20180608091936.  We use the
+    // The excludes list could be looser than the fully qualified idents.  E.g. if karate/redis is
+    // on the exclude list then we should exclude karate/redis/1.1.0/20180608091936.  We use the
     // `Identifiable` trait which supplies this logic for PackageIdents
     let should_exclude = excludes.iter().any(|i| i.satisfies(ident));
     if should_exclude {

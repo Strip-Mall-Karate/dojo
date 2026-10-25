@@ -18,7 +18,7 @@ use core::os::process::windows_child::{ChildStderr,
                                        ChildStdout,
                                        ExitStatus};
 use dojo_common::output::{self,
-                             StructuredOutput};
+                          StructuredOutput};
 #[cfg(unix)]
 use std::process::{ChildStderr,
                    ChildStdout,

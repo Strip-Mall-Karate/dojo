@@ -25,10 +25,10 @@ use std::{sync::mpsc::{sync_channel,
 use crate::{env,
             util};
 use dojo_common::{command::package::install::InstallSource,
-                     ui::UI};
+                  ui::UI};
 use dojo_core::{package::{PackageIdent,
-                             PackageInstall},
-                   ChannelIdent};
+                          PackageInstall},
+                ChannelIdent};
 use time::{Duration as TimeDuration,
            SteadyTime};
 

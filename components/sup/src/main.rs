@@ -44,30 +44,30 @@ use crate::sup::{cli::cli,
                  util};
 use clap::ArgMatches;
 use dojo_common::{cli::{cache_key_path_from_matches,
-                           GOSSIP_DEFAULT_PORT},
-                     command::package::install::InstallSource,
-                     output::{self,
-                              OutputFormat,
-                              OutputVerbosity},
-                     outputln,
-                     ui::{NONINTERACTIVE_ENVVAR,
-                          UI},
-                     FeatureFlag};
+                        GOSSIP_DEFAULT_PORT},
+                  command::package::install::InstallSource,
+                  output::{self,
+                           OutputFormat,
+                           OutputVerbosity},
+                  outputln,
+                  ui::{NONINTERACTIVE_ENVVAR,
+                       UI},
+                  FeatureFlag};
 #[cfg(windows)]
 use dojo_core::crypto::dpapi::encrypt;
 use dojo_core::{crypto::{self,
-                            SymKey},
-                   url::{bldr_url_from_env,
-                         default_bldr_url},
-                   ChannelIdent};
+                         SymKey},
+                url::{bldr_url_from_env,
+                      default_bldr_url},
+                ChannelIdent};
 use dojo_launcher_client::{LauncherCli,
-                              ERR_NO_RETRY_EXCODE};
+                           ERR_NO_RETRY_EXCODE};
 use dojo_sup_protocol::{ctl::ServiceBindList,
-                           types::{ApplicationEnvironment,
-                                   BindingMode,
-                                   ServiceBind,
-                                   Topology,
-                                   UpdateStrategy}};
+                        types::{ApplicationEnvironment,
+                                BindingMode,
+                                ServiceBind,
+                                Topology,
+                                UpdateStrategy}};
 use std::{env,
           io::{self,
                Write},
@@ -504,7 +504,7 @@ mod test {
     use crate::sup::{config::GossipListenAddr,
                      http_gateway};
     use dojo_common::{locked_env_var,
-                         types::ListenCtlAddr};
+                      types::ListenCtlAddr};
 
     fn no_feature_flags() -> FeatureFlag { FeatureFlag::empty() }
 

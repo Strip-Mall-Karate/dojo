@@ -77,7 +77,7 @@ impl fmt::Display for Error {
             Error::IdentNotFullyQualified => {
                 "Cannot perform the specified operation. Specify a fully qualifed package \
                  identifier (ex: karate/busybox-static/1.42.2/20170513215502)"
-                                                                            .to_string()
+                                                                              .to_string()
             }
             Error::UploadFailed(ref s) => format!("Upload failed: {}", s),
             Error::UrlParseError(ref e) => format!("{}", e),

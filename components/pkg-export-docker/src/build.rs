@@ -42,9 +42,9 @@ use crate::{accounts::{EtcGroupEntry,
             util};
 use clap;
 #[cfg(unix)]
-use failure::SyncFailure;
-#[cfg(unix)]
 use doj;
+#[cfg(unix)]
+use failure::SyncFailure;
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
 #[cfg(windows)]
@@ -1034,7 +1034,8 @@ mod test {
                                                                         .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
+            let build_spec =
+                BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 
@@ -1056,7 +1057,8 @@ mod test {
                                                           .install();
 
             let matches = arg_matches(&[&*PROGRAM_NAME, "acme/my_pkg"]);
-            let build_spec = BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
+            let build_spec =
+                BuildSpec::new_from_cli_matches(&matches, "https://bldr.karate.company");
 
             let ctx = BuildRootContext::from_spec(&build_spec, rootfs.path()).unwrap();
 

@@ -21,8 +21,8 @@
 //! See the [Config](struct.Config.html) struct for the specific options available.
 
 use dojo_common::cli::{GOSSIP_DEFAULT_IP,
-                          GOSSIP_DEFAULT_PORT,
-                          GOSSIP_LISTEN_ADDRESS_ENVVAR};
+                       GOSSIP_DEFAULT_PORT,
+                       GOSSIP_LISTEN_ADDRESS_ENVVAR};
 use dojo_core::env::Config as EnvConfig;
 use std::{fmt,
           io,

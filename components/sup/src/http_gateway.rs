@@ -32,14 +32,14 @@ use actix_web::{http::{self,
                 Path,
                 Request};
 use dojo_common::{cli::{LISTEN_HTTP_ADDRESS_ENVVAR,
-                           LISTEN_HTTP_DEFAULT_IP,
-                           LISTEN_HTTP_DEFAULT_PORT},
-                     templating::hooks,
-                     FeatureFlag};
+                        LISTEN_HTTP_DEFAULT_IP,
+                        LISTEN_HTTP_DEFAULT_PORT},
+                  templating::hooks,
+                  FeatureFlag};
 use dojo_core::{crypto,
-                   env as henv,
-                   env::Config as EnvConfig,
-                   service::ServiceGroup};
+                env as henv,
+                env::Config as EnvConfig,
+                service::ServiceGroup};
 use prometheus::{self,
                  CounterVec,
                  Encoder,
@@ -539,10 +539,10 @@ fn service_from_services(service_group: &ServiceGroup, services_json: &str) -> O
 mod tests {
     use crate::test_helpers::*;
     use dojo_butterfly::{member::Member,
-                            server::{Server,
-                                     ServerProxy,
-                                     Suitability},
-                            trace::Trace};
+                         server::{Server,
+                                  ServerProxy,
+                                  Suitability},
+                         trace::Trace};
     use serde_json;
     use std::{fs::File,
               io::Read,

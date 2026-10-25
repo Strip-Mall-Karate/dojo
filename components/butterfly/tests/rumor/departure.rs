@@ -14,7 +14,7 @@
 
 use crate::btest;
 use dojo_butterfly::{client::Client,
-                        member::Health};
+                     member::Health};
 
 #[test]
 fn two_members_share_departures() {

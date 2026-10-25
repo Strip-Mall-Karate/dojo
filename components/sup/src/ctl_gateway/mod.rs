@@ -24,16 +24,16 @@ pub mod server;
 
 use crate::error::{Error,
                    Result};
-use futures::prelude::*;
 use dojo_api_client::DisplayProgress;
 use dojo_common::{output::{self,
-                              OutputContext,
-                              OutputFormat,
-                              StructuredOutput},
-                     ui::UIWriter,
-                     PROGRAM_NAME};
+                           OutputContext,
+                           OutputFormat,
+                           StructuredOutput},
+                  ui::UIWriter,
+                  PROGRAM_NAME};
 use dojo_core;
 use dojo_sup_protocol;
+use futures::prelude::*;
 use std::{fmt,
           fs::{self,
                File},
@@ -268,7 +268,7 @@ pub fn readgen_secret_key<T>(sup_root: T) -> Result<String>
                                                                    e))
                                  })?;
     if dojo_sup_protocol::read_secret_key(&sup_root, &mut out).ok()
-                                                                 .unwrap_or(false)
+                                                              .unwrap_or(false)
     {
         Ok(out)
     } else {

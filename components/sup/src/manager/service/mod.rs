@@ -49,35 +49,35 @@ use crate::{census::{CensusGroup,
             manager::{FsCfg,
                       GatewayState,
                       Sys}};
-use futures::{future,
-              Future,
-              IntoFuture};
 use dojo_butterfly::rumor::service::Service as ServiceRumor;
 pub use dojo_common::templating::{config::{Cfg,
-                                              UserConfigPath},
-                                     package::{Env,
-                                               Pkg,
-                                               PkgProxy}};
+                                           UserConfigPath},
+                                  package::{Env,
+                                            Pkg,
+                                            PkgProxy}};
 use dojo_common::{outputln,
-                     templating::{config::CfgRenderer,
-                                  hooks::Hook}};
+                  templating::{config::CfgRenderer,
+                               hooks::Hook}};
 use dojo_core::{crypto::hash,
-                   fs::{atomic_write,
-                        svc_hooks_path,
-                        SvcDir,
-                        FS_ROOT_PATH},
-                   package::{metadata::Bind,
-                             PackageIdent,
-                             PackageInstall},
-                   service::{HealthCheckInterval,
-                             ServiceBind,
-                             ServiceGroup},
-                   ChannelIdent};
+                fs::{atomic_write,
+                     svc_hooks_path,
+                     SvcDir,
+                     FS_ROOT_PATH},
+                package::{metadata::Bind,
+                          PackageIdent,
+                          PackageInstall},
+                service::{HealthCheckInterval,
+                          ServiceBind,
+                          ServiceGroup},
+                ChannelIdent};
 use dojo_launcher_client::LauncherCli;
 use dojo_sup_protocol::types::BindingMode;
 pub use dojo_sup_protocol::types::{ProcessState,
-                                      Topology,
-                                      UpdateStrategy};
+                                   Topology,
+                                   UpdateStrategy};
+use futures::{future,
+              Future,
+              IntoFuture};
 use prometheus::{HistogramTimer,
                  HistogramVec};
 use serde::{ser::SerializeStruct,
@@ -1020,7 +1020,7 @@ impl Service {
     #[cfg(not(windows))]
     fn set_gossip_permissions<T: AsRef<Path>>(&self, path: T) -> bool {
         use dojo_core::{os::users,
-                           util::posix_perm};
+                        util::posix_perm};
 
         if users::can_run_services_as_svc_user() {
             let result =

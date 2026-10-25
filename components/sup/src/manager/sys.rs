@@ -19,7 +19,7 @@ use crate::{config::GossipListenAddr,
             VERSION};
 use dojo_butterfly::rumor::service::SysInfo;
 use dojo_common::{outputln,
-                     types::ListenCtlAddr};
+                  types::ListenCtlAddr};
 use dojo_core;
 use std::{net::{IpAddr,
                 Ipv4Addr,

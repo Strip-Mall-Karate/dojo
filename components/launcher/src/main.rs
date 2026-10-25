@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use env_logger;
 use dojo_common::output::{self,
-                             OutputFormat,
-                             OutputVerbosity};
+                          OutputFormat,
+                          OutputVerbosity};
 use dojo_launcher::server;
+use env_logger;
 use log::{error,
           log,
           Level};

@@ -26,18 +26,18 @@ use super::{CtlRequest,
             REQ_TIMEOUT};
 use crate::manager::{commands,
                      ManagerState};
+use dojo_core::crypto;
+use dojo_sup_protocol::{self as protocol,
+                        codec::*,
+                        net::{self,
+                              ErrCode,
+                              NetErr,
+                              NetResult}};
 use futures::{future::{self,
                        Either},
               prelude::*,
               sync::mpsc,
               try_ready};
-use dojo_core::crypto;
-use dojo_sup_protocol::{self as protocol,
-                           codec::*,
-                           net::{self,
-                                 ErrCode,
-                                 NetErr,
-                                 NetResult}};
 use prometheus::{HistogramTimer,
                  HistogramVec,
                  IntCounterVec};

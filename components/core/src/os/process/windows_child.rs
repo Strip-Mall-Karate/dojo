@@ -108,7 +108,7 @@ use winapi::{shared::{minwindef::{BOOL,
 use crate::error::{Error,
                    Result};
 use dojo_win_users::sid::{self,
-                             Sid};
+                          Sid};
 
 use super::super::{super::crypto::dpapi::decrypt,
                    users::get_current_username};

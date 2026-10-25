@@ -270,7 +270,7 @@ impl SymKey {
     /// extern crate tempfile;
     ///
     /// use dojo_core::crypto::{keys::PairType,
-    ///                            SymKey};
+    ///                         SymKey};
     /// use tempfile::Builder;
     ///
     /// fn main() {

@@ -379,7 +379,7 @@ pub fn parse_name_with_rev<T>(name_with_rev: T) -> Result<(String, String)>
 /// extern crate dojo_core;
 ///
 /// use dojo_core::crypto::keys::{parse_key_str,
-///                                  PairType};
+///                               PairType};
 ///
 /// fn main() {
 ///     let content = "SIG-PUB-1
@@ -399,7 +399,7 @@ pub fn parse_name_with_rev<T>(name_with_rev: T) -> Result<(String, String)>
 /// extern crate dojo_core;
 ///
 /// use dojo_core::crypto::keys::{parse_key_str,
-///                                  PairType};
+///                               PairType};
 ///
 /// fn main() {
 ///     let content = "SIG-SEC-1
@@ -834,7 +834,6 @@ mod test {
     /// Keys should be able to be symlinks, not just normal
     /// files. This is particularly important in environments like
     /// Kubernetes that rely heavily on symlinks.
-    ///
     #[test]
     fn keys_that_are_symlinks_can_still_be_found() {
         let temp_dir = Builder::new().prefix("symlinks_are_ok").tempdir().unwrap();

@@ -26,8 +26,8 @@ use crate::{error::{Error,
                     RumorPayload,
                     RumorType}};
 use dojo_core::{crypto::{keys::box_key_pair::WrappedSealedBox,
-                            BoxKeyPair},
-                   service::ServiceGroup};
+                         BoxKeyPair},
+                service::ServiceGroup};
 use std::{cmp::Ordering,
           mem,
           path::Path,

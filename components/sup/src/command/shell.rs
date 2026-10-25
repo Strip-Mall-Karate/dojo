@@ -15,7 +15,7 @@
 use crate::error::{Error,
                    Result};
 use dojo_common::{outputln,
-                     util::path};
+                  util::path};
 use dojo_core::fs::find_command;
 use libc;
 use std::{env,

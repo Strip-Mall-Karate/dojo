@@ -26,8 +26,7 @@ use nitox::{commands::ConnectCommand,
             NatsClientOptions};
 
 fn main() {
-    println!("Welcome to the testing subscriber for the Automate / Dojo Event Streaming \
-              Prototype");
+    println!("Welcome to the testing subscriber for the Automate / Dojo Event Streaming Prototype");
     println!("Press '^C' to end");
     let connect_cmd = ConnectCommand::builder().build().unwrap();
     let options = NatsClientOptions::builder().connect_command(connect_cmd)

@@ -955,10 +955,8 @@ impl<'a> InstallTask<'a> {
         let artifact_target = artifact.target()?;
         let active_target = PackageTarget::active_target();
         if active_target != artifact_target {
-            return Err(Error::DojoCore(hcore::Error::WrongActivePackageTarget(
-                active_target,
-                artifact_target,
-            )));
+            return Err(Error::DojoCore(hcore::Error::WrongActivePackageTarget(active_target,
+                                                                              artifact_target)));
         }
 
         let nwr = artifact::artifact_signer(&artifact.path)?;

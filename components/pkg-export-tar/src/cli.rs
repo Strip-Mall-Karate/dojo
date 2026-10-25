@@ -113,8 +113,8 @@ impl<'a, 'b> Cli<'a, 'b> {
     }
 
     pub fn add_pkg_ident_arg(self) -> Self {
-        let help = "A Dojo package identifier (ex: acme/redis) and/or filepath to a Dojo \
-                    Artifact (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)";
+        let help = "A Dojo package identifier (ex: acme/redis) and/or filepath to a Dojo Artifact \
+                    (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)";
 
         let app =
             self.app

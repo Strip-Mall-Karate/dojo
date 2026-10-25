@@ -15,20 +15,20 @@
 use crate::error::{Error,
                    SupError};
 use dojo_butterfly::{member::{Health,
-                                 Member,
-                                 MemberList},
-                        rumor::{election::{Election as ElectionRumor,
-                                           ElectionStatus as ElectionStatusRumor,
-                                           ElectionUpdate as ElectionUpdateRumor},
-                                service::{Service as ServiceRumor,
-                                          SysInfo},
-                                service_config::ServiceConfig as ServiceConfigRumor,
-                                service_file::ServiceFile as ServiceFileRumor,
-                                RumorStore}};
+                              Member,
+                              MemberList},
+                     rumor::{election::{Election as ElectionRumor,
+                                        ElectionStatus as ElectionStatusRumor,
+                                        ElectionUpdate as ElectionUpdateRumor},
+                             service::{Service as ServiceRumor,
+                                       SysInfo},
+                             service_config::ServiceConfig as ServiceConfigRumor,
+                             service_file::ServiceFile as ServiceFileRumor,
+                             RumorStore}};
 use dojo_common::outputln;
 use dojo_core::{self,
-                   package::PackageIdent,
-                   service::ServiceGroup};
+                package::PackageIdent,
+                service::ServiceGroup};
 use serde::{ser::SerializeStruct,
             Serialize,
             Serializer};
@@ -735,19 +735,19 @@ mod tests {
     use super::*;
     use crate::test_helpers::*;
     use dojo_butterfly::{member::{Health,
-                                     MemberList},
-                            rumor::{election::{self,
-                                               Election as ElectionRumor,
-                                               ElectionUpdate as ElectionUpdateRumor},
-                                    service::{Service as ServiceRumor,
-                                              SysInfo},
-                                    service_config::ServiceConfig as ServiceConfigRumor,
-                                    service_file::ServiceFile as ServiceFileRumor,
-                                    RumorStore}};
+                                  MemberList},
+                         rumor::{election::{self,
+                                            Election as ElectionRumor,
+                                            ElectionUpdate as ElectionUpdateRumor},
+                                 service::{Service as ServiceRumor,
+                                           SysInfo},
+                                 service_config::ServiceConfig as ServiceConfigRumor,
+                                 service_file::ServiceFile as ServiceFileRumor,
+                                 RumorStore}};
     use dojo_common::cli::FS_ROOT;
     use dojo_core::{fs::cache_key_path,
-                       package::ident::PackageIdent,
-                       service::ServiceGroup};
+                    package::ident::PackageIdent,
+                    service::ServiceGroup};
     use serde_json;
 
     #[test]

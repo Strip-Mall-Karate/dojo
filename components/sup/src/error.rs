@@ -36,22 +36,22 @@
 //! Also included in this module is `Result<T>`, a type alias for `Result<T, SupError>`. Use
 //! it instead of the longer `Result` form.
 
-use futures::sync::oneshot;
-use glob;
 use dojo_api_client;
 use dojo_butterfly;
 use dojo_common::{self,
-                     output::{self,
-                              OutputContext,
-                              OutputVerbosity,
-                              StructuredOutput},
-                     PROGRAM_NAME};
+                  output::{self,
+                           OutputContext,
+                           OutputVerbosity,
+                           StructuredOutput},
+                  PROGRAM_NAME};
 use dojo_core::{self,
-                   os::process::Pid,
-                   package::{self,
-                             Identifiable}};
+                os::process::Pid,
+                package::{self,
+                          Identifiable}};
 use dojo_launcher_client;
 use dojo_sup_protocol;
+use futures::sync::oneshot;
+use glob;
 use nitox;
 use notify;
 use rustls;
@@ -190,8 +190,8 @@ impl fmt::Display for SupError {
                                 the system, this Supervisor cannot be started (if we did, we \
                                 would risk the services on this machine behaving badly without \
                                 our knowledge.) If you know that the services on this system are \
-                                safe, and want them to rejoin the dojo ring, you need to:\n\n  \
-                                rm -rf /doj/sup/default/MEMBER_ID /doj/sup/default/data\n\n This \
+                                safe, and want them to rejoin the dojo ring, you need to:\n\n  rm \
+                                -rf /doj/sup/default/MEMBER_ID /doj/sup/default/data\n\n This \
                                 will cause the Supervisor to join the ring as a new member.\n\n \
                                 If you are in doubt, it is better to consider the services \
                                 managed by this Supervisor as unsafe to run."
@@ -289,8 +289,8 @@ impl fmt::Display for SupError {
                         pid)
             }
             Error::ProcessLockIO(ref path, ref err) => {
-                format!("Unable to start Dojo Supervisor because we weren't able to write or \
-                         read to a process lock at {}, {}",
+                format!("Unable to start Dojo Supervisor because we weren't able to write or read \
+                         to a process lock at {}, {}",
                         path.display(),
                         err)
             }
@@ -405,9 +405,7 @@ impl error::Error for SupError {
             Error::PidFileCorrupt(_) => "Unable to decode contents of PID file",
             Error::PidFileIO(..) => "Unable to read or write to PID file",
             Error::ProcessLockCorrupt => "Unable to decode contents of process lock",
-            Error::ProcessLocked(_) => {
-                "Another instance of the Dojo Supervisor is already running"
-            }
+            Error::ProcessLocked(_) => "Another instance of the Dojo Supervisor is already running",
             Error::ProcessLockIO(..) => "Unable to read or write to a process lock",
             Error::RecvError(_) => "A channel failed to receive a response",
             Error::ServiceDeserializationError(_) => "Can't deserialize service status",

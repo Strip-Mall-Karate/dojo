@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use env_logger;
 use dojo_common as common;
+use env_logger;
 
 use dojo_pkg_export_docker as export_docker;
 #[macro_use]

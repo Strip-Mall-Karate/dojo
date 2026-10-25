@@ -266,11 +266,11 @@ impl<'a, 'b> Cli<'a, 'b> {
 
     pub fn add_pkg_ident_arg(self, options: PkgIdentArgOptions) -> Self {
         let help = if options.multiple {
-            "One or more Dojo package identifiers (ex: acme/redis) and/or filepaths to a \
-             Dojo Artifact (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)"
+            "One or more Dojo package identifiers (ex: acme/redis) and/or filepaths to a Dojo \
+             Artifact (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)"
         } else {
-            "A Dojo package identifier (ex: acme/redis) and/or filepath to a Dojo Artifact \
-             (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)"
+            "A Dojo package identifier (ex: acme/redis) and/or filepath to a Dojo Artifact (ex: \
+             /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)"
         };
 
         let app =

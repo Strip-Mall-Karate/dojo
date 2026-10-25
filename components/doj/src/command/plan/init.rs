@@ -122,8 +122,8 @@ pub fn start(ui: &mut UI,
         let rendered_plan = handlebars.template_render(DEFAULT_PLAN_TEMPLATE, &data)?;
         create_with_template(ui, &format!("{}/plan.sh", root), &rendered_plan)?;
     }
-    ui.para("`plan.sh` is the foundation of your new dojo. It contains metadata, \
-             dependencies, and tasks.")?;
+    ui.para("`plan.sh` is the foundation of your new dojo. It contains metadata, dependencies, \
+             and tasks.")?;
     let rendered_default_toml = handlebars.template_render(DEFAULT_TOML_TEMPLATE, &data)?;
     create_with_template(ui,
                          &format!("{}/default.toml", root),
@@ -152,7 +152,6 @@ pub fn start(ui: &mut UI,
         create_dir_all(&hooks_path)?;
     }
     ui.para("`/hooks/` contains automation hooks into your dojo.")?;
-
 
     render_ignorefile(ui, &root)?;
 

@@ -25,14 +25,14 @@ use std::{fs::{self,
 use crate::hcore::{os::users,
                    package::PackageInstall};
 
-pub mod fixture_root;
 pub mod doj_root;
+pub mod fixture_root;
 pub mod test_butterfly;
 pub mod test_sup;
 
 // Re-export the key structs of this package for ergonomics.
-pub use self::{fixture_root::FixtureRoot,
-               doj_root::DojRoot,
+pub use self::{doj_root::DojRoot,
+               fixture_root::FixtureRoot,
                test_sup::TestSup};
 
 /// Sleep for the specified number of seconds!

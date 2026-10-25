@@ -27,7 +27,7 @@ use serde::{ser::SerializeStruct,
 use toml;
 
 use dojo_core::{package::Identifiable,
-                   service::ServiceGroup};
+                service::ServiceGroup};
 
 use crate::{error::{Error,
                     Result},
@@ -232,8 +232,8 @@ mod tests {
               str::FromStr};
 
     use dojo_core::{package::{Identifiable,
-                                 PackageIdent},
-                       service::ServiceGroup};
+                              PackageIdent},
+                    service::ServiceGroup};
 
     use super::Service;
     use crate::rumor::{service::SysInfo,

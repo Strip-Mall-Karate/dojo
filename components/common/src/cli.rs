@@ -20,8 +20,8 @@
 use crate::types::ListenCtlAddr;
 use clap::ArgMatches;
 use dojo_core::{env as henv,
-                   fs::{cache_key_path,
-                        CACHE_KEY_PATH}};
+                fs::{cache_key_path,
+                     CACHE_KEY_PATH}};
 use std::path::PathBuf;
 
 pub const GOSSIP_DEFAULT_IP: &str = "0.0.0.0";

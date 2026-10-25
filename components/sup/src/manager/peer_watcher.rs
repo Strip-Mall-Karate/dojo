@@ -18,7 +18,7 @@ use crate::{error::{Error,
                                     Callbacks}};
 use dojo_butterfly::member::Member;
 use dojo_common::{cli::GOSSIP_DEFAULT_PORT,
-                     outputln};
+                  outputln};
 use std::{fs::File,
           io::{BufRead,
                BufReader},
