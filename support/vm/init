@@ -1,0 +1,24 @@
+#!/bin/sh
+# Stage 0 init: mounts the kernel filesystems, brings up loopback and execs
+# doj-launch, which runs as PID 1 and starts doj-sup. An image without
+# doj-launch hands the console to a shell instead.
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t tmpfs tmpfs /run
+ip link set lo up
+hostname dojo
+
+echo "dojo: booted $(uname -srm)"
+
+if grep -qw dojo.check /proc/cmdline; then
+  /bin/check &
+fi
+
+if [ -x /bin/doj-launch ]; then
+  export DOJ_SUP_BINARY=/bin/doj-sup
+  exec /bin/doj-launch run
+fi
+
+exec sh

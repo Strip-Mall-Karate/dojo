@@ -25,11 +25,34 @@ another.
 | `components/plan-build` | Builds a package from a plan |
 | `components/studio` | The clean-room build environment |
 | `components/pkg-export-docker`, `pkg-export-tar` | Exporters |
+| `support/vm` | The Dojo VM for Apple silicon Macs |
 | `vendor/ipc-channel` | Servo's ipc-channel with Windows support |
 
 ## Building
 
 See [BUILDING.md](BUILDING.md).
+
+## The Dojo VM
+
+On an Apple silicon Mac with Nix, `support/vm/boot` boots Dojo in an arm64 VM
+under Apple's hypervisor, with its serial console on your terminal (Ctrl-A X
+quits). The kernel and userland come from nixpkgs (nixos-26.05) as a stage-0
+bootstrap until `karate` packages replace them.
+
+To run `doj-launch` as PID 1, build it in nixpkgs' Linux builder (another arm64
+VM, which `support/vm/builder` starts) and boot with the result:
+
+```sh
+support/vm/builder start
+support/vm/builder payload
+support/vm/boot --payload support/vm/out/payload.cpio.gz
+```
+
+`--check` boots and checks that the Supervisor's HTTP gateway answers, that the
+Launcher restarts the Supervisor after SIGKILL and after `doj sup term`, and that
+SIGTERM to PID 1 powers the VM off without a kernel panic. `--check-reboot` ends
+with SIGINT to PID 1 (the kernel's Ctrl-Alt-Del) and expects a reboot. `support/vm/builder test <package>...` runs a package's tests and
+format check in the builder. `support/vm/builder stop` stops it.
 
 ## License
 

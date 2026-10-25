@@ -59,7 +59,8 @@ pub fn check_for_signal() -> Option<SignalEvent> {
 
     if let Some(code) = signals.pop_front() {
         match Signal::from_signal_code(code) {
-            Some(Signal::INT) | Some(Signal::TERM) => Some(SignalEvent::Shutdown),
+            Some(Signal::INT) => Some(SignalEvent::Interrupt),
+            Some(Signal::TERM) => Some(SignalEvent::Shutdown),
             Some(Signal::CHLD) => Some(SignalEvent::WaitForChild),
             Some(signal) => Some(SignalEvent::Passthrough(signal)),
             None => {

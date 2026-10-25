@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Runs inside the builder VM. Tests the named packages with Rust 1.33.0 and
+# checks their formatting with the rustfmt the tree was formatted with.
+set -euo pipefail
+
+if [[ $# -lt 2 ]]; then
+  echo "usage: test.sh <tree-dir> <package>..." >&2
+  exit 2
+fi
+tree=$(realpath "$1")
+shift
+
+. "$(dirname "$0")/env.sh"
+cd "$tree"
+packages=()
+for p in "$@"; do
+  packages+=(-p "$p")
+done
+
+run rustup toolchain install 1.33.0 --profile minimal
+run rustup toolchain install nightly-2019-04-09 --profile minimal -c rustfmt
+status=0
+run cargo +1.33.0 test --locked "${packages[@]}" || status=1
+run cargo +nightly-2019-04-09 fmt "${packages[@]}" -- --check || status=1
+exit "$status"

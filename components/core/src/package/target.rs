@@ -257,6 +257,16 @@ macro_rules! supported_package_targets {
 // the third and fourth values are used by the Rust compiler at build time and never exposed in
 // code at runtime.
 supported_package_targets! {
+    /// Represents a [Linux kernel]-based system running on the [64-bit] version of the
+    /// [Arm][arm] [instruction set architecture][isa], commonly known as [AArch64].
+    ///
+    /// [Linux kernel]: https://en.wikipedia.org/wiki/Linux_kernel
+    /// [64-bit]: https://en.wikipedia.org/wiki/64-bit_computing
+    /// [arm]: https://en.wikipedia.org/wiki/ARM_architecture_family
+    /// [isa]: https://en.wikipedia.org/wiki/Instruction_set_architecture
+    /// [AArch64]: https://en.wikipedia.org/wiki/AArch64
+    ("aarch64-linux", AArch64_Linux, AARCH64_LINUX, "aarch64", "linux");
+
     /// Represents a [XNU kernel]-based system (more commonly referred to as [Darwin] or [macOS])
     /// running on a [64-bit] version of the [x86][x] [instruction set architecture][isa], commonly
     /// known as [x86_64].

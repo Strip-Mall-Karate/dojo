@@ -1,0 +1,60 @@
+#!/bin/sh
+# Runs beside PID 1 when the kernel command line has dojo.check. Reports what
+# it finds and shuts the VM down; boot --check reads the report.
+
+report() {
+  echo "dojo: $*"
+}
+
+fail() {
+  report "check failed: $*"
+  poweroff -f
+  exit 1
+}
+
+if [ ! -x /bin/doj-launch ]; then
+  report "pid1=$(cat /proc/1/comm)"
+  report "check ok"
+  poweroff -f
+  exit 0
+fi
+
+# Waits up to 60 seconds for a Supervisor other than $1 (none: any) whose HTTP
+# gateway answers, and prints its PID.
+supervisor_up() {
+  for _ in $(seq 1 60); do
+    pid=$(pidof doj-sup)
+    if [ -n "${pid}" ] && [ "${pid}" != "$1" ] &&
+      wget -q -O /dev/null http://127.0.0.1:9631/services 2>/dev/null; then
+      echo "${pid}"
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+[ "$(cat /proc/1/comm)" = doj-launch ] || fail "PID 1 is $(cat /proc/1/comm), not doj-launch"
+report "pid1=doj-launch"
+
+first=$(supervisor_up none) || fail "the Supervisor's HTTP gateway did not answer"
+report "supervisor=${first}"
+
+# Init restarts a Supervisor that dies, whatever killed it.
+kill -KILL "${first}"
+second=$(supervisor_up "${first}") || fail "the Supervisor did not come back after SIGKILL"
+report "supervisor=${second} after SIGKILL"
+
+# doj sup term restarts the Supervisor rather than powering the machine off.
+DOJ_SUP_BINARY=/bin/doj-sup doj sup term
+third=$(supervisor_up "${second}") || fail "the Supervisor did not come back after doj sup term"
+report "supervisor=${third} after doj sup term"
+
+report "check ok"
+# SIGINT to init reboots, SIGTERM powers off. Either way the Launcher stops the
+# Supervisor and, being init, ends the machine instead of exiting.
+if grep -qw dojo.reboot /proc/cmdline; then
+  kill -INT 1
+else
+  kill -TERM 1
+fi

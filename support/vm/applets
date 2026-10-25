@@ -1,0 +1,17 @@
+sh
+cat
+echo
+grep
+ls
+mkdir
+mount
+poweroff
+uname
+sleep
+seq
+wget
+ps
+pidof
+ip
+hostname
+kill
