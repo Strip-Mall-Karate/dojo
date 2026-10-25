@@ -43,12 +43,16 @@ if [[ "$(uname -sm)" != "Darwin arm64" ]]; then
 fi
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-build() {
-  nix-build --no-out-link "${here}" -A "$1"
-}
-qemu="$(build qemu)/bin/qemu-system-aarch64"
-kernel="$(build kernel)/Image"
-initrd="$(build initrd)"
+# One evaluation for everything the VM needs: nix-build prints the paths in
+# the order of the attributes, and an evaluation costs seconds on a busy Mac.
+{
+  read -r qemu
+  read -r kernel
+  read -r initrd
+  read -r coreutils
+} < <(nix-build --no-out-link "${here}" -A qemu -A kernel -A initrd -A coreutils)
+qemu="${qemu}/bin/qemu-system-aarch64"
+kernel="${kernel}/Image"
 work="$(mktemp -d -t dojo-vm)"
 trap 'rm -rf "${work}"' EXIT
 if [[ -n "${payload}" ]]; then
@@ -75,7 +79,7 @@ fi
 
 log="${work}/check.log"
 status=0
-"$(build coreutils)/bin/timeout" 120 "${qemu}" "${args[@]}" -nographic -append "${append} quiet ${check_args}" </dev/null >"${log}" 2>&1 || status=$?
+"${coreutils}/bin/timeout" 120 "${qemu}" "${args[@]}" -nographic -append "${append} quiet ${check_args}" </dev/null >"${log}" 2>&1 || status=$?
 cat "${log}"
 if [[ "${status}" -ne 0 ]]; then
   echo "boot: QEMU exited ${status} (124 is the 120 second deadline)" >&2
