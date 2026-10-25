@@ -39,7 +39,6 @@ extern crate winapi;
 #[cfg(windows)]
 extern crate winreg;
 
-pub mod analytics;
 pub mod cli;
 pub mod command;
 pub mod config;

@@ -42,8 +42,7 @@ use crate::{common::{cli::{cache_key_path_from_matches,
                              SigKeyPair},
                     env as henv,
                     env::Config as EnvConfig,
-                    fs::{cache_analytics_path,
-                         cache_artifact_path,
+                    fs::{cache_artifact_path,
                          launcher_root_path},
                     package::{target,
                               PackageIdent,
@@ -64,8 +63,7 @@ use clap::{ArgMatches,
            Shell};
 use env_logger;
 use futures::prelude::*;
-use doj::{analytics,
-          cli,
+use doj::{cli,
           command::{self,
                     pkg::list::ListingType},
           config::{self,
@@ -123,7 +121,6 @@ fn main() {
     env_logger::init();
     let mut ui = UI::default_with_env();
     let flags = FeatureFlag::from_env(&mut ui);
-    thread::spawn(analytics::instrument_subcommand);
     if let Err(e) = start(&mut ui, flags) {
         ui.fatal(e).unwrap();
         std::process::exit(1)
@@ -144,10 +141,7 @@ fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
     let child = thread::Builder::new().stack_size(8 * 1024 * 1024)
                                       .spawn(move || {
                                           cli::get(feature_flags).get_matches_from_safe_borrow(&mut args.iter())
-                                                    .unwrap_or_else(|e| {
-                                                        analytics::instrument_clap_error(&e);
-                                                        e.exit();
-                                                    })
+                                                    .unwrap_or_else(|e| e.exit())
                                       })
                                       .unwrap();
     let app_matches = child.join().unwrap();
@@ -325,7 +319,7 @@ fn sub_cli_setup(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let cache_key_path = cache_key_path_from_matches(&m);
     init();
 
-    command::cli::setup::start(ui, &cache_key_path, &cache_analytics_path(Some(&*FS_ROOT)))
+    command::cli::setup::start(ui, &cache_key_path)
 }
 
 fn sub_cli_completers(m: &ArgMatches<'_>, feature_flags: FeatureFlag) -> Result<()> {
