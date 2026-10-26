@@ -938,9 +938,10 @@ fn run_with_check_false_returns_the_code_and_goes_on() {
 }
 
 #[test]
-fn a_build_may_use_a_build_directory_beside_its_source() {
-    let sandbox = Sandbox::new("sibling-build");
-    // The source project's plans configure in `../<name>-build`, apart from the source.
+fn a_build_may_write_in_the_cache() {
+    let sandbox = Sandbox::new("cache-writes");
+    // The source project's plans configure in `../<name>-build` beside the source,
+    // and move or mark what they download.
     let source = plan("sib",
                       "",
                       r#" :build (fn [b]
@@ -949,9 +950,17 @@ fn a_build_may_use_a_build_directory_beside_its_source() {
                                      (b:mkdir (b:join build "sub"))
                                      (b:write (b:join build "sub/../made") "here")
                                      (b:run ["sh" "-c" "cat made > ../seen"] {:cwd build})
-                                     (b:write "copied" (b:read (b:join b.cache "sib-build/made")))))"#);
+                                     (b:move (b:join b.cache "seen") (b:join b.cache "moved"))
+                                     (b:write "copied" (b:read (b:join b.cache "moved")))))"#);
     let built = sandbox.build(&source).expect("builds");
     assert_eq!(read(&built.prefix.join("copied")), "here");
+
+    for call in [r#"(b:mkdir (b:join b.cache "../escape"))"#,
+                 r#"(b:write (b:join b.cache "sib-build/../../x") "")"#]
+    {
+        let bad = plan("sib", "", &format!(" :build (fn [b] {call})"));
+        assert_refused(sandbox.build(&bad), "and the cache");
+    }
 
     // `<path>/.` names only a directory, with or without `..` before it.
     let dirs = plan("sib",
@@ -967,14 +976,6 @@ fn a_build_may_use_a_build_directory_beside_its_source() {
                                                         " ")))"#);
     let built = sandbox.build(&dirs).expect("builds");
     assert_eq!(read(&built.prefix.join("answers")), "false true false true");
-
-    for call in [r#"(b:mkdir (b:join b.cache "other-build"))"#,
-                 r#"(b:mkdir (b:join b.cache "sib-build/../other-build"))"#,
-                 r#"(b:write (b:join b.cache "sib-build-not") "")"#]
-    {
-        let bad = plan("sib", "", &format!(" :build (fn [b] {call})"));
-        assert_refused(sandbox.build(&bad), "and the build directory");
-    }
 }
 
 #[test]

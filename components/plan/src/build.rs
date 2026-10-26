@@ -343,28 +343,26 @@ impl State {
         Ok(Some(stdout))
     }
 
-    /// A path a plan may create: inside the prefix, inside `b.src`, or inside
-    /// `<b.cache>/<name>-build` (the separate build directory beside the
-    /// source) when absolute, and not through a symbolic link that leads
-    /// elsewhere. Relative paths are inside the prefix; `..` is resolved by
-    /// the path's text.
+    /// A path a plan may create: inside the prefix, `b.src` or `b.cache`
+    /// (where sources are downloaded and unpacked, and a build may keep a
+    /// separate build directory) when absolute, and not through a symbolic
+    /// link that leads elsewhere. Relative paths are inside the prefix; `..`
+    /// is resolved by the path's text.
     fn creatable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
         let prefix = self.prefix()?;
         let src = self.src.borrow().clone();
-        let build = self.cache.join(format!("{}-build", self.name));
         let full = lexical(&prefix.join(path)).ok_or_else(|| {
                                                   format!("{what}: {path} climbs above the root")
                                               })?;
-        let Some(root) = [&prefix, &src, &build].into_iter()
-                                                .find(|root| full.starts_with(root))
+        let Some(root) = [&prefix, &src, &self.cache].into_iter()
+                                                     .find(|root| full.starts_with(root))
         else {
             return Err(format!("{what}: {} is outside the prefix ({}), the \
-                                source directory ({}) and the build directory \
-                                ({})",
+                                source directory ({}) and the cache ({})",
                                full.display(),
                                prefix.display(),
                                src.display(),
-                               build.display()));
+                               self.cache.display()));
         };
         if root.exists() {
             let mut existing = full.as_path();
@@ -416,12 +414,6 @@ impl State {
     /// A path a plan may remove or move away: where it may create, a
     /// symbolic link itself included.
     fn removable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
-        let build = self.cache.join(format!("{}-build", self.name));
-        if Path::new(path).is_absolute()
-           && lexical(Path::new(path)).as_deref() == Some(build.as_path())
-        {
-            return Ok(build);
-        }
         let full = Path::new(path);
         let (Some(parent), Some(name)) = (full.parent(), full.file_name()) else {
             return Err(format!("{what}: {path} names no file"));
