@@ -543,6 +543,8 @@ impl Plan {
             builtin::fix_libtool(&state, &layout.src).map_err(Error::Build)?;
         }
         package::check_hooks(&options.plan_dir).map_err(Error::Build)?;
+        package::check_service(&options.plan_dir, &self.metadata().to_json(Some(target))["svc"])
+            .map_err(Error::Build)?;
         self.run_phase(&state, &b, "prepare")?;
         self.run_phase(&state, &b, "build")?;
         if options.check {

@@ -76,6 +76,17 @@ pub fn check_hooks(plan_dir: &Path) -> Result<(), String> {
                 bad.join(", ")))
 }
 
+/// Refuses a service the package could not start: `svc` set without `run`
+/// in a plan with no run hook.
+pub fn check_service(plan_dir: &Path, svc: &Json) -> Result<(), String> {
+    if svc.is_object() && svc.get("run").is_none() && !plan_dir.join("hooks").join("run").is_file()
+    {
+        return Err("`svc` names no `run`, and the plan has no hooks/run to start the service"
+                       .to_string());
+    }
+    Ok(())
+}
+
 /// Writes `pre_build.env` to the output directory so a build worker can
 /// name a build that fails.
 pub fn write_pre_build(options: &Options, ident: &str) -> Result<(), String> {

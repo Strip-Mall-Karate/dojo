@@ -865,3 +865,19 @@ fn getenv_reads_the_build_environment() {
     assert_eq!(read(&built.prefix.join("flags")), "-O2 -g");
     assert_eq!(read(&built.prefix.join("unset")), "nil");
 }
+
+#[test]
+fn a_service_with_a_run_hook_names_its_user_without_run() {
+    let sandbox = Sandbox::new("service-hook");
+    let source = plan("svc", r#":svc {:user "web" :group "web"}"#, "");
+    assert_refused(sandbox.build(&source),
+                   "`svc` names no `run`, and the plan has no hooks/run");
+
+    fs::create_dir_all(sandbox.context().join("hooks")).unwrap();
+    fs::write(sandbox.context().join("hooks/run"),
+              "#!/bin/sh\nexec tool --serve\n").unwrap();
+    let built = sandbox.build(&source).expect("builds");
+    assert!(!built.prefix.join("run").exists(), "the run hook starts it");
+    assert_eq!(read(&built.prefix.join("SVC_USER")), "web\n");
+    assert_eq!(read(&built.prefix.join("SVC_GROUP")), "web\n");
+}

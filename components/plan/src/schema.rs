@@ -332,7 +332,9 @@ fn parse_field(kind: Option<Kind>, value: &Value, what: &str) -> Result<Field, E
             }
             json!(kind)
         }
-        Kind::Svc => Json::Object(record(value, &what, &["run"], &["user", "group"])?),
+        // `run` may be left out when the plan has a run hook (hooks/run), which
+        // starts the service instead; the build checks that one of them is there.
+        Kind::Svc => Json::Object(record(value, &what, &[], &["run", "user", "group"])?),
         Kind::Exports => {
             let mut exports = Map::new();
             for (key, value) in entries(&table_of(value, &what)?, &what)? {
