@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# Boots two Dojo VMs that form a ring: the second Supervisor joins through the
+# first, and both gossip over a link between the two QEMU processes. Each VM
+# is a support/vm/boot; this script only arranges the link and the consoles.
+# --check runs boot --check in both, which must each see two members alive
+# and power off cleanly. Without it, each serial console is on a local TCP
+# port, printed at start; Ctrl-C ends both VMs.
+set -euo pipefail
+
+usage() {
+  echo "usage: support/vm/ring [--check] [--payload <file.cpio.gz>] [--port <first of four local ports>]" >&2
+  exit 2
+}
+
+check=false
+payload=""
+port=19638
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check) check=true; shift ;;
+    --payload)
+      [[ $# -ge 2 ]] || usage
+      payload="$2"; shift 2 ;;
+    --port)
+      [[ $# -ge 2 ]] || usage
+      port="$2"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+if [[ ! "${port}" =~ ^[0-9]+$ ]]; then
+  echo "ring: --port takes a number" >&2
+  exit 2
+fi
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The link is a UDP tunnel on the loopback: VM 1 sends to VM 2's port and the
+# other way round. The consoles take the next two ports. The ring itself is
+# 10.0.3.0/24, clear of the 10.0.2.0/24 each VM's user-mode network uses.
+link1="${port}:$((port + 1))"
+link2="$((port + 1)):${port}"
+console1=$((port + 2))
+console2=$((port + 3))
+# macOS's bash 3.2 treats an empty array as unset under -u, hence the
+# ${common[@]+...} expansions below.
+common=()
+if [[ -n "${payload}" ]]; then
+  common+=(--payload "${payload}")
+fi
+vm1=(--ring 10.0.3.1/24 --link "${link1}")
+vm2=(--ring 10.0.3.2/24 --link "${link2}" --peer 10.0.3.1)
+
+pids=()
+# Each boot runs QEMU as a child, so end the children, then the boots.
+stop() {
+  [[ "${#pids[@]}" -gt 0 ]] || return 0
+  for pid in "${pids[@]}"; do
+    pkill -TERM -P "${pid}" 2>/dev/null || true
+  done
+  # A wait cut short by the signal that ended this script returns at once, so
+  # poll until every boot has gone.
+  for _ in $(seq 1 50); do
+    for pid in "${pids[@]}"; do
+      wait "${pid}" 2>/dev/null || true
+    done
+    pgrep -q -P $$ || return 0
+    sleep 0.2
+  done
+}
+trap stop EXIT
+
+if ! "${check}"; then
+  "${here}/boot" ${common[@]+"${common[@]}"} "${vm1[@]}" --console "${console1}" </dev/null &
+  pids+=("$!")
+  "${here}/boot" ${common[@]+"${common[@]}"} "${vm2[@]}" --console "${console2}" </dev/null &
+  pids+=("$!")
+  trap 'exit 130' INT TERM
+  wait
+  exit
+fi
+
+work="$(mktemp -d -t dojo-ring)"
+trap 'stop; rm -rf "${work}"' EXIT
+"${here}/boot" --check ${common[@]+"${common[@]}"} "${vm1[@]}" --members 2 >"${work}/1.log" 2>&1 &
+pids+=("$!")
+"${here}/boot" --check ${common[@]+"${common[@]}"} "${vm2[@]}" --members 2 >"${work}/2.log" 2>&1 &
+pids+=("$!")
+failed=0
+for n in 1 2; do
+  if ! wait "${pids[$((n - 1))]}"; then
+    failed=$((failed + 1))
+  fi
+done
+pids=()
+for n in 1 2; do
+  echo "ring: VM ${n}"
+  cat "${work}/${n}.log"
+done
+if [[ "${failed}" -ne 0 ]]; then
+  echo "ring: ${failed} of 2 VMs failed its check" >&2
+  exit 1
+fi

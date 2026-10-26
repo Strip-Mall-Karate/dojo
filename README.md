@@ -50,11 +50,42 @@ support/vm/builder payload
 support/vm/boot --payload support/vm/out/payload.cpio.gz
 ```
 
-`--check` boots and checks that the Supervisor's HTTP gateway answers, that the
-Launcher restarts the Supervisor after SIGKILL and after `doj sup term`, and that
-SIGTERM to PID 1 powers the VM off without a kernel panic. `--check-reboot` ends
-with SIGINT to PID 1 (the kernel's Ctrl-Alt-Del) and expects a reboot. `support/vm/builder test <package>...` runs a package's tests and
-format check in the builder. `support/vm/builder stop` stops it.
+The VM has one NIC, `eth0`, on QEMU's user-mode network: init leases its
+address (10.0.2.15) and default route with DHCP, which is how the Supervisor
+finds its own address, and the VM can reach out through the Mac but nothing
+reaches in.
+
+`--check` boots and checks that `eth0` has an address, that the Supervisor's
+HTTP gateway answers and it found its own address, that the Launcher restarts
+the Supervisor after SIGKILL and after `doj sup term`, and that SIGTERM to PID 1
+powers the VM off without a kernel panic. `--check-reboot` ends with SIGINT to
+PID 1 (the kernel's Ctrl-Alt-Del) and expects a reboot. `support/vm/builder
+test <package>...` runs a package's tests and format check in the builder.
+`support/vm/builder stop` stops it.
+
+### A ring
+
+A dojo is a ring of machines whose Supervisors gossip with each other.
+`support/vm/ring` boots two VMs from the same payload that form the first one:
+
+```sh
+support/vm/ring --payload support/vm/out/payload.cpio.gz
+```
+
+Each VM gets a second NIC, `eth1`, on a link between the two QEMU processes (a
+UDP tunnel on the Mac's loopback, which needs no privilege), with the static
+addresses 10.0.3.1 and 10.0.3.2. The second Supervisor starts with
+`--peer 10.0.3.1`. `ring` prints each VM's serial console as a `nc` command on
+a local TCP port, and Ctrl-C ends both VMs. `--port <n>` moves the four local
+ports it uses (two for the link, two for the consoles) from 19638.
+
+`ring --check` runs `boot --check` in both VMs, where each Supervisor must also
+report two members alive in its gossip (`/butterfly` on the HTTP gateway), and
+both must power off cleanly within `boot`'s deadline. The kernel command line
+carries a VM's place in the ring to init and the check: `dojo.ring=<addr/prefix>`
+for `eth1`, `dojo.peer=<addr>` for the Supervisor and `dojo.members=<n>` for the
+check; `boot` takes them as `--ring`, `--link`, `--peer` and `--members`, and
+`--console <port>` serves the console on TCP instead of the terminal.
 
 ## License
 

@@ -34,8 +34,23 @@ supervisor_up() {
   return 1
 }
 
+# Counts the members this Supervisor's gossip reports Alive. Its list holds
+# every member it has heard of, itself included once a peer's rumour about it
+# comes back, so a ring of n shows n and a Supervisor alone shows none. The
+# gateway serves one line of JSON, so count matches, not lines.
+alive_members() {
+  wget -q -O - http://127.0.0.1:9631/butterfly 2>/dev/null |
+    grep -o '"health":"Alive"' | grep -c .
+}
+
 [ "$(cat /proc/1/comm)" = doj-launch ] || fail "PID 1 is $(cat /proc/1/comm), not doj-launch"
 report "pid1=doj-launch"
+
+# init leased eth0 before starting this script; the Supervisor finds its own
+# address through that NIC's default route.
+address=$(ip -4 -o addr show dev eth0 | grep -o 'inet [0-9.]*' | grep -o '[0-9.]*$')
+[ -n "${address}" ] || fail "eth0 has no address"
+report "eth0=${address}"
 
 first=$(supervisor_up none) || fail "the Supervisor's HTTP gateway did not answer"
 report "supervisor=${first}"
@@ -49,6 +64,20 @@ report "supervisor=${second} after SIGKILL"
 DOJ_SUP_BINARY=/bin/doj-sup doj sup term
 third=$(supervisor_up "${second}") || fail "the Supervisor did not come back after doj sup term"
 report "supervisor=${third} after doj sup term"
+
+# In a ring (dojo.members=<n>), the Supervisor must see every member alive.
+# The other machines restart their Supervisors at the same time as this one,
+# so allow a while for the gossip to settle.
+members=$(grep -o 'dojo.members=[0-9]*' /proc/cmdline | grep -o '[0-9]*$')
+if [ -n "${members}" ]; then
+  for _ in $(seq 1 60); do
+    alive=$(alive_members)
+    [ "${alive}" -ge "${members}" ] && break
+    sleep 1
+  done
+  [ "${alive}" -ge "${members}" ] || fail "${alive} of ${members} members alive"
+  report "members=${alive} alive"
+fi
 
 report "check ok"
 # SIGINT to init reboots, SIGTERM powers off. Either way the Launcher stops the

@@ -15,3 +15,4 @@ pidof
 ip
 hostname
 kill
+udhcpc
