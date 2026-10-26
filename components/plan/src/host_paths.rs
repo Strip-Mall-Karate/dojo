@@ -63,7 +63,10 @@ fn walk(prefix: &Path, dir: &Path, root: &str, findings: &mut Vec<String>) -> Re
             walk(prefix, &path, root, findings)?;
         } else if kind.is_file() {
             let shown = path.strip_prefix(prefix).unwrap_or(&path).display().to_string();
-            for (what, named) in host_paths(&path, root)? {
+            let executable = entry.metadata()
+                                  .map_err(|e| format!("cannot read {}: {e}", path.display()))
+                                  .map(|meta| is_executable(&meta))?;
+            for (what, named) in host_paths(&path, root, executable)? {
                 findings.push(format!("{shown}: {what} {named}"));
             }
         }
@@ -71,8 +74,22 @@ fn walk(prefix: &Path, dir: &Path, root: &str, findings: &mut Vec<String>) -> Re
     Ok(())
 }
 
-/// What `path` names outside `root`, as (what, path) pairs.
-fn host_paths(path: &Path, root: &str) -> Result<Vec<(&'static str, String)>, String> {
+#[cfg(unix)]
+fn is_executable(meta: &fs::Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    meta.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn is_executable(_meta: &fs::Metadata) -> bool { true }
+
+/// What `path` names outside `root`, as (what, path) pairs. A script's
+/// interpreter counts only when the script is executable: one that is not is
+/// documentation or an example, not a command.
+fn host_paths(path: &Path,
+              root: &str,
+              executable: bool)
+              -> Result<Vec<(&'static str, String)>, String> {
     let outside = |named: &str| !named.starts_with(root);
     let mut head = [0_u8; 4];
     let read = fs::File::open(path).and_then(|mut f| {
@@ -96,7 +113,7 @@ fn host_paths(path: &Path, root: &str) -> Result<Vec<(&'static str, String)>, St
         }
         return Ok(found);
     }
-    if read >= 2 && head.starts_with(b"#!") {
+    if executable && read >= 2 && head.starts_with(b"#!") {
         let text = fs::read(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         let line = text[2..].split(|&b| b == b'\n').next().unwrap_or_default();
         let line = String::from_utf8_lossy(line);

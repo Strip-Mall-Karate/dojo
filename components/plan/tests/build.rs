@@ -317,7 +317,11 @@ fn a_package_naming_only_its_root_passes_the_host_path_check() {
                                       (b:mkdir (.. b.prefix "/bin"))
                                       (b:write (.. b.prefix "/bin/plain") "#!/bin/sh\necho hi\n")
                                       (b:write (.. b.prefix "/bin/env") "#!/usr/bin/env sh\necho hi\n")
-                                      (b:write (.. b.prefix "/bin/own") (.. "#!" b.prefix "/bin/plain\n")))"##);
+                                      (b:write (.. b.prefix "/bin/own") (.. "#!" b.prefix "/bin/plain\n"))
+                                      (each [_ f (ipairs ["plain" "env" "own"])]
+                                        (b:chmod (.. b.prefix "/bin/" f) "755"))
+                                      ;; Not executable: documentation, whatever it names.
+                                      (b:write (.. b.prefix "/example.py") "#!/usr/bin/python\n"))"##);
     sandbox.build_with(&source, &options).expect("names only the root and shared interpreters");
 }
 
