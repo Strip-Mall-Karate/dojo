@@ -36,12 +36,12 @@ pub fn run(state: &State, phase: &str) -> Result<(), String> {
         "download" => download(state),
         "verify" => verify(state),
         "unpack" => unpack(state),
-        "build" if !state.windows() => {
+        "build" => {
             let prefix = format!("--prefix={}", state.prefix_text()?);
             state.run(&["./configure".into(), prefix], None, &[], false)?;
             state.run(&["make".into()], None, &[], false).map(drop)
         }
-        "install" if !state.windows() => {
+        "install" => {
             state.run(&["make".into(), "install".into()], None, &[], false)
                  .map(drop)
         }
@@ -127,8 +127,6 @@ fn unpack(state: &State) -> Result<(), String> {
     let tar = [".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz"];
     let argv: Vec<String> = if tar.iter().any(|ext| name.ends_with(ext)) {
         vec!["tar".into(), "xf".into(), file, "--no-same-owner".into()]
-    } else if is_zip && state.windows() {
-        vec!["tar".into(), "xf".into(), file]
     } else if is_zip {
         vec!["unzip".into(), "-o".into(), file]
     } else {
@@ -162,8 +160,10 @@ fn strip(state: &State) -> Result<(), String> {
     if !files.is_empty() {
         state.log("Stripping unneeded symbols from binaries and libraries");
     }
-    let builder_path: Vec<(String, String)> =
-        state.builder_path.iter().map(|path| ("PATH".to_string(), path.clone())).collect();
+    let builder_path: Vec<(String, String)> = state.builder_path
+                                                   .iter()
+                                                   .map(|path| ("PATH".to_string(), path.clone()))
+                                                   .collect();
     for file in files {
         let flag = match kind(&file)? {
             Some(Binary::Executable) => "--strip-all",
@@ -204,14 +204,10 @@ pub fn walk(dir: &Path, files: &mut Vec<PathBuf>, writable: bool) -> Result<(), 
     Ok(())
 }
 
-#[cfg(unix)]
 fn owner_can_write(metadata: &fs::Metadata) -> bool {
     use std::os::unix::fs::PermissionsExt;
     metadata.permissions().mode() & 0o200 != 0
 }
-
-#[cfg(not(unix))]
-fn owner_can_write(metadata: &fs::Metadata) -> bool { !metadata.permissions().readonly() }
 
 enum Binary {
     Executable,

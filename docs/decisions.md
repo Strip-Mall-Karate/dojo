@@ -38,3 +38,11 @@ longer story.
   replace them.
 - **Toolchain:** the tree ships on Rust 1.33.0 and OpenSSL 1.0.2 and is being moved to current
   stable Rust, Launcher first.
+
+## 2026-10-26
+
+- **No Windows packages.** Plans build for Linux (`x86_64-linux`, `aarch64-linux`,
+  `x86_64-linux-kernel2`) and macOS (`x86_64-darwin`, `aarch64-darwin`) only. The PowerShell
+  builder and every `plan.ps1` are gone, and `doj-plan-build` does not compile for Windows.
+- **macOS is a package platform**, Apple silicon included. Homebrew and Nix are the models for how
+  macOS packages are built and relocated.

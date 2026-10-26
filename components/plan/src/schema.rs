@@ -28,12 +28,13 @@ use serde_json::{Map,
 
 use crate::Error;
 
-/// The package targets Dojo builds for, as `components/core` names them.
+/// The package targets plans build for, Linux and macOS, as
+/// `components/core` names them.
 pub const TARGETS: &[&str] = &["x86_64-linux",
                                "aarch64-linux",
                                "x86_64-linux-kernel2",
                                "x86_64-darwin",
-                               "x86_64-windows"];
+                               "aarch64-darwin"];
 
 /// The build phases, in the order a build runs them.
 pub const PHASES: &[&str] =

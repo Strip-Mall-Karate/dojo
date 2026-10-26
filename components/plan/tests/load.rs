@@ -23,28 +23,29 @@ use dojo_plan::Plan;
 use serde_json::json;
 
 /// Each refused plan and a piece of the message it must be refused with.
-const REFUSED: &[(&str, &str)] = &[("fail-bad-ident", "`zlib` is not a package ident"),
-                                   ("fail-exposes",
-                                    "`exposes` names `admin`, which is not in `exports`"),
-                                   ("fail-global-table", "unknown identifier: _G"),
-                                   ("fail-import-macros", "extra module not found"),
-                                   ("fail-include", "module not found extra"),
-                                   ("fail-io", "unknown identifier: io"),
-                                   ("fail-loop", "the plan ran past its budget"),
-                                   ("fail-lua-plan", "has plan.lua but no plan.fnl"),
-                                   ("fail-macro-io", "unknown identifier: io"),
-                                   ("fail-macro-loop", "compiling the plan ran past its budget"),
-                                   ("fail-macro-memory", "not enough memory"),
-                                   ("fail-memory", "the plan ran out of memory"),
-                                   ("fail-missing-name", "does not set `name`"),
-                                   ("fail-not-table", "returns a string, not a table"),
-                                   ("fail-on-name", "`on.x86_64-linux` may not override `name`"),
-                                   ("fail-pcall", "unknown identifier: pcall"),
-                                   ("fail-phase-not-fn", "`build` is a string, not a function"),
-                                   ("fail-raw-lua", "attempt to index a nil value (global 'os')"),
-                                   ("fail-string-metatable", "unknown identifier: getmetatable"),
-                                   ("fail-unknown-key", "unknown key `nmae`"),
-                                   ("fail-unknown-target", "`x86_64-windows` is not in `targets`")];
+const REFUSED: &[(&str, &str)] =
+    &[("fail-bad-ident", "`zlib` is not a package ident"),
+      ("fail-exposes", "`exposes` names `admin`, which is not in `exports`"),
+      ("fail-global-table", "unknown identifier: _G"),
+      ("fail-import-macros", "extra module not found"),
+      ("fail-include", "module not found extra"),
+      ("fail-io", "unknown identifier: io"),
+      ("fail-loop", "the plan ran past its budget"),
+      ("fail-lua-plan", "has plan.lua but no plan.fnl"),
+      ("fail-macro-io", "unknown identifier: io"),
+      ("fail-macro-loop", "compiling the plan ran past its budget"),
+      ("fail-macro-memory", "not enough memory"),
+      ("fail-memory", "the plan ran out of memory"),
+      ("fail-missing-name", "does not set `name`"),
+      ("fail-not-table", "returns a string, not a table"),
+      ("fail-on-name", "`on.x86_64-linux` may not override `name`"),
+      ("fail-pcall", "unknown identifier: pcall"),
+      ("fail-phase-not-fn", "`build` is a string, not a function"),
+      ("fail-raw-lua", "attempt to index a nil value (global 'os')"),
+      ("fail-string-metatable", "unknown identifier: getmetatable"),
+      ("fail-unknown-key", "unknown key `nmae`"),
+      ("fail-unknown-target", "`aarch64-darwin` is not in `targets`"),
+      ("fail-windows-target", "`targets`: unknown target `x86_64-windows`")];
 
 fn fixtures() -> Vec<PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
@@ -107,17 +108,17 @@ fn other_plans_load() {
 }
 
 #[test]
-fn launcher_merges_the_windows_overrides() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/launcher");
-    let plan = Plan::load(dir).expect("the launcher plan loads");
+fn a_target_override_merges_into_that_target_only() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/overrides");
+    let plan = Plan::load(dir).expect("the plan loads");
     let linux = plan.metadata().to_json(Some("x86_64-linux"));
-    let windows = plan.metadata().to_json(Some("x86_64-windows"));
-    assert_eq!(linux["deps"][0], json!("karate/glibc"));
-    assert_eq!(windows["deps"][0], json!("karate/openssl"));
-    assert_eq!(windows["name"], json!("doj-launcher"));
-    assert_eq!(windows["version_computed"], json!(true));
-    assert_eq!(windows["phases"], json!(["prepare", "install"]));
-    assert!(windows.get("on").is_none());
+    let macos = plan.metadata().to_json(Some("aarch64-darwin"));
+    assert_eq!(linux["deps"], json!(["karate/glibc", "karate/zlib"]));
+    assert_eq!(linux["phases"], json!(["build"]));
+    assert_eq!(macos["deps"], json!(["karate/zlib"]));
+    assert_eq!(macos["name"], json!("hello"));
+    assert_eq!(macos["phases"], json!(["build", "install"]));
+    assert!(macos.get("on").is_none());
 }
 
 #[test]

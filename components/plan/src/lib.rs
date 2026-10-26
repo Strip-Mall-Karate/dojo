@@ -19,6 +19,10 @@
 //! returns. Reading a plan's metadata needs nothing more. The build stage,
 //! [`Plan::build`], calls the phase functions the loaded table holds.
 
+// Plans build on Linux and macOS only.
+#[cfg(not(unix))]
+compile_error!("doj-plan-build builds packages on Linux and macOS");
+
 mod build;
 mod builtin;
 mod deps;
