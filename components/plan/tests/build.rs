@@ -953,6 +953,21 @@ fn a_build_may_use_a_build_directory_beside_its_source() {
     let built = sandbox.build(&source).expect("builds");
     assert_eq!(read(&built.prefix.join("copied")), "here");
 
+    // `<path>/.` names only a directory, with or without `..` before it.
+    let dirs = plan("sib",
+                    "",
+                    r#" :build (fn [b]
+                                 (b:write "f" "")
+                                 (b:mkdir "d")
+                                 (b:write "answers"
+                                          (table.concat [(tostring (b:exists (b:join b.prefix "f/.")))
+                                                         (tostring (b:exists (b:join b.prefix "d/.")))
+                                                         (tostring (b:exists (b:join b.prefix "d/../f/.")))
+                                                         (tostring (b:exists (b:join b.prefix "f/../d/.")))]
+                                                        " ")))"#);
+    let built = sandbox.build(&dirs).expect("builds");
+    assert_eq!(read(&built.prefix.join("answers")), "false true false true");
+
     for call in [r#"(b:mkdir (b:join b.cache "other-build"))"#,
                  r#"(b:mkdir (b:join b.cache "sib-build/../other-build"))"#,
                  r#"(b:write (b:join b.cache "sib-build-not") "")"#]

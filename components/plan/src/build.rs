@@ -1357,9 +1357,13 @@ fn set_mode(path: &Path, mode: Option<u32>) -> Result<(), String> {
 #[cfg(not(unix))]
 fn set_mode(_: &Path, _: Option<u32>) -> Result<(), String> { Ok(()) }
 
-/// `path` with `.` and `..` resolved by its text, as the shell resolves
-/// `cd ..`; none when `..` climbs above the root.
+/// `path` with `..` resolved by its text, as the shell resolves `cd ..`;
+/// none when `..` climbs above the root. A trailing `/.` or `/` stays, so
+/// the path still names only a directory.
 fn lexical(path: &Path) -> Option<PathBuf> {
+    if !path.components().any(|part| part == Component::ParentDir) {
+        return Some(path.to_path_buf());
+    }
     let mut out = PathBuf::new();
     for part in path.components() {
         match part {
@@ -1371,6 +1375,12 @@ fn lexical(path: &Path) -> Option<PathBuf> {
             }
             other => out.push(other),
         }
+    }
+    let text = path.as_os_str().as_encoded_bytes();
+    if text.ends_with(b"/.") {
+        out.push(".");
+    } else if text.ends_with(b"/") {
+        out.push("");
     }
     Some(out)
 }
