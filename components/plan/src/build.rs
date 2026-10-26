@@ -889,7 +889,7 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      s.check_this(&this, "b:run")?;
                      let argv = texts(&argv, "b:run: argv")?;
                      let opts = run_options(&opts, "b:run", true)?;
-                     let stdin = opts.stdin.as_deref().map(str::as_bytes);
+                     let stdin = opts.stdin.as_deref();
                      if opts.check {
                          s.run_fed(&argv, opts.cwd.as_deref(), &opts.env, stdin, false)
                           .map_err(mlua::Error::runtime)?;
@@ -906,7 +906,7 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      s.check_this(&this, "b:capture")?;
                      let argv = texts(&argv, "b:capture: argv")?;
                      let opts = run_options(&opts, "b:capture", false)?;
-                     let stdin = opts.stdin.as_deref().map(str::as_bytes);
+                     let stdin = opts.stdin.as_deref();
                      s.run_fed(&argv, opts.cwd.as_deref(), &opts.env, stdin, true)
                       .map(Option::unwrap_or_default)
                       .map_err(mlua::Error::runtime)
@@ -1022,7 +1022,7 @@ fn add_files(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      s.check_this(&this, "b:write")?;
                      let path = s.creatable(&text_of(&path, "b:write: the path")?, "b:write")
                                  .map_err(mlua::Error::runtime)?;
-                     let contents = text_of(&contents, "b:write: the text")?;
+                     let contents = bytes_of(&contents, "b:write: the text")?;
                      let written = path.parent()
                                        .map_or(Ok(()), fs::create_dir_all)
                                        .and_then(|()| fs::write(&path, contents));
@@ -1048,15 +1048,17 @@ fn add_files(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
 fn add_file_reads(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
     let s = Rc::clone(state);
     b.raw_set("read",
-              lua.create_function(move |_, (this, path): (Value, Value)| {
+              lua.create_function(move |lua, (this, path): (Value, Value)| {
                      s.check_this(&this, "b:read")?;
                      let path = s.readable(&text_of(&path, "b:read: the path")?, "b:read")
                                  .map_err(mlua::Error::runtime)?;
-                     fs::read_to_string(&path).map_err(|e| {
-                                                  mlua::Error::runtime(format!("b:read: cannot \
-                                                                                read {}: {e}",
-                                                                               path.display()))
-                                              })
+                     // A file's bytes as they are: a Lua string holds any.
+                     let bytes = fs::read(&path).map_err(|e| {
+                                                    mlua::Error::runtime(format!("b:read: cannot \
+                                                                                  read {}: {e}",
+                                                                                 path.display()))
+                                                })?;
+                     lua.create_string(bytes)
                  })?)?;
 
     let s = Rc::clone(state);
@@ -1566,8 +1568,8 @@ struct RunOptions {
     env:   Vec<(String, String)>,
     /// Whether a nonzero exit stops the build: true unless the plan says false.
     check: bool,
-    /// Text the program reads as its input.
-    stdin: Option<String>,
+    /// Bytes the program reads as its input.
+    stdin: Option<Vec<u8>>,
 }
 
 /// Reads `b:run` and `b:capture` options: `cwd`, `env`, a table of names to
@@ -1595,7 +1597,7 @@ fn run_options(opts: &Value, what: &str, may_tolerate: bool) -> mlua::Result<Run
         }
     }
     let stdin = opts.get("stdin")
-                    .map(|stdin| text_of(stdin, &format!("{what}: `stdin`")))
+                    .map(|stdin| bytes_of(stdin, &format!("{what}: `stdin`")))
                     .transpose()?;
     Ok(RunOptions { cwd,
                     env,
@@ -1641,6 +1643,19 @@ fn env_name(value: &Value, what: &str) -> mlua::Result<String> {
 }
 
 /// A string, or an integer as its digits.
+/// A string's bytes, whatever their encoding, or an integer's digits.
+fn bytes_of(value: &Value, what: &str) -> mlua::Result<Vec<u8>> {
+    match value {
+        Value::String(bytes) => Ok(bytes.as_bytes().to_vec()),
+        Value::Integer(i) => Ok(i.to_string().into_bytes()),
+        other => {
+            Err(mlua::Error::runtime(format!("{what} is a {}, not a \
+                                              string",
+                                             other.type_name())))
+        }
+    }
+}
+
 fn text_of(value: &Value, what: &str) -> mlua::Result<String> {
     match value {
         Value::String(text) => {

@@ -963,6 +963,24 @@ fn a_build_may_use_a_build_directory_beside_its_source() {
 }
 
 #[test]
+fn read_and_write_keep_bytes_that_are_not_utf8() {
+    let sandbox = Sandbox::new("bytes");
+    // Latin-1 text and binary data, as source trees hold.
+    let source = plan("bytes",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:write "latin1" "caf\xe9 /usr/bin/file\n")
+                                   (let [text (b:read (b:join b.prefix "latin1"))]
+                                     (b:write "fixed" (pick-values 1 (text:gsub "/usr/bin/file" "file")))
+                                     (b:write "fed" (b:capture ["od" "-An" "-tx1"] {:stdin text}))))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(fs::read(built.prefix.join("fixed")).unwrap(),
+               b"caf\xe9 file\n");
+    assert!(read(&built.prefix.join("fed")).contains("e9"),
+            "stdin carried the byte");
+}
+
+#[test]
 fn stdin_is_the_programs_input() {
     let sandbox = Sandbox::new("run-stdin");
     // More than a pipe holds, so a feeder that blocked on a full pipe would hang the test.
