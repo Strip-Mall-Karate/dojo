@@ -184,6 +184,101 @@ fn phases_resolve_from_target_to_plan_to_scaffolding_to_builtin() {
 }
 
 #[test]
+fn a_scaffolding_adds_metadata_and_reads_the_plans_settings() {
+    let mut sandbox = Sandbox::new("scaffold-meta");
+    sandbox.package("test/runtime");
+    let scaffolding = sandbox.package("test/scaffolding");
+    fs::create_dir_all(scaffolding.join("lib")).unwrap();
+    // `metadata` sees the plan's metadata, its settings and its directories;
+    // phases see the settings on `b`, and defaults the build installs follow
+    // the plan's.
+    fs::write(scaffolding.join("lib/scaffolding.fnl"),
+              r#"{:metadata (fn [plan settings dirs]
+                              (let [app (dirs.src.json "package.json")]
+                                {:deps ["test/runtime"]
+                                 :bin_dirs ["bin" (.. plan.name "/bin")]
+                                 :exports {:port "app.port" :host "ignored.host"}
+                                 :exposes [(. settings.ports 1)]
+                                 :description app.description
+                                 :license [(if (dirs.plan.exists "plan.fnl") "MIT" "none")]}))
+                  :build (fn [b]
+                           (b:write "greeting" b.scaffolding_settings.greeting)
+                           (b:write "source" (tostring b.source))
+                           (b:write "default.toml" "[extra]\nkey = 1\n"))}"#).unwrap();
+    fs::write(sandbox.context().join("default.toml"),
+              "[app]\nport = 8000\nhost = \"0.0.0.0\"\n").unwrap();
+    fs::write(sandbox.context().join("package.json"),
+              r#"{"description": "from package.json"}"#).unwrap();
+    let source = plan("scaffolded",
+                      r#":scaffolding {:package "test/scaffolding"
+                                      :settings {:greeting "hi" :ports ["port"]}}
+                         :bin_dirs ["bin"]
+                         :exports {:host "app.host"}"#,
+                      " :build (fn [b] (b.default.build b))");
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("greeting")), "hi");
+    assert_eq!(read(&built.prefix.join("source")),
+               "nil",
+               "no source, no b.source");
+    assert_eq!(read(&built.prefix.join("DEPS")).trim(),
+               format!("test/runtime/1.0/{RELEASE}"),
+               "the scaffolding's run dependency is the package's");
+    let exports = read(&built.prefix.join("EXPORTS"));
+    assert!(exports.contains("port=app.port") && exports.contains("host=app.host"),
+            "the plan's export wins, the scaffolding's adds: {exports}");
+    let path = read(&built.prefix.join("PATH"));
+    assert!(path.contains("scaffolded/bin"),
+            "bin_dirs gained the scaffolding's: {path}");
+    assert_eq!(path.matches("/bin").count(),
+               2,
+               "`bin` once, from both: {path}");
+    let manifest = read(&built.prefix.join("MANIFEST"));
+    assert!(manifest.contains("from package.json") && manifest.contains("MIT"),
+            "description and license from the scaffolding: {manifest}");
+    assert_eq!(read(&built.prefix.join("default.toml")),
+               "[app]\nport = 8000\nhost = \"0.0.0.0\"\n\n[extra]\nkey = 1\n",
+               "the plan's defaults, then the build's");
+    assert_eq!(read(&built.prefix.join("EXPOSES")).trim(), "8000");
+
+    for (metadata, expected) in [("{:name \"other\"}", "a scaffolding may set"),
+                                 ("{:deps \"test/runtime\"}", "is a string, not a table"),
+                                 ("{:exposes [\"nothing\"]}", "`exposes` names `nothing`"),
+                                 ("(do (dirs.src.read \"../escape\") {})", "is not a path inside")]
+    {
+        fs::write(scaffolding.join("lib/scaffolding.fnl"),
+                  format!("{{:metadata (fn [plan settings dirs] {metadata})}}")).unwrap();
+        assert_refused(sandbox.build(&source), expected);
+    }
+    let bad = plan("scaffolded",
+                   r#":scaffolding {:package "test/scaffolding" :settings {:f (fn [])}}"#,
+                   "");
+    assert_refused(sandbox.build(&bad), "is a function, not a string, number");
+}
+
+#[test]
+fn packaging_uses_the_builders_tools_not_a_dependencys() {
+    // A run dependency's xz (busybox's only decompresses) is first on the
+    // build's PATH; the package is still compressed with the builder's.
+    let mut sandbox = Sandbox::new("packager-path");
+    let shadow = sandbox.package("test/shadow");
+    fs::create_dir_all(shadow.join("bin")).unwrap();
+    for tool in ["xz", "tar"] {
+        fs::write(shadow.join("bin").join(tool), "#!/bin/sh\nexit 7\n").unwrap();
+        fs::set_permissions(shadow.join("bin").join(tool),
+                            fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    fs::write(shadow.join("PATH"),
+              format!("{}\n", shadow.join("bin").display())).unwrap();
+    let source = plan("shadowed",
+                      r#":deps ["test/shadow"]"#,
+                      r#" :build (fn [b] (b:write "shadowed" (tostring (b:run ["xz"] {:check false}))))"#);
+    let built = sandbox.build(&source).expect("builds and packages");
+    assert_eq!(read(&built.prefix.join("shadowed")),
+               "7",
+               "the build itself sees the dependency's xz");
+}
+
+#[test]
 fn a_version_function_runs_with_b_and_sets_the_prefix() {
     let sandbox = Sandbox::new("version");
     let source = plan("versioned",
@@ -404,6 +499,35 @@ fn a_source_is_downloaded_verified_and_unpacked() {
     let wrong = "0".repeat(64);
     assert_refused(sandbox.build(&with_sha(&wrong)),
                    &format!("has SHA-256 {sha}, but `source.sha256` is {wrong}"));
+
+    // A source directory may be inside what the archive unpacks, and `b.source`
+    // tells phases what the plan downloaded.
+    fs::create_dir_all(upstream.join("hello-2.0/sub")).unwrap();
+    fs::write(upstream.join("hello-2.0/sub/inner.txt"), "inner").unwrap();
+    let status = Command::new("tar").args(["czf", "hello-2.0.tar.gz", "hello-2.0"])
+                                    .current_dir(&upstream)
+                                    .status()
+                                    .expect("run tar");
+    assert!(status.success());
+    let sha = hex(&Sha256::digest(fs::read(&tarball).unwrap()));
+    let nested = plan("hello",
+                      &format!(r#":version "2.0" :source {{:url "file://{}" :sha256 "{sha}" :dirname "hello-2.0/sub"}}"#,
+                               tarball.display()),
+                      r#" :build (fn [b]
+                                   (b:write "inner" (b:capture ["cat" "inner.txt"]))
+                                   (b:write "source" (.. b.source.filename " " b.source.dirname " " b.source.sha256)))"#);
+    let built = sandbox.build(&nested).expect("builds");
+    assert_eq!(read(&built.prefix.join("inner")), "inner");
+    assert_eq!(read(&built.prefix.join("source")),
+               format!("hello-2.0.tar.gz hello-2.0/sub {sha}"));
+    for dirname in ["../escape", "/abs", "a//b"] {
+        let bad = plan("hello",
+                       &format!(r#":version "2.0" :source {{:url "file://{}" :sha256 "{sha}" :dirname "{dirname}"}}"#,
+                                tarball.display()),
+                       "");
+        assert_refused(sandbox.build(&bad),
+                       "must be a relative path inside the cache");
+    }
 }
 
 #[test]

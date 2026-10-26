@@ -200,9 +200,22 @@ impl Package<'_> {
             copy_tree(&from, &self.prefix.join(dir), skip)?;
             set_mode(&self.prefix.join(dir), 0o755)?;
         }
+        // The plan's defaults, then any the build installed (a scaffolding's,
+        // for keys the plan does not set), as the shell builder appended them.
         let defaults = plan_dir.join("default.toml");
+        let installed = self.prefix.join("default.toml");
         if defaults.is_file() {
-            copy_file(&defaults, &self.prefix.join("default.toml"))?;
+            let own = fs::read_to_string(&defaults).map_err(|e| {
+                                                       format!("cannot read {}: {e}",
+                                                               defaults.display())
+                                                   })?;
+            let added = fs::read_to_string(&installed).unwrap_or_default();
+            let joined = if added.is_empty() {
+                own
+            } else {
+                format!("{own}\n{added}")
+            };
+            write(&installed, &joined)?;
         }
         Ok(())
     }
@@ -371,7 +384,7 @@ impl Package<'_> {
         if exposes.is_empty() {
             return Ok(());
         }
-        let file = self.options.plan_dir.join("default.toml");
+        let file = self.prefix.join("default.toml");
         let text = fs::read_to_string(&file).map_err(|e| {
                                                 format!("`exposes` needs {}: {e}", file.display())
                                             })?;
@@ -529,10 +542,19 @@ impl Package<'_> {
         let level = self.env_var("DOJ_HART_COMPRESSION_LEVEL")
                         .unwrap_or_else(|| "6".to_string());
         let text = |path: &Path| path.to_string_lossy().into_owned();
+        // The builder's own tar and xz, from the PATH it was started with: a
+        // dependency's tools (busybox's xz, which only decompresses) are the
+        // build's, not the packager's.
+        let builder_path: Vec<(String, String)> = self.options
+                                                      .env
+                                                      .iter()
+                                                      .filter(|(name, _)| name == "PATH")
+                                                      .cloned()
+                                                      .collect();
         self.state
             .run(&["tar".into(), "-cf".into(), text(&tar), text(self.prefix)],
                  Some(self.work),
-                 &[],
+                 &builder_path,
                  false)?;
         self.state.run(&["xz".into(),
                           "--compress".into(),
@@ -540,7 +562,7 @@ impl Package<'_> {
                           "--threads=0".into(),
                           text(&tar)],
                         Some(self.work),
-                        &[],
+                        &builder_path,
                         false)?;
         self.doj_sign(&xz, &hart)?;
         remove_file(&tar)?;

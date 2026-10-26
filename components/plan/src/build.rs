@@ -9,6 +9,17 @@
 //! Each phase resolves to the plan's function for the target, then the
 //! scaffolding's, then the builtin. `b.default.<phase>` runs the next one
 //! down from wherever it is called.
+//!
+//! A scaffolding is a package shipping `lib/scaffolding.fnl`, a module of
+//! phase functions. Its `metadata` function, if it has one, gets the plan's
+//! metadata, the plan's settings for it (`:scaffolding {:package <ident>
+//! :settings <data>}`) and read-only views of the build's source context
+//! and the plan's directory, before dependencies resolve. It may return
+//! dependencies, directories, `svc`, exports, binds and the descriptive keys
+//! to add: lists gain its entries, tables its keys, and whatever the plan sets
+//! itself stays the plan's. A `default.toml` the build installs follows the
+//! plan's in the package. Phases read the settings as `b.scaffolding_settings` and the
+//! plan's source as `b.source`.
 
 use std::{cell::{Cell,
                  RefCell},
@@ -50,7 +61,8 @@ use crate::{Error,
                       Artifact,
                       Package},
             sandbox,
-            schema::PHASES};
+            schema::{self,
+                     PHASES}};
 
 /// Where Dojo keeps packages and caches when `DOJ_ROOT_PATH` is unset.
 #[cfg(not(windows))]
@@ -495,6 +507,8 @@ impl State {
 struct Started {
     state:     Rc<State>,
     b:         Table,
+    /// The plan's metadata for the target, with its scaffolding's added.
+    json:      Json,
     deps:      Resolved,
     runtime:   Inherited,
     buildtime: Inherited,
@@ -574,6 +588,7 @@ impl Plan {
     pub fn build(&self, options: &Options, packages: &dyn Resolve) -> Result<Built, Error> {
         let Started { state,
                       b,
+                      json,
                       deps,
                       mut runtime,
                       mut buildtime, } = self.start(options, packages)?;
@@ -608,8 +623,7 @@ impl Plan {
             builtin::fix_libtool(&state, &layout.src).map_err(Error::Build)?;
         }
         package::check_hooks(&options.plan_dir).map_err(Error::Build)?;
-        package::check_service(&options.plan_dir, &self.metadata().to_json(Some(target))["svc"])
-            .map_err(Error::Build)?;
+        package::check_service(&options.plan_dir, &json["svc"]).map_err(Error::Build)?;
         self.run_phase(&state, &b, "prepare")?;
         self.run_phase(&state, &b, "build")?;
         if options.check {
@@ -633,7 +647,6 @@ impl Plan {
             };
             to.export(&export.name, &export.value, export.push, &layout.ident);
         }
-        let json = self.metadata().to_json(Some(target));
         let artifact = Package { state: &state,
                                  options,
                                  json: &json,
@@ -660,23 +673,44 @@ impl Plan {
         if (os == "windows") != cfg!(windows) {
             return Err(Error::Build(format!("cannot build `{target}` packages on this host")));
         }
-        let json = self.metadata().to_json(Some(target));
+        let mut json = self.metadata().to_json(Some(target));
         if json["type"] == "composite" {
             return Err(Error::Build("composite plans are not supported".to_string()));
         }
         let name = json["name"].as_str().unwrap_or_default().to_string();
-        let origin = json["origin"].as_str().unwrap_or_default();
-        package::check_key(&options.keys, origin).map_err(Error::Build)?;
+        let origin = json["origin"].as_str().unwrap_or_default().to_string();
+        package::check_key(&options.keys, &origin).map_err(Error::Build)?;
 
-        let deps = Resolved::resolve(&strings(&json["deps"]),
-                                     &strings(&json["build_deps"]),
-                                     json["scaffolding"].as_str(),
-                                     &options.root.join("pkgs"),
-                                     packages).map_err(Error::Build)?;
-        let scaffolding = match json["scaffolding"].as_str() {
-            Some(_) => Some(load_scaffolding(&self.lua, &deps.build_deps[0].path)?),
+        // `scaffolding` is a package ident or `{:package <ident> :settings <data>}`.
+        let (scaffolding_ident, scaffolding_settings) = match &json["scaffolding"] {
+            Json::String(ident) => (Some(ident.clone()), Json::Null),
+            Json::Object(fields) => {
+                (fields.get("package")
+                       .and_then(Json::as_str)
+                       .map(String::from),
+                 fields.get("settings").cloned().unwrap_or(Json::Null))
+            }
+            _ => (None, Json::Null),
+        };
+        let scaffolding = match &scaffolding_ident {
+            Some(ident) => {
+                let path = packages.resolve(ident).map_err(Error::Build)?;
+                Some(load_scaffolding(&self.lua, &path)?)
+            }
             None => None,
         };
+        if let Some(module) = &scaffolding {
+            add_scaffolding_metadata(&self.lua,
+                                     module,
+                                     &mut json,
+                                     &scaffolding_settings,
+                                     &[("src", &options.context), ("plan", &options.plan_dir)])?;
+        }
+        let deps = Resolved::resolve(&strings(&json["deps"]),
+                                     &strings(&json["build_deps"]),
+                                     scaffolding_ident.as_deref(),
+                                     &options.root.join("pkgs"),
+                                     packages).map_err(Error::Build)?;
         let mut chains = BTreeMap::new();
         for phase in PHASES {
             let own = match self.value(target, phase).map_err(|e| lua_error(&e))? {
@@ -717,11 +751,16 @@ impl Plan {
                                     active: RefCell::new(Vec::new()),
                                     b: Cell::new(0),
                                     exports: RefCell::new(Vec::new()) });
-        let b =
-            context(&self.lua, &state, options, origin, scaffolding).map_err(|e| lua_error(&e))?;
+        let b = context(&self.lua,
+                        &state,
+                        options,
+                        &origin,
+                        scaffolding,
+                        &scaffolding_settings).map_err(|e| lua_error(&e))?;
         state.b.set(b.to_pointer() as usize);
         Ok(Started { state,
                      b,
+                     json,
                      deps,
                      runtime,
                      buildtime })
@@ -842,13 +881,124 @@ fn load_scaffolding(lua: &Lua, package: &Path) -> Result<Table, Error> {
     Ok(module)
 }
 
+/// Calls the scaffolding module's `metadata` function, if it has one, with
+/// the plan's metadata, the plan's settings for it and read-only views of
+/// `dirs` (the build's source context and the plan's directory), and adds
+/// what it returns to `json`.
+fn add_scaffolding_metadata(lua: &Lua,
+                            module: &Table,
+                            json: &mut Json,
+                            settings: &Json,
+                            dirs: &[(&str, &Path)])
+                            -> Result<(), Error> {
+    let failed = |e: &mlua::Error| {
+        Error::Build(format!("the scaffolding's metadata failed: {}",
+                             message(e, Stage::Build)))
+    };
+    let Some(metadata) = module.raw_get::<Option<Function>>("metadata")
+                               .map_err(|e| failed(&e))?
+    else {
+        return Ok(());
+    };
+    let plan = json_to_lua(lua, json).map_err(|e| failed(&e))?;
+    let settings = json_to_lua(lua, settings).map_err(|e| failed(&e))?;
+    let views = lua.create_table().map_err(|e| failed(&e))?;
+    for (name, dir) in dirs {
+        views.raw_set(*name, dir_view(lua, dir).map_err(|e| failed(&e))?)
+             .map_err(|e| failed(&e))?;
+    }
+    sandbox::limit(lua,
+                   sandbox::PLAN_MEMORY,
+                   sandbox::PLAN_INSTRUCTIONS,
+                   "the scaffolding").map_err(|e| failed(&e))?;
+    let added = metadata.call::<Value>((plan, settings, views))
+                        .map_err(|e| failed(&e))?;
+    let added = schema::parse_contribution(&added)?;
+    schema::merge_contribution(json, added)
+}
+
+/// A read-only view of `dir` for a scaffolding's `metadata`: `read`, `exists`
+/// and `json` take a path inside it. `read` gives a file's bytes and `json`
+/// its parsed JSON, nil when there is no such file.
+fn dir_view(lua: &Lua, dir: &Path) -> mlua::Result<Table> {
+    let inside = {
+        let dir = dir.to_path_buf();
+        move |path: String| -> mlua::Result<PathBuf> {
+            let relative = Path::new(&path);
+            if relative.is_absolute()
+               || relative.components()
+                          .any(|part| part == Component::ParentDir)
+            {
+                return Err(mlua::Error::runtime(format!("{path} is not a path \
+                                                         inside the directory")));
+            }
+            Ok(dir.join(relative))
+        }
+    };
+    let view = lua.create_table()?;
+    let at = inside.clone();
+    view.raw_set("exists",
+                 lua.create_function(move |_, path: String| Ok(at(path)?.exists()))?)?;
+    let at = inside.clone();
+    view.raw_set("read",
+                 lua.create_function(move |lua, path: String| {
+                        match fs::read(at(path)?) {
+                            Ok(bytes) => Ok(Value::String(lua.create_string(bytes)?)),
+                            Err(_) => Ok(Value::Nil),
+                        }
+                    })?)?;
+    view.raw_set("json",
+                 lua.create_function(move |lua, path: String| {
+                        let file = inside(path.clone())?;
+                        let Ok(text) = fs::read_to_string(&file) else {
+                            return Ok(Value::Nil);
+                        };
+                        let json: Json = serde_json::from_str(&text).map_err(|e| {
+                                             mlua::Error::runtime(format!("{path} is not JSON: \
+                                                                           {e}"))
+                                         })?;
+                        json_to_lua(lua, &json)
+                    })?)?;
+    Ok(view)
+}
+
+/// JSON as Lua values: objects and arrays become fresh tables, null is nil.
+fn json_to_lua(lua: &Lua, json: &Json) -> mlua::Result<Value> {
+    Ok(match json {
+        Json::Null => Value::Nil,
+        Json::Bool(b) => Value::Boolean(*b),
+        Json::Number(n) => {
+            match n.as_i64() {
+                Some(i) => Value::Integer(i),
+                None => Value::Number(n.as_f64().unwrap_or_default()),
+            }
+        }
+        Json::String(text) => Value::String(lua.create_string(text)?),
+        Json::Array(items) => {
+            let table = lua.create_table()?;
+            for (i, item) in items.iter().enumerate() {
+                table.raw_set(i + 1, json_to_lua(lua, item)?)?;
+            }
+            Value::Table(table)
+        }
+        Json::Object(fields) => {
+            let table = lua.create_table()?;
+            for (key, item) in fields {
+                table.raw_set(key.as_str(), json_to_lua(lua, item)?)?;
+            }
+            Value::Table(table)
+        }
+    })
+}
+
 /// Builds `b`. `version`, `prefix` and `src` are set once the version is
 /// known.
 fn context(lua: &Lua,
            state: &Rc<State>,
            options: &Options,
            origin: &str,
-           scaffolding: Option<Table>)
+           scaffolding: Option<Table>,
+           scaffolding_settings: &Json)
            -> mlua::Result<Table> {
     let b = lua.create_table()?;
     let target = options.target.as_str();
@@ -863,6 +1013,20 @@ fn context(lua: &Lua,
               text(&options.plan_dir).map_err(mlua::Error::runtime)?)?;
     b.raw_set("jobs", options.jobs)?;
     b.raw_set("scaffolding", scaffolding)?;
+    // The plan's settings for its scaffolding, and its source, for
+    // scaffoldings that work on the source themselves.
+    b.raw_set("scaffolding_settings",
+              json_to_lua(lua, scaffolding_settings)?)?;
+    if let Some(source) = &state.settings.source {
+        let table = lua.create_table()?;
+        table.raw_set("url", source.url.as_str())?;
+        table.raw_set("sha256", source.sha256.as_str())?;
+        table.raw_set("filename", source.filename.as_str())?;
+        if let Some(dirname) = &source.dirname {
+            table.raw_set("dirname", dirname.as_str())?;
+        }
+        b.raw_set("source", table)?;
+    }
     add_processes(lua, &b, state)?;
     add_files(lua, &b, state)?;
     add_file_reads(lua, &b, state)?;
@@ -1771,11 +1935,14 @@ fn settings(json: &Json, name: &str) -> Result<Settings, Error> {
     };
     if let Some(Source { dirname: Some(dirname),
                          .. }) = &source
-       && (dirname.contains(['/', '\\']) || dirname == "..")
+       && (dirname.starts_with(['/', '\\'])
+           || dirname.contains(':')
+           || dirname.split(['/', '\\'])
+                     .any(|part| part == ".." || part.is_empty()))
     {
         return Err(Error::Build(format!("{name}: `source.dirname` \
-                                         `{dirname}` must be one directory \
-                                         name")));
+                                         `{dirname}` must be a relative \
+                                         path inside the cache")));
     }
     let mut other_dirs = strings(&json["include_dirs"]);
     other_dirs.extend(strings(&json["pconfig_dirs"]));
