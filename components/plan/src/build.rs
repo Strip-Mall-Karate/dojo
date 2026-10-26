@@ -168,6 +168,20 @@ pub struct State {
     active:       RefCell<Vec<(&'static str, usize)>>,
     /// The address of the `b` table, to tell `b:run` from `b.run`.
     b:            Cell<usize>,
+    /// What the plan passes on to the packages that depend on it, in the
+    /// order it said so.
+    exports:      RefCell<Vec<Export>>,
+}
+
+/// A variable a plan passes on: at run time (`RUNTIME_ENVIRONMENT`) or only
+/// to the builds of packages that depend on it (`BUILDTIME_ENVIRONMENT`),
+/// replacing the value or put in front of a list.
+struct Export {
+    runtime: bool,
+    /// The list separator when the value goes in front of a list.
+    push:    Option<&'static str>,
+    name:    String,
+    value:   String,
 }
 
 impl State {
@@ -306,6 +320,88 @@ impl State {
         Ok(full)
     }
 
+    /// A path a plan may read: inside the prefix, the source directory, the
+    /// cache, the plan's directory or a declared dependency. Relative paths
+    /// are from the directory programs run in.
+    fn readable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
+        let path = Path::new(path);
+        if path.components().any(|c| c == Component::ParentDir) {
+            return Err(format!("{what}: {} may not contain `..`", path.display()));
+        }
+        let full = self.default_cwd().join(path);
+        let mut roots = vec![self.src.borrow().clone(),
+                             self.cache.clone(),
+                             self.context.clone()];
+        if let Ok(prefix) = self.prefix() {
+            roots.push(prefix);
+        }
+        roots.extend(self.deps.iter().map(|dep| dep.path.clone()));
+        if roots.iter().any(|root| full.starts_with(root)) {
+            Ok(full)
+        } else {
+            Err(format!("{what}: {} is outside the prefix, the source \
+                         directory, the cache, the plan's directory and \
+                         the dependencies",
+                        full.display()))
+        }
+    }
+
+    /// A path a plan may remove or move away: where it may create, a
+    /// symbolic link itself included.
+    fn removable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
+        let full = Path::new(path);
+        let (Some(parent), Some(name)) = (full.parent(), full.file_name()) else {
+            return Err(format!("{what}: {path} names no file"));
+        };
+        let parent = match parent.to_str() {
+            Some("") => ".".to_string(),
+            Some(parent) => parent.to_string(),
+            None => return Err(format!("{what}: {path} is not UTF-8")),
+        };
+        Ok(self.creatable(&parent, what)?.join(name))
+    }
+
+    /// Points each file's `#!` line at `interpreter` inside `dep`, whatever
+    /// path it named before that ends in the interpreter's name.
+    fn fix_interpreter(&self,
+                       files: &[String],
+                       dep: &str,
+                       interpreter: &str)
+                       -> Result<(), String> {
+        let new = self.dep_path(dep)?.join(interpreter);
+        if !new.is_file() {
+            return Err(format!("b:fix_interpreter: {} is not a file", new.display()));
+        }
+        let new = text(&new)?;
+        for file in files {
+            let path = self.creatable(file, "b:fix_interpreter")?;
+            let contents = fs::read(&path).map_err(|e| {
+                                              format!("b:fix_interpreter: cannot read {}: {e}",
+                                                      path.display())
+                                          })?;
+            let Some(rest) = contents.strip_prefix(b"#!") else {
+                continue;
+            };
+            let end = rest.iter().position(|&b| b == b'\n').unwrap_or(rest.len());
+            let Ok(line) = std::str::from_utf8(&rest[..end]) else {
+                continue;
+            };
+            let program = line.split_whitespace().next().unwrap_or("");
+            if !program.ends_with(interpreter) {
+                continue;
+            }
+            let args = &line.trim_start()[program.len()..];
+            let mut fixed = format!("#!{new}{args}").into_bytes();
+            fixed.extend_from_slice(&rest[end..]);
+            fs::write(&path, fixed).map_err(|e| {
+                                       format!("b:fix_interpreter: cannot write {}: {e}",
+                                               path.display())
+                                   })?;
+            self.log(&format!("Interpreter of {} is {new}", path.display()));
+        }
+        Ok(())
+    }
+
     /// The installed path of a declared dependency, named by its name,
     /// `origin/name` or the ident as declared.
     fn dep_path(&self, name: &str) -> Result<PathBuf, String> {
@@ -414,8 +510,8 @@ impl Plan {
         let Started { state,
                       b,
                       deps,
-                      runtime,
-                      buildtime, } = self.start(options, packages)?;
+                      mut runtime,
+                      mut buildtime, } = self.start(options, packages)?;
         let target = options.target.as_str();
         let version = match &self.metadata().to_json(Some(target))["version"] {
             Json::String(version) => version.clone(),
@@ -462,6 +558,14 @@ impl Plan {
         self.run_phase(&state, &b, "install")?;
         self.run_phase(&state, &b, "strip")?;
         state.log(&format!("Installed {} in {}", layout.ident, prefix.display()));
+        for export in state.exports.borrow().iter() {
+            let to = if export.runtime {
+                &mut runtime
+            } else {
+                &mut buildtime
+            };
+            to.export(&export.name, &export.value, export.push, &layout.ident);
+        }
         let json = self.metadata().to_json(Some(target));
         let artifact = Package { state: &state,
                                  options,
@@ -544,7 +648,8 @@ impl Plan {
                                     phase: Cell::new("version"),
                                     chains,
                                     active: RefCell::new(Vec::new()),
-                                    b: Cell::new(0) });
+                                    b: Cell::new(0),
+                                    exports: RefCell::new(Vec::new()) });
         let b =
             context(&self.lua, &state, options, origin, scaffolding).map_err(|e| lua_error(&e))?;
         state.b.set(b.to_pointer() as usize);
@@ -693,11 +798,15 @@ fn context(lua: &Lua,
     b.raw_set("scaffolding", scaffolding)?;
     add_processes(lua, &b, state)?;
     add_files(lua, &b, state)?;
+    add_file_reads(lua, &b, state)?;
+    add_file_changes(lua, &b, state)?;
+    add_file_helpers(lua, &b, state)?;
+    add_exports(lua, &b, state)?;
     add_defaults(lua, &b, state)?;
     Ok(b)
 }
 
-/// `b:run`, `b:capture`, `b:env` and `b:env_append`.
+/// `b:run`, `b:capture`, `b:getenv`, `b:env` and `b:env_append`.
 fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
     let s = Rc::clone(state);
     b.raw_set("run",
@@ -729,6 +838,14 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      let value = text_of(&value, "b:env: the value")?;
                      s.env.borrow_mut().set(&name, value);
                      Ok(())
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("getenv",
+              lua.create_function(move |_, (this, name): (Value, Value)| {
+                     s.check_this(&this, "b:getenv")?;
+                     let name = env_name(&name, "b:getenv")?;
+                     Ok(s.env.borrow().get(&name).map(str::to_string))
                  })?)?;
 
     let s = Rc::clone(state);
@@ -834,6 +951,214 @@ fn add_files(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
     Ok(())
 }
 
+/// `b:read`, `b:exists` and `b:find`. Reads stay inside the prefix, the
+/// source directory, the cache, the plan's directory and the declared
+/// dependencies.
+fn add_file_reads(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
+    let s = Rc::clone(state);
+    b.raw_set("read",
+              lua.create_function(move |_, (this, path): (Value, Value)| {
+                     s.check_this(&this, "b:read")?;
+                     let path = s.readable(&text_of(&path, "b:read: the path")?, "b:read")
+                                 .map_err(mlua::Error::runtime)?;
+                     fs::read_to_string(&path).map_err(|e| {
+                                                  mlua::Error::runtime(format!("b:read: cannot \
+                                                                                read {}: {e}",
+                                                                               path.display()))
+                                              })
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("exists",
+              lua.create_function(move |_, (this, path): (Value, Value)| {
+                     s.check_this(&this, "b:exists")?;
+                     let path = s.readable(&text_of(&path, "b:exists: the path")?, "b:exists")
+                                 .map_err(mlua::Error::runtime)?;
+                     Ok(fs::symlink_metadata(path).is_ok())
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("find",
+              lua.create_function(move |lua, (this, dir, pattern): (Value, Value, Value)| {
+                     s.check_this(&this, "b:find")?;
+                     let dir = s.readable(&text_of(&dir, "b:find: the directory")?, "b:find")
+                                .map_err(mlua::Error::runtime)?;
+                     let pattern = text_of(&pattern, "b:find: the pattern")?;
+                     let mut found = Vec::new();
+                     find(&dir, &pattern, &mut found).map_err(mlua::Error::runtime)?;
+                     found.sort();
+                     lua.create_sequence_from(found)
+                 })?)?;
+
+    Ok(())
+}
+
+/// `b:copy`, `b:move`, `b:remove`, `b:symlink` and `b:chmod`: what a plan
+/// does to files without a shell. Writes stay where `b:write` may write.
+fn add_file_changes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
+    let s = Rc::clone(state);
+    b.raw_set("copy",
+              lua.create_function(move |_, (this, from, to): (Value, Value, Value)| {
+                     s.check_this(&this, "b:copy")?;
+                     let from = s.readable(&text_of(&from, "b:copy: the source")?, "b:copy")
+                                 .map_err(mlua::Error::runtime)?;
+                     let to = s.creatable(&text_of(&to, "b:copy: the destination")?, "b:copy")
+                               .map_err(mlua::Error::runtime)?;
+                     copy_tree(&from, &to).map_err(mlua::Error::runtime)
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("move",
+              lua.create_function(move |_, (this, from, to): (Value, Value, Value)| {
+                     s.check_this(&this, "b:move")?;
+                     let from = s.removable(&text_of(&from, "b:move: the source")?, "b:move")
+                                 .map_err(mlua::Error::runtime)?;
+                     let to = s.creatable(&text_of(&to, "b:move: the destination")?, "b:move")
+                               .map_err(mlua::Error::runtime)?;
+                     if let Some(parent) = to.parent() {
+                         fs::create_dir_all(parent).map_err(|e| {
+                             mlua::Error::runtime(format!("b:move: cannot create {}: {e}",
+                                                          parent.display()))
+                         })?;
+                     }
+                     fs::rename(&from, &to).map_err(|e| {
+                                               mlua::Error::runtime(format!("b:move: cannot move \
+                                                                             {} to {}: {e}",
+                                                                            from.display(),
+                                                                            to.display()))
+                                           })
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("remove",
+              lua.create_function(move |_, (this, path): (Value, Value)| {
+                     s.check_this(&this, "b:remove")?;
+                     let path = s.removable(&text_of(&path, "b:remove: the path")?, "b:remove")
+                                 .map_err(mlua::Error::runtime)?;
+                     remove_path(&path).map_err(mlua::Error::runtime)
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("symlink",
+              lua.create_function(move |_, (this, target, link): (Value, Value, Value)| {
+                     s.check_this(&this, "b:symlink")?;
+                     let target = text_of(&target, "b:symlink: the target")?;
+                     let link = s.creatable(&text_of(&link, "b:symlink: the link")?, "b:symlink")
+                                 .map_err(mlua::Error::runtime)?;
+                     make_symlink(&target, &link).map_err(mlua::Error::runtime)
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("chmod",
+              lua.create_function(move |_, (this, path, mode): (Value, Value, Value)| {
+                     s.check_this(&this, "b:chmod")?;
+                     let path = s.creatable(&text_of(&path, "b:chmod: the path")?, "b:chmod")
+                                 .map_err(mlua::Error::runtime)?;
+                     let mode = octal_mode(&text_of(&mode, "b:chmod: the mode")?, "b:chmod")?;
+                     set_mode(&path, Some(mode)).map_err(mlua::Error::runtime)
+                 })?)?;
+
+    Ok(())
+}
+
+/// `b:fix_interpreter` and `b:download`.
+fn add_file_helpers(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
+    let s = Rc::clone(state);
+    b.raw_set("fix_interpreter",
+              lua.create_function(move |_,
+                                        (this, files, dep, interpreter): (Value,
+                                         Value,
+                                         Value,
+                                         Value)| {
+                                      s.check_this(&this, "b:fix_interpreter")?;
+                                      let files = match &files {
+                                          Value::Table(_) => {
+                                              texts(&files, "b:fix_interpreter: the files")?
+                                          }
+                                          _ => {
+                                              vec![text_of(&files, "b:fix_interpreter: the file")?]
+                                          }
+                                      };
+                                      let dep = text_of(&dep, "b:fix_interpreter: the dependency")?;
+                                      let interpreter = text_of(&interpreter,
+                                                                "b:fix_interpreter: the \
+                                                                 interpreter")?;
+                                      s.fix_interpreter(&files, &dep, &interpreter)
+                                       .map_err(mlua::Error::runtime)
+                                  })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("download",
+              lua.create_function(move |_,
+                                        (this, url, sha256, filename): (Value,
+                                         Value,
+                                         Value,
+                                         Value)| {
+                                      s.check_this(&this, "b:download")?;
+                                      let url = text_of(&url, "b:download: the URL")?;
+                                      let sha256 = text_of(&sha256, "b:download: the SHA-256")?;
+                                      let filename =
+                                          text_of(&filename, "b:download: the file name")?;
+                                      if filename.contains(['/', '\\']) || filename == ".." {
+                                          return Err(mlua::Error::runtime(format!("b:download: \
+                                                                                   `{filename}` \
+                                                                                   is a path, \
+                                                                                   not a file \
+                                                                                   name")));
+                                      }
+                                      let file = builtin::fetch(&s, &url, &sha256, &filename)
+                                                     .map_err(mlua::Error::runtime)?;
+                                      let computed =
+                                          builtin::sha256(&file).map_err(mlua::Error::runtime)?;
+                                      if computed != sha256 {
+                                          let _ = fs::remove_file(&file);
+                                          return Err(mlua::Error::runtime(format!("b:download: \
+                                                                                   {url} has \
+                                                                                   SHA-256 \
+                                                                                   {computed}, \
+                                                                                   not {sha256}")));
+                                      }
+                                      text(&file).map_err(mlua::Error::runtime)
+                                  })?)?;
+    Ok(())
+}
+
+/// `b:runtime_env`, `b:runtime_env_push`, `b:buildtime_env` and
+/// `b:buildtime_env_push`: what the plan passes on to the packages that
+/// depend on it. Each takes effect in this build too, from when it is
+/// called.
+fn add_exports(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
+    for (method, runtime, push) in [("runtime_env", true, false),
+                                    ("runtime_env_push", true, true),
+                                    ("buildtime_env", false, false),
+                                    ("buildtime_env_push", false, true)]
+    {
+        let s = Rc::clone(state);
+        let what = format!("b:{method}");
+        b.raw_set(method,
+                  lua.create_function(move |_, (this, name, value): (Value, Value, Value)| {
+                         s.check_this(&this, &what)?;
+                         let name = env_name(&name, &what)?;
+                         let value = text_of(&value, &format!("{what}: the value"))?;
+                         let push =
+                             push.then(|| {
+                                     build_env::aggregate_separator(&name).unwrap_or(s.separator())
+                                 });
+                         if let Some(separator) = push {
+                             s.env.borrow_mut().prepend(&name, &value, separator);
+                         } else {
+                             s.env.borrow_mut().set(&name, value.clone());
+                         }
+                         s.exports.borrow_mut().push(Export { runtime,
+                                                              push,
+                                                              name,
+                                                              value });
+                         Ok(())
+                     })?)?;
+    }
+    Ok(())
+}
+
 /// `b.default`, one function per phase that runs the next level of that
 /// phase's chain.
 fn add_defaults(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
@@ -934,6 +1259,115 @@ fn set_mode(path: &Path, mode: Option<u32>) -> Result<(), String> {
 #[cfg(not(unix))]
 fn set_mode(_: &Path, _: Option<u32>) -> Result<(), String> { Ok(()) }
 
+/// Every file and directory under `dir` whose name matches `pattern`, at any
+/// depth. Symbolic links are listed, not followed.
+fn find(dir: &Path, pattern: &str, found: &mut Vec<String>) -> Result<(), String> {
+    let entries =
+        fs::read_dir(dir).map_err(|e| format!("b:find: cannot read {}: {e}", dir.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("b:find: cannot read {}: {e}", dir.display()))?;
+        let path = entry.path();
+        if entry.file_name()
+                .to_str()
+                .is_some_and(|name| wildcard(pattern, name))
+        {
+            found.push(text(&path)?);
+        }
+        let kind = entry.file_type()
+                        .map_err(|e| format!("b:find: cannot read {}: {e}", path.display()))?;
+        if kind.is_dir() {
+            find(&path, pattern, found)?;
+        }
+    }
+    Ok(())
+}
+
+/// Copies a file, a symbolic link or a directory tree to exactly `to`,
+/// keeping modes and links.
+fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
+    let meta = fs::symlink_metadata(from).map_err(|e| {
+                                             format!("b:copy: cannot read {}: {e}", from.display())
+                                         })?;
+    if let Some(parent) = to.parent() {
+        fs::create_dir_all(parent).map_err(|e| {
+                                      format!("b:copy: cannot create {}: {e}", parent.display())
+                                  })?;
+    }
+    if meta.file_type().is_symlink() {
+        let target = fs::read_link(from).map_err(|e| {
+                                            format!("b:copy: cannot read the link {}: {e}",
+                                                    from.display())
+                                        })?;
+        return make_symlink(&target.to_string_lossy(), to);
+    }
+    if meta.is_dir() {
+        fs::create_dir_all(to).map_err(|e| format!("b:copy: cannot create {}: {e}", to.display()))?;
+        let entries =
+            fs::read_dir(from).map_err(|e| format!("b:copy: cannot read {}: {e}", from.display()))?;
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("b:copy: cannot read {}: {e}", from.display()))?;
+            copy_tree(&entry.path(), &to.join(entry.file_name()))?;
+        }
+        return fs::set_permissions(to, meta.permissions()).map_err(|e| {
+                                                              format!("b:copy: cannot set the \
+                                                                       mode of {}: {e}",
+                                                                      to.display())
+                                                          });
+    }
+    fs::copy(from, to).map(drop).map_err(|e| {
+                                    format!("b:copy: cannot copy {} to {}: {e}",
+                                            from.display(),
+                                            to.display())
+                                })
+}
+
+/// Removes a file, a symbolic link or a directory tree; one that is not
+/// there is already removed.
+fn remove_path(path: &Path) -> Result<(), String> {
+    let Ok(meta) = fs::symlink_metadata(path) else {
+        return Ok(());
+    };
+    let removed = if meta.is_dir() {
+        fs::remove_dir_all(path)
+    } else {
+        fs::remove_file(path)
+    };
+    removed.map_err(|e| format!("b:remove: cannot remove {}: {e}", path.display()))
+}
+
+#[cfg(unix)]
+fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
+    if let Some(parent) = link.parent() {
+        fs::create_dir_all(parent).map_err(|e| {
+                                      format!("b:symlink: cannot create {}: {e}", parent.display())
+                                  })?;
+    }
+    std::os::unix::fs::symlink(target, link).map_err(|e| {
+                                                format!("b:symlink: cannot link {} to {target}: \
+                                                         {e}",
+                                                        link.display())
+                                            })
+}
+
+/// Plans build for Linux only; Windows has no symbolic links a plan makes.
+#[cfg(not(unix))]
+fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
+    Err(format!("b:symlink: cannot link {} to {target} on Windows",
+                link.display()))
+}
+
+/// Octal permissions like `"755"`.
+fn octal_mode(mode: &str, what: &str) -> mlua::Result<u32> {
+    match u32::from_str_radix(mode, 8) {
+        Ok(bits) if (3..=4).contains(&mode.len()) && bits <= 0o7777 => Ok(bits),
+        _ => {
+            Err(mlua::Error::runtime(format!("{what}: the mode is \
+                                              `{mode}`, not octal \
+                                              permissions like \"755\"")))
+        }
+    }
+}
+
 /// Reads `opts.mode`: octal digits in a string, like `"755"`.
 fn install_mode(opts: &Value) -> mlua::Result<Option<u32>> {
     let opts = options(opts, "b:install", &["mode"])?;
@@ -941,14 +1375,7 @@ fn install_mode(opts: &Value) -> mlua::Result<Option<u32>> {
         return Ok(None);
     };
     let mode = text_of(mode, "b:install: `mode`")?;
-    match u32::from_str_radix(&mode, 8) {
-        Ok(bits) if (3..=4).contains(&mode.len()) && bits <= 0o7777 => Ok(Some(bits)),
-        _ => {
-            Err(mlua::Error::runtime(format!("b:install: `mode` is \
-                                              `{mode}`, not octal \
-                                              permissions like \"755\"")))
-        }
-    }
+    octal_mode(&mode, "b:install").map(Some)
 }
 
 /// Reads `b:run` and `b:capture` options: `cwd`, and `env`, a table of

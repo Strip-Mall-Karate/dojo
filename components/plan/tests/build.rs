@@ -678,3 +678,190 @@ fn hooks_with_windows_line_endings_are_refused() {
               "#!/bin/sh\r\ntrue\r\n").unwrap();
     assert_refused(sandbox.build(&plan("crlf", "", "")), "CR+LF line endings");
 }
+
+#[test]
+fn file_operations_work_inside_the_build() {
+    let sandbox = Sandbox::new("file-ops");
+    let source = plan("files",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:write (b:join b.src "tree" "a.txt") "alpha")
+                                   (b:write (b:join b.src "tree" "deep" "b.txt") "beta")
+                                   (b:write (b:join b.src "config.in") "PREFIX=@prefix@\n")
+                                   (b:copy "tree" "share/tree")
+                                   (b:copy "tree/a.txt" "share/a.txt")
+                                   (b:move "share/a.txt" "share/moved.txt")
+                                   (b:symlink "moved.txt" "share/link.txt")
+                                   (b:chmod "share/moved.txt" "640")
+                                   (let [text (b:read "config.in")
+                                         (fixed _) (text:gsub "@prefix@" "/doj/pkgs/x")]
+                                     (b:write "etc/config" fixed))
+                                   (b:write "found"
+                                            (table.concat (b:find (b:join b.prefix "share")
+                                                                  "*.txt")
+                                                          "\n"))
+                                   (b:write "exists"
+                                            (.. (tostring (b:exists "tree/a.txt")) " "
+                                                (tostring (b:exists "tree/nowhere"))))
+                                   (b:remove "share/tree/deep")
+                                   (b:remove "share/nothing-here"))"#);
+    let built = sandbox.build(&source).expect("builds");
+    let prefix = &built.prefix;
+    assert_eq!(read(&prefix.join("share/tree/a.txt")), "alpha");
+    assert!(!prefix.join("share/tree/deep").exists(),
+            "the subtree was removed");
+    assert!(!prefix.join("share/a.txt").exists(),
+            "the file was moved away");
+    assert_eq!(read(&prefix.join("share/moved.txt")), "alpha");
+    assert_eq!(fs::read_link(prefix.join("share/link.txt")).unwrap(),
+               Path::new("moved.txt"));
+    assert_eq!(fs::metadata(prefix.join("share/moved.txt")).unwrap()
+                                                           .permissions()
+                                                           .mode()
+               & 0o777,
+               0o640);
+    assert_eq!(read(&prefix.join("etc/config")), "PREFIX=/doj/pkgs/x\n");
+    let share = prefix.join("share");
+    let expected: Vec<String> =
+        ["link.txt", "moved.txt", "tree/a.txt", "tree/deep/b.txt"].iter()
+                                                                  .map(|p| {
+                                                                      share.join(p)
+                                                                           .to_str()
+                                                                           .unwrap()
+                                                                           .to_string()
+                                                                  })
+                                                                  .collect();
+    assert_eq!(read(&prefix.join("found")), expected.join("\n"));
+    assert_eq!(read(&prefix.join("exists")), "true false");
+}
+
+#[test]
+fn file_operations_stay_inside_the_build() {
+    let sandbox = Sandbox::new("file-op-bounds");
+    let outside = sandbox.dir.join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("secret"), "kept").unwrap();
+    let outside = outside.to_str().unwrap();
+    let cases = [(format!(r#"(b:read "{outside}/secret")"#), "b:read: "),
+                 (format!(r#"(b:exists "{outside}/secret")"#), "b:exists: "),
+                 (format!(r#"(b:find "{outside}" "*")"#), "b:find: "),
+                 (format!(r#"(b:copy "{outside}/secret" "secret")"#), "b:copy: "),
+                 (format!(r#"(b:remove "{outside}/secret")"#), "b:remove: "),
+                 (format!(r#"(b:move "{outside}/secret" "secret")"#), "b:move: "),
+                 (r#"(b:copy "/etc/hosts" "hosts")"#.to_string(),
+                  "is outside the prefix, the source"),
+                 (r#"(b:write "x" "") (b:copy "x" "/etc/dojo-test")"#.to_string(),
+                  "is outside the prefix ("),
+                 (r#"(b:symlink "/etc" "../escape")"#.to_string(), "may not contain `..`"),
+                 (r#"(b:read "../plan.fnl")"#.to_string(), "may not contain `..`"),
+                 (r#"(b:write "x" "") (b:chmod "x" "9")"#.to_string(), "not octal permissions")];
+    for (call, expected) in cases {
+        let source = plan("bounds", "", &format!(" :build (fn [b] {call})"));
+        assert_refused(sandbox.build(&source), expected);
+    }
+    assert_eq!(read(&sandbox.dir.join("outside/secret")), "kept");
+}
+
+#[test]
+fn fix_interpreter_points_matching_shebangs_at_the_dependency() {
+    let mut sandbox = Sandbox::new("fix-interpreter");
+    let coreutils = sandbox.package("test/coreutils");
+    fs::create_dir_all(coreutils.join("bin")).unwrap();
+    fs::write(coreutils.join("bin/env"), "").unwrap();
+    let source = plan("scripts",
+                      r#":deps ["test/coreutils"]"#,
+                      r##" :build (fn [b]
+                                   (b:write "bin/tool" "#!/usr/bin/env python -u\nprint(1)\n")
+                                   (b:write "bin/other" "#!/bin/sh\necho\n")
+                                   (b:write "bin/plain" "no shebang\n")
+                                   (b:fix_interpreter (b:glob (b:join b.prefix "bin") "*")
+                                                      "coreutils" "bin/env"))"##);
+    let built = sandbox.build(&source).expect("builds");
+    let env = coreutils.join("bin/env");
+    assert_eq!(read(&built.prefix.join("bin/tool")),
+               format!("#!{} python -u\nprint(1)\n", env.display()));
+    assert_eq!(read(&built.prefix.join("bin/other")), "#!/bin/sh\necho\n");
+    assert_eq!(read(&built.prefix.join("bin/plain")), "no shebang\n");
+
+    let missing = plan("scripts",
+                       r#":deps ["test/coreutils"]"#,
+                       r#" :build (fn [b] (b:fix_interpreter [] "coreutils" "bin/python"))"#);
+    assert_refused(sandbox.build(&missing), "bin/python is not a file");
+}
+
+#[test]
+fn download_checks_its_checksum() {
+    let sandbox = Sandbox::new("download");
+    let file = sandbox.dir.join("extra.txt");
+    fs::write(&file, "extra source").unwrap();
+    let url = format!("file://{}", file.display());
+    let sha = hex(&Sha256::digest(b"extra source"));
+    let good = plan("fetch",
+                    "",
+                    &format!(r#" :build (fn [b]
+                                   (b:copy (b:download "{url}" "{sha}" "extra.txt") "extra"))"#));
+    let built = sandbox.build(&good).expect("builds");
+    assert_eq!(read(&built.prefix.join("extra")), "extra source");
+
+    let wrong = "0".repeat(64);
+    let bad = plan("fetch",
+                   "",
+                   &format!(r#" :build (fn [b] (b:download "{url}" "{wrong}" "wrong.txt"))"#));
+    assert_refused(sandbox.build(&bad), "has SHA-256");
+    let path = plan("fetch",
+                    "",
+                    &format!(r#" :build (fn [b] (b:download "{url}" "{sha}" "../x"))"#));
+    assert_refused(sandbox.build(&path), "is a path, not a file name");
+}
+
+#[test]
+fn a_plan_passes_its_own_environment_on() {
+    let mut sandbox = Sandbox::new("exports");
+    let dep = sandbox.package("test/python");
+    fs::write(dep.join("RUNTIME_ENVIRONMENT"),
+              "PYTHONPATH=/dep/lib\nCLASSPATH=/dep/a.jar\n").unwrap();
+    fs::write(dep.join("IDENT"), "test/python/1.0/20261025000000\n").unwrap();
+    let source = plan("exports",
+                      r#":deps ["test/python"]"#,
+                      r#" :build (fn [b]
+                                   (b:runtime_env_push "PYTHONPATH" (b:join b.prefix "lib"))
+                                   (b:runtime_env_push "CLASSPATH" (b:join b.prefix "b.jar"))
+                                   (b:runtime_env "TOOL_HOME" b.prefix)
+                                   (b:buildtime_env "TOOL_FLAGS" "-O2")
+                                   (b:write "seen" (b:capture ["sh" "-c" "echo $PYTHONPATH $TOOL_FLAGS"])))"#);
+    let built = sandbox.build(&source).expect("builds");
+    let prefix = built.prefix.to_str().unwrap();
+    let runtime = read(&built.prefix.join("RUNTIME_ENVIRONMENT"));
+    assert!(runtime.contains(&format!("PYTHONPATH={prefix}/lib:/dep/lib\n")),
+            "{runtime}");
+    assert!(runtime.contains(&format!("CLASSPATH={prefix}/b.jar;/dep/a.jar\n")),
+            "{runtime}");
+    assert!(runtime.contains(&format!("TOOL_HOME={prefix}\n")),
+            "{runtime}");
+    assert!(!runtime.contains("TOOL_FLAGS"), "{runtime}");
+    let provenance = read(&built.prefix.join("RUNTIME_ENVIRONMENT_PROVENANCE"));
+    assert!(provenance.contains(&format!("PYTHONPATH={} test/python/1.0/20261025000000\n",
+                                         built.ident)),
+            "{provenance}");
+    assert!(provenance.contains(&format!("TOOL_HOME={}\n", built.ident)),
+            "{provenance}");
+    assert_eq!(read(&built.prefix.join("BUILDTIME_ENVIRONMENT")),
+               "TOOL_FLAGS=-O2\n");
+    assert_eq!(read(&built.prefix.join("seen")),
+               format!("{prefix}/lib:/dep/lib -O2"));
+}
+
+#[test]
+fn getenv_reads_the_build_environment() {
+    let sandbox = Sandbox::new("getenv");
+    let source = plan("getenv",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:env "FLAGS" "-O2")
+                                   (b:env "FLAGS" (.. (b:getenv "FLAGS") " -g"))
+                                   (b:write "flags" (b:getenv "FLAGS"))
+                                   (b:write "unset" (tostring (b:getenv "NOT_SET_ANYWHERE"))))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("flags")), "-O2 -g");
+    assert_eq!(read(&built.prefix.join("unset")), "nil");
+}

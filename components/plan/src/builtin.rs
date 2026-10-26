@@ -48,17 +48,24 @@ fn download(state: &State) -> Result<(), String> {
     let Some(source) = &state.settings.source else {
         return Ok(());
     };
-    let file = state.cache.join(&source.filename);
+    fetch(state, &source.url, &source.sha256, &source.filename).map(drop)
+}
+
+/// Downloads `url` into the cache as `filename`, unless a file there already
+/// has `sha256`, and returns its path. `verify` checks the plan's source;
+/// `b:download` checks its own.
+pub fn fetch(state: &State, url: &str, sha256: &str, filename: &str) -> Result<PathBuf, String> {
+    let file = state.cache.join(filename);
     if file.is_file() {
         state.log(&format!("Found {}, checking it", file.display()));
-        if sha256(&file)? == source.sha256 {
+        if self::sha256(&file)? == sha256 {
             state.log("Using the cached file");
-            return Ok(());
+            return Ok(file);
         }
         fs::remove_file(&file).map_err(|e| format!("cannot remove {}: {e}", file.display()))?;
     }
-    state.log(&format!("Downloading {} to {}", source.url, file.display()));
-    let partial = state.cache.join(format!("{}.part", source.filename));
+    state.log(&format!("Downloading {url} to {}", file.display()));
+    let partial = state.cache.join(format!("{filename}.part"));
     state.run(&["curl".into(),
                 "--fail".into(),
                 "--location".into(),
@@ -66,7 +73,7 @@ fn download(state: &State) -> Result<(), String> {
                 "--show-error".into(),
                 "--output".into(),
                 partial.to_string_lossy().into_owned(),
-                source.url.clone()],
+                url.to_string()],
               None,
               &[],
               false)?;
@@ -74,7 +81,8 @@ fn download(state: &State) -> Result<(), String> {
                                    format!("cannot move {} to {}: {e}",
                                            partial.display(),
                                            file.display())
-                               })
+                               })?;
+    Ok(file)
 }
 
 /// Checks the downloaded file against `source.sha256`.
