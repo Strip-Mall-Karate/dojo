@@ -99,6 +99,9 @@ pub struct Options {
     pub context:  PathBuf,
     /// Whether to run the `check` phase.
     pub check:    bool,
+    /// Whether a Linux package that names files outside the root (a dynamic
+    /// linker, a RUNPATH entry, a script's interpreter) fails the build.
+    pub refuse_host_paths: bool,
     /// Parallel jobs, `b.jobs`.
     pub jobs:     usize,
     /// The environment the build starts from.
@@ -136,6 +139,7 @@ impl Options {
                   plan_dir: plan_dir.to_path_buf(),
                   context: context.to_path_buf(),
                   check: false,
+                  refuse_host_paths: false,
                   jobs: thread::available_parallelism().map_or(1, usize::from),
                   env: env::vars().collect() }
     }
@@ -646,6 +650,9 @@ impl Plan {
         }
         self.run_phase(&state, &b, "install")?;
         self.run_phase(&state, &b, "strip")?;
+        if options.refuse_host_paths && state.os == "linux" {
+            crate::host_paths::refuse(&prefix, &options.root).map_err(Error::Build)?;
+        }
         state.log(&format!("Installed {} in {}", layout.ident, prefix.display()));
         for export in state.exports.borrow().iter() {
             let to = if export.runtime {

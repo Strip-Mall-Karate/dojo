@@ -28,6 +28,7 @@ mod builtin;
 mod deps;
 mod env;
 mod fennel;
+mod host_paths;
 mod package;
 mod sandbox;
 mod schema;
