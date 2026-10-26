@@ -289,6 +289,22 @@ fn packaging_uses_the_builders_tools_not_a_dependencys() {
 }
 
 #[test]
+fn b_write_replaces_a_read_only_file_in_the_source() {
+    // Archives ship read-only files (libtool's build-aux/ltmain.sh); the bash
+    // plans rewrote them with sed -i, which replaces the file.
+    let sandbox = Sandbox::new("write-read-only");
+    let source = plan("readonly",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:write (b:join b.src "locked") "before")
+                                   (b:chmod (b:join b.src "locked") "444")
+                                   (b:write (b:join b.src "locked") "after")
+                                   (b:write "seen" (b:read (b:join b.src "locked"))))"#);
+    let built = sandbox.build(&source).expect("writes over a read-only file");
+    assert_eq!(read(&built.prefix.join("seen")), "after");
+}
+
+#[test]
 fn stripping_uses_the_builders_strip_not_the_packages() {
     // The package's own bin is on the build's PATH, and binutils installs a
     // strip there that cannot rewrite itself while it runs; the strip phase
