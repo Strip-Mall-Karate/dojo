@@ -6,9 +6,13 @@
 //!
 //! Loading is the first of a plan's two stages. It compiles `plan.fnl`, runs
 //! it in a sandbox that cannot touch the machine, and checks the table it
-//! returns. Reading a plan's metadata needs nothing more; the build stage
-//! calls the phase functions the loaded table holds.
+//! returns. Reading a plan's metadata needs nothing more. The build stage,
+//! [`Plan::build`], calls the phase functions the loaded table holds.
 
+mod build;
+mod builtin;
+mod deps;
+mod env;
 mod fennel;
 mod sandbox;
 mod schema;
@@ -23,9 +27,15 @@ use mlua::{Lua,
            Table,
            Value};
 
-pub use crate::schema::{Metadata,
-                        PHASES,
-                        TARGETS};
+pub use crate::{build::{Built,
+                        Options,
+                        host_target,
+                        target_os},
+                deps::{DojPkgPath,
+                       Resolve},
+                schema::{Metadata,
+                         PHASES,
+                         TARGETS}};
 
 /// The file a plan directory holds.
 pub const PLAN_FILE: &str = "plan.fnl";
@@ -51,6 +61,8 @@ pub enum Error {
     Run(String),
     /// The plan's table does not fit the schema.
     Invalid(String),
+    /// A build step or phase failed.
+    Build(String),
 }
 
 impl fmt::Display for Error {
@@ -66,7 +78,9 @@ impl fmt::Display for Error {
             Error::Missing { dir, old: None } => {
                 write!(f, "{} has no {PLAN_FILE}", dir.display())
             }
-            Error::Compile(message) | Error::Run(message) => f.write_str(message),
+            Error::Compile(message) | Error::Run(message) | Error::Build(message) => {
+                f.write_str(message)
+            }
             Error::Invalid(message) => write!(f, "{PLAN_FILE}: {message}"),
         }
     }
@@ -78,8 +92,33 @@ impl std::error::Error for Error {}
 /// phase functions for the build stage.
 pub struct Plan {
     metadata: Metadata,
-    _table:   Table,
-    _lua:     Lua,
+    table:    Table,
+    lua:      Lua,
+}
+
+/// Where a plan and the source it builds live.
+#[derive(Debug)]
+pub struct Located {
+    /// The directory holding `plan.fnl`.
+    pub plan_dir: PathBuf,
+    /// The source directory of a plan without `source`.
+    pub context:  PathBuf,
+}
+
+/// Finds the plan for `dir`, which holds `plan.fnl` itself or in a `dojo`
+/// subdirectory. In the second case `dir` is the plan's source, as it was
+/// for the shell builder.
+#[must_use]
+pub fn locate(dir: impl AsRef<Path>) -> Located {
+    let dir = dir.as_ref();
+    let nested = dir.join("dojo");
+    if !dir.join(PLAN_FILE).is_file() && nested.join(PLAN_FILE).is_file() {
+        Located { plan_dir: nested,
+                  context:  dir.to_path_buf(), }
+    } else {
+        Located { plan_dir: dir.to_path_buf(),
+                  context:  dir.to_path_buf(), }
+    }
 }
 
 impl Plan {
@@ -133,8 +172,8 @@ impl Plan {
         };
         let metadata = Metadata::parse(&table)?;
         Ok(Plan { metadata,
-                  _table: table,
-                  _lua: lua })
+                  table,
+                  lua })
     }
 
     /// The plan's checked metadata.
@@ -144,7 +183,7 @@ impl Plan {
 /// The message of a Lua error without mlua's wrapping or the Lua stack
 /// traceback, which shows the sandbox's internals rather than the plan.
 /// Memory errors carry no message from Lua, so they get one here.
-fn message(error: &mlua::Error, stage: Stage) -> String {
+pub(crate) fn message(error: &mlua::Error, stage: Stage) -> String {
     match error {
         mlua::Error::RuntimeError(message) | mlua::Error::SyntaxError { message, .. } => {
             let message = message.split("\nstack traceback:")
@@ -162,6 +201,10 @@ fn message(error: &mlua::Error, stage: Stage) -> String {
                     format!("the plan ran out of memory (the limit is {} MiB)",
                             sandbox::PLAN_MEMORY >> 20)
                 }
+                Stage::Build => {
+                    format!("the plan ran out of memory during the build (the limit is {} MiB)",
+                            sandbox::PLAN_MEMORY >> 20)
+                }
             }
         }
         mlua::Error::CallbackError { cause, .. } => message(cause, stage),
@@ -171,7 +214,8 @@ fn message(error: &mlua::Error, stage: Stage) -> String {
 
 /// Which part of loading an error came from.
 #[derive(Clone, Copy)]
-enum Stage {
+pub(crate) enum Stage {
     Compile,
     Run,
+    Build,
 }
