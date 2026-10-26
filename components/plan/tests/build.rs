@@ -813,3 +813,40 @@ fn download_checks_its_checksum() {
                     &format!(r#" :build (fn [b] (b:download "{url}" "{sha}" "../x"))"#));
     assert_refused(sandbox.build(&path), "is a path, not a file name");
 }
+
+#[test]
+fn a_plan_passes_its_own_environment_on() {
+    let mut sandbox = Sandbox::new("exports");
+    let dep = sandbox.package("test/python");
+    fs::write(dep.join("RUNTIME_ENVIRONMENT"),
+              "PYTHONPATH=/dep/lib\nCLASSPATH=/dep/a.jar\n").unwrap();
+    fs::write(dep.join("IDENT"), "test/python/1.0/20261025000000\n").unwrap();
+    let source = plan("exports",
+                      r#":deps ["test/python"]"#,
+                      r#" :build (fn [b]
+                                   (b:runtime_env_push "PYTHONPATH" (b:join b.prefix "lib"))
+                                   (b:runtime_env_push "CLASSPATH" (b:join b.prefix "b.jar"))
+                                   (b:runtime_env "TOOL_HOME" b.prefix)
+                                   (b:buildtime_env "TOOL_FLAGS" "-O2")
+                                   (b:write "seen" (b:capture ["sh" "-c" "echo $PYTHONPATH $TOOL_FLAGS"])))"#);
+    let built = sandbox.build(&source).expect("builds");
+    let prefix = built.prefix.to_str().unwrap();
+    let runtime = read(&built.prefix.join("RUNTIME_ENVIRONMENT"));
+    assert!(runtime.contains(&format!("PYTHONPATH={prefix}/lib:/dep/lib\n")),
+            "{runtime}");
+    assert!(runtime.contains(&format!("CLASSPATH={prefix}/b.jar;/dep/a.jar\n")),
+            "{runtime}");
+    assert!(runtime.contains(&format!("TOOL_HOME={prefix}\n")),
+            "{runtime}");
+    assert!(!runtime.contains("TOOL_FLAGS"), "{runtime}");
+    let provenance = read(&built.prefix.join("RUNTIME_ENVIRONMENT_PROVENANCE"));
+    assert!(provenance.contains(&format!("PYTHONPATH={} test/python/1.0/20261025000000\n",
+                                         built.ident)),
+            "{provenance}");
+    assert!(provenance.contains(&format!("TOOL_HOME={}\n", built.ident)),
+            "{provenance}");
+    assert_eq!(read(&built.prefix.join("BUILDTIME_ENVIRONMENT")),
+               "TOOL_FLAGS=-O2\n");
+    assert_eq!(read(&built.prefix.join("seen")),
+               format!("{prefix}/lib:/dep/lib -O2"));
+}

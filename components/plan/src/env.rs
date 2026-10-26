@@ -61,6 +61,12 @@ impl Env {
         self.set(name, joined);
     }
 
+    /// Puts `value` in front of `name`'s list, each entry once.
+    pub fn prepend(&mut self, name: &str, value: &str, separator: &str) {
+        let joined = push_to_path(value, self.get(name).unwrap_or(""), separator);
+        self.set(name, joined);
+    }
+
     pub fn vars(&self) -> &[(String, String)] { &self.vars }
 }
 
@@ -151,7 +157,7 @@ const AGGREGATES: &[(&str, &str)] = &[("PATH", ":"),
                                       ("RUBYLIB", ":"),
                                       ("RUBYPATH", ":")];
 
-fn aggregate_separator(name: &str) -> Option<&'static str> {
+pub fn aggregate_separator(name: &str) -> Option<&'static str> {
     AGGREGATES.iter()
               .find(|(n, _)| *n == name)
               .map(|(_, separator)| *separator)
@@ -219,6 +225,25 @@ impl Inherited {
         } else {
             self.vars.insert(name.to_string(), value.to_string());
             self.provenance.insert(name.to_string(), ident.to_string());
+        }
+    }
+
+    /// The package's own `value` for `name`, replacing what its
+    /// dependencies passed on, or put in front of their list with `push`.
+    pub fn export(&mut self, name: &str, value: &str, push: Option<&str>, ident: &str) {
+        let current = self.vars.get(name).cloned().unwrap_or_default();
+        match push {
+            Some(separator) if !current.is_empty() => {
+                let from = self.provenance.get(name).cloned().unwrap_or_default();
+                self.vars
+                    .insert(name.to_string(), push_to_path(value, &current, separator));
+                self.provenance
+                    .insert(name.to_string(), push_to_path(ident, &from, " "));
+            }
+            _ => {
+                self.vars.insert(name.to_string(), value.to_string());
+                self.provenance.insert(name.to_string(), ident.to_string());
+            }
         }
     }
 

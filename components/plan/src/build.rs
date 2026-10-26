@@ -168,6 +168,20 @@ pub struct State {
     active:       RefCell<Vec<(&'static str, usize)>>,
     /// The address of the `b` table, to tell `b:run` from `b.run`.
     b:            Cell<usize>,
+    /// What the plan passes on to the packages that depend on it, in the
+    /// order it said so.
+    exports:      RefCell<Vec<Export>>,
+}
+
+/// A variable a plan passes on: at run time (`RUNTIME_ENVIRONMENT`) or only
+/// to the builds of packages that depend on it (`BUILDTIME_ENVIRONMENT`),
+/// replacing the value or put in front of a list.
+struct Export {
+    runtime: bool,
+    /// The list separator when the value goes in front of a list.
+    push:    Option<&'static str>,
+    name:    String,
+    value:   String,
 }
 
 impl State {
@@ -496,8 +510,8 @@ impl Plan {
         let Started { state,
                       b,
                       deps,
-                      runtime,
-                      buildtime, } = self.start(options, packages)?;
+                      mut runtime,
+                      mut buildtime, } = self.start(options, packages)?;
         let target = options.target.as_str();
         let version = match &self.metadata().to_json(Some(target))["version"] {
             Json::String(version) => version.clone(),
@@ -544,6 +558,14 @@ impl Plan {
         self.run_phase(&state, &b, "install")?;
         self.run_phase(&state, &b, "strip")?;
         state.log(&format!("Installed {} in {}", layout.ident, prefix.display()));
+        for export in state.exports.borrow().iter() {
+            let to = if export.runtime {
+                &mut runtime
+            } else {
+                &mut buildtime
+            };
+            to.export(&export.name, &export.value, export.push, &layout.ident);
+        }
         let json = self.metadata().to_json(Some(target));
         let artifact = Package { state: &state,
                                  options,
@@ -626,7 +648,8 @@ impl Plan {
                                     phase: Cell::new("version"),
                                     chains,
                                     active: RefCell::new(Vec::new()),
-                                    b: Cell::new(0) });
+                                    b: Cell::new(0),
+                                    exports: RefCell::new(Vec::new()) });
         let b =
             context(&self.lua, &state, options, origin, scaffolding).map_err(|e| lua_error(&e))?;
         state.b.set(b.to_pointer() as usize);
@@ -778,6 +801,7 @@ fn context(lua: &Lua,
     add_file_reads(lua, &b, state)?;
     add_file_changes(lua, &b, state)?;
     add_file_helpers(lua, &b, state)?;
+    add_exports(lua, &b, state)?;
     add_defaults(lua, &b, state)?;
     Ok(b)
 }
@@ -1088,6 +1112,42 @@ fn add_file_helpers(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()>
                                       }
                                       text(&file).map_err(mlua::Error::runtime)
                                   })?)?;
+    Ok(())
+}
+
+/// `b:runtime_env`, `b:runtime_env_push`, `b:buildtime_env` and
+/// `b:buildtime_env_push`: what the plan passes on to the packages that
+/// depend on it. Each takes effect in this build too, from when it is
+/// called.
+fn add_exports(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
+    for (method, runtime, push) in [("runtime_env", true, false),
+                                    ("runtime_env_push", true, true),
+                                    ("buildtime_env", false, false),
+                                    ("buildtime_env_push", false, true)]
+    {
+        let s = Rc::clone(state);
+        let what = format!("b:{method}");
+        b.raw_set(method,
+                  lua.create_function(move |_, (this, name, value): (Value, Value, Value)| {
+                         s.check_this(&this, &what)?;
+                         let name = env_name(&name, &what)?;
+                         let value = text_of(&value, &format!("{what}: the value"))?;
+                         let push =
+                             push.then(|| {
+                                     build_env::aggregate_separator(&name).unwrap_or(s.separator())
+                                 });
+                         if let Some(separator) = push {
+                             s.env.borrow_mut().prepend(&name, &value, separator);
+                         } else {
+                             s.env.borrow_mut().set(&name, value.clone());
+                         }
+                         s.exports.borrow_mut().push(Export { runtime,
+                                                              push,
+                                                              name,
+                                                              value });
+                         Ok(())
+                     })?)?;
+    }
     Ok(())
 }
 
