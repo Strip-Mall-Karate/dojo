@@ -343,29 +343,28 @@ impl State {
         Ok(Some(stdout))
     }
 
-    /// A path a plan may create: inside the prefix, or inside `b.src` when
-    /// absolute, and not through a symbolic link that leads elsewhere.
-    /// Relative paths are inside the prefix.
+    /// A path a plan may create: inside the prefix, inside `b.src`, or inside
+    /// `<b.cache>/<name>-build` (the separate build directory beside the
+    /// source) when absolute, and not through a symbolic link that leads
+    /// elsewhere. Relative paths are inside the prefix; `..` is resolved by
+    /// the path's text.
     fn creatable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
-        let path = Path::new(path);
-        if path.components().any(|c| c == Component::ParentDir) {
-            return Err(format!("{what}: {} may not contain `..`", path.display()));
-        }
         let prefix = self.prefix()?;
         let src = self.src.borrow().clone();
-        let full = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            prefix.join(path)
-        };
-        let Some(root) = [&prefix, &src].into_iter()
-                                        .find(|root| full.starts_with(root))
+        let build = self.cache.join(format!("{}-build", self.name));
+        let full = lexical(&prefix.join(path)).ok_or_else(|| {
+                                                  format!("{what}: {path} climbs above the root")
+                                              })?;
+        let Some(root) = [&prefix, &src, &build].into_iter()
+                                                .find(|root| full.starts_with(root))
         else {
-            return Err(format!("{what}: {} is outside the prefix ({}) and the \
-                                source directory ({})",
+            return Err(format!("{what}: {} is outside the prefix ({}), the \
+                                source directory ({}) and the build directory \
+                                ({})",
                                full.display(),
                                prefix.display(),
-                               src.display()));
+                               src.display(),
+                               build.display()));
         };
         if root.exists() {
             let mut existing = full.as_path();
@@ -393,11 +392,10 @@ impl State {
     /// cache, the plan's directory or a declared dependency. Relative paths
     /// are from the directory programs run in.
     fn readable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
-        let path = Path::new(path);
-        if path.components().any(|c| c == Component::ParentDir) {
-            return Err(format!("{what}: {} may not contain `..`", path.display()));
-        }
-        let full = self.default_cwd().join(path);
+        let full = lexical(&self.default_cwd().join(path)).ok_or_else(|| {
+                                                              format!("{what}: {path} climbs \
+                                                                       above the root")
+                                                          })?;
         let mut roots = vec![self.src.borrow().clone(),
                              self.cache.clone(),
                              self.context.clone()];
@@ -418,6 +416,12 @@ impl State {
     /// A path a plan may remove or move away: where it may create, a
     /// symbolic link itself included.
     fn removable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
+        let build = self.cache.join(format!("{}-build", self.name));
+        if Path::new(path).is_absolute()
+           && lexical(Path::new(path)).as_deref() == Some(build.as_path())
+        {
+            return Ok(build);
+        }
         let full = Path::new(path);
         let (Some(parent), Some(name)) = (full.parent(), full.file_name()) else {
             return Err(format!("{what}: {path} names no file"));
@@ -1350,6 +1354,24 @@ fn set_mode(path: &Path, mode: Option<u32>) -> Result<(), String> {
 /// Windows has no mode bits to set.
 #[cfg(not(unix))]
 fn set_mode(_: &Path, _: Option<u32>) -> Result<(), String> { Ok(()) }
+
+/// `path` with `.` and `..` resolved by its text, as the shell resolves
+/// `cd ..`; none when `..` climbs above the root.
+fn lexical(path: &Path) -> Option<PathBuf> {
+    let mut out = PathBuf::new();
+    for part in path.components() {
+        match part {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !out.pop() || out.as_os_str().is_empty() {
+                    return None;
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    Some(out)
+}
 
 /// Every file and directory under `dir` whose name matches `pattern`, at any
 /// depth. Symbolic links are listed, not followed.

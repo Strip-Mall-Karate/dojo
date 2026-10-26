@@ -273,7 +273,7 @@ fn writes_stay_inside_the_prefix_and_source() {
     symlink(&outside, sandbox.context().join("link")).unwrap();
 
     let cases = [(r#"(b:write "/etc/dojo-test" "")"#, "is outside the prefix"),
-                 (r#"(b:write "../escape" "")"#, "may not contain `..`"),
+                 (r#"(b:write "../escape" "")"#, "is outside the prefix"),
                  (r#"(b:mkdir (b:join b.src "link" "inner"))"#, "through a symbolic link"),
                  (r#"(b:write (b:join b.src "link") "")"#, "through a symbolic link")];
     for (call, expected) in cases {
@@ -752,8 +752,9 @@ fn file_operations_stay_inside_the_build() {
                   "is outside the prefix, the source"),
                  (r#"(b:write "x" "") (b:copy "x" "/etc/dojo-test")"#.to_string(),
                   "is outside the prefix ("),
-                 (r#"(b:symlink "/etc" "../escape")"#.to_string(), "may not contain `..`"),
-                 (r#"(b:read "../plan.fnl")"#.to_string(), "may not contain `..`"),
+                 (r#"(b:symlink "/etc" "../escape")"#.to_string(), "is outside the prefix"),
+                 (r#"(b:read "../../plan.fnl")"#.to_string(), "is outside the prefix, the source"),
+                 (r#"(b:read "/../../../etc/hosts")"#.to_string(), "climbs above the root"),
                  (r#"(b:write "x" "") (b:chmod "x" "9")"#.to_string(), "not octal permissions")];
     for (call, expected) in cases {
         let source = plan("bounds", "", &format!(" :build (fn [b] {call})"));
@@ -934,6 +935,31 @@ fn run_with_check_false_returns_the_code_and_goes_on() {
                        "",
                        r#" :build (fn [b] (b:capture ["true"] {:check false}))"#);
     assert_refused(sandbox.build(&capture), "b:capture");
+}
+
+#[test]
+fn a_build_may_use_a_build_directory_beside_its_source() {
+    let sandbox = Sandbox::new("sibling-build");
+    // The source project's plans configure in `../<name>-build`, apart from the source.
+    let source = plan("sib",
+                      "",
+                      r#" :build (fn [b]
+                                   (let [build (b:join b.cache (.. b.name "-build"))]
+                                     (b:remove build)
+                                     (b:mkdir (b:join build "sub"))
+                                     (b:write (b:join build "sub/../made") "here")
+                                     (b:run ["sh" "-c" "cat made > ../seen"] {:cwd build})
+                                     (b:write "copied" (b:read (b:join b.cache "sib-build/made")))))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("copied")), "here");
+
+    for call in [r#"(b:mkdir (b:join b.cache "other-build"))"#,
+                 r#"(b:mkdir (b:join b.cache "sib-build/../other-build"))"#,
+                 r#"(b:write (b:join b.cache "sib-build-not") "")"#]
+    {
+        let bad = plan("sib", "", &format!(" :build (fn [b] {call})"));
+        assert_refused(sandbox.build(&bad), "and the build directory");
+    }
 }
 
 #[test]
