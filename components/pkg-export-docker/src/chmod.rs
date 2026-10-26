@@ -29,10 +29,6 @@
 //! essentially doubles the size of any container, due to how Docker's
 //! layered filesystem works. The approach here takes more code, but
 //! results in a better experience for end-users.
-//!
-//! Also note that this is currently a no-op on Windows, since
-//! permissions work differently over there, and we don't have
-//! non-root Dojo supervisors there either.
 
 use std::{fs,
           os::unix::fs::PermissionsExt,

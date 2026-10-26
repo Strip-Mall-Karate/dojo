@@ -33,7 +33,7 @@
 //! Internally, a [`PackageTarget`] is represented using the type system resulting in type safety
 //! and static certainty while providing only one string representation for each type when
 //! serializing and deserializing. So while at the edges of the system we may be dealing with
-//! strings such as `x86_64-windows` in web requests, metadata files, etc., a small, safe
+//! strings such as `aarch64-darwin` in web requests, metadata files, etc., a small, safe
 //! representation will be stored in memory and passed around.
 //!
 //! # Determining Package Target
@@ -319,16 +319,6 @@ supported_package_targets! {
     /// [isa]: https://en.wikipedia.org/wiki/Instruction_set_architecture
     /// [x86_64]: https://en.wikipedia.org/wiki/X86-64
     ("x86_64-linux-kernel2", X86_64_Linux_Kernel2, X86_64_LINUX_KERNEL2, "x86_64", "linux");
-
-    /// Represents a [Windows kernel]-based system running on a [64-bit] version of the [x86][x]
-    /// [instruction set architecture][isa], commonly known as [x86_64].
-    ///
-    /// [Windows kernel]: https://en.wikipedia.org/wiki/Architecture_of_Windows_NT
-    /// [64-bit]: https://en.wikipedia.org/wiki/64-bit_computing
-    /// [x]: https://en.wikipedia.org/wiki/X86
-    /// [isa]: https://en.wikipedia.org/wiki/Instruction_set_architecture
-    /// [x86_64]: https://en.wikipedia.org/wiki/X86-64
-    ("x86_64-windows", X86_64_Windows, X86_64_WINDOWS, "x86_64", "windows");
 }
 
 lazy_static::lazy_static! {
@@ -607,11 +597,11 @@ mod test {
             target: PackageTarget,
         }
         let toml = r#"
-            target = "x86_64-windows"
+            target = "aarch64-darwin"
             "#;
         let data: Data = toml::from_str(toml).unwrap();
 
-        assert_eq!(data.target, PackageTarget(Type::X86_64_Windows));
+        assert_eq!(data.target, PackageTarget(Type::AArch64_Darwin));
     }
 
     #[test]
@@ -631,16 +621,16 @@ mod test {
 
     #[test]
     fn type_no_variant() {
-        assert_eq!(None, Type::X86_64_Windows.variant());
+        assert_eq!(None, Type::AArch64_Darwin.variant());
     }
 
     #[test]
     fn package_target_iter_no_variant() {
-        let target = PackageTarget(Type::X86_64_Windows);
+        let target = PackageTarget(Type::AArch64_Darwin);
         let mut iter = target.iter();
 
-        assert_eq!(Some("x86_64"), iter.next());
-        assert_eq!(Some("windows"), iter.next());
+        assert_eq!(Some("aarch64"), iter.next());
+        assert_eq!(Some("darwin"), iter.next());
         assert_eq!(None, iter.next());
     }
 

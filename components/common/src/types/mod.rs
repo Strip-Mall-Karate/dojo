@@ -22,17 +22,16 @@ pub use self::listen_ctl_addr::ListenCtlAddr;
 /// `SVC_GROUP` for a service. If not, it will be for the user the
 /// Supervisor itself is running as.
 ///
-/// On Windows, all but `username` will be `None`. On Linux,
 /// `username` and `groupname` may legitimately be `None`, but `uid`
 /// and `gid` should always be `Some`.
 #[derive(Debug, Default)]
 pub struct UserInfo {
-    /// Windows required, Linux optional
+    /// Optional
     pub username: Option<String>,
-    /// Linux preferred
+    /// Preferred
     pub uid: Option<u32>,
-    /// Linux optional
+    /// Optional
     pub groupname: Option<String>,
-    /// Linux preferred
+    /// Preferred
     pub gid: Option<u32>,
 }

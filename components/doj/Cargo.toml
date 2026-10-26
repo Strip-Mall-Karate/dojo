@@ -59,11 +59,6 @@ path = "../http-client"
 version = "*"
 features = ["v4"]
 
-[target.'cfg(windows)'.dependencies]
-widestring = "*"
-winapi = { version = "*", features = ["winuser", "windef"] }
-winreg = "*"
-
 [dev-dependencies]
 tempfile = "*"
 

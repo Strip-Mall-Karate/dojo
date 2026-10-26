@@ -129,18 +129,6 @@ impl Supervisor {
         }
     }
 
-    #[cfg(windows)]
-    fn user_info(&self, pkg: &Pkg) -> Result<UserInfo> {
-        // Windows only really has usernames, not groups and other
-        // IDs.
-        //
-        // Note that the Windows Supervisor does not yet have a
-        // corresponding "non-root" behavior, as the Linux version
-        // does; services run as the service user.
-        Ok(UserInfo { username: Some(pkg.svc_user.clone()),
-                      ..Default::default() })
-    }
-
     pub fn start(&mut self,
                  pkg: &Pkg,
                  group: &ServiceGroup,

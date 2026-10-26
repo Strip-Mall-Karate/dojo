@@ -17,9 +17,9 @@ use std::thread;
 #[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 use libc;
 use platform::{OsIpcSender, OsIpcOneShotServer};
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 use libc::{kill, SIGSTOP, SIGCONT};
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 use test::{fork, Wait};
 #[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 use test::{get_channel_name_arg, spawn_server};
@@ -401,7 +401,7 @@ fn receiver_set() {
 }
 
 #[test]
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 fn receiver_set_eintr() {
     let (server, name) = OsIpcOneShotServer::new().unwrap();
     let child_pid = unsafe {
@@ -671,7 +671,7 @@ fn cross_process_spawn() {
                (data, vec![], vec![]));
 }
 
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 #[test]
 fn cross_process_fork() {
     let (server, name) = OsIpcOneShotServer::new().unwrap();
@@ -722,7 +722,7 @@ fn cross_process_sender_transfer_spawn() {
                (data, vec![], vec![]));
 }
 
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 #[test]
 fn cross_process_sender_transfer_fork() {
     let (server, name) = OsIpcOneShotServer::new().unwrap();
@@ -925,7 +925,7 @@ mod sync_test {
 // the kernel instead of explicitly (ports in a message that's already
 // buffered are intended for only one process).
 #[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
-#[cfg_attr(any(target_os = "windows", target_os = "macos"), ignore)]
+#[cfg_attr(target_os = "macos", ignore)]
 #[test]
 fn cross_process_two_step_transfer_spawn() {
     let cookie: &[u8] = b"cookie";

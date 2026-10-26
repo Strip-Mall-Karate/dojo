@@ -98,7 +98,6 @@ use time::Timespec;
 
 static LOGKEY: &'static str = "SR";
 
-#[cfg(not(windows))]
 pub const GOSSIP_FILE_PERMISSIONS: u32 = 0o640;
 
 lazy_static! {
@@ -820,19 +819,11 @@ impl Service {
         Ok(())
     }
 
-    #[cfg(not(windows))]
     fn set_hook_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
         use dojo_common::templating::hooks::HOOK_PERMISSIONS;
         use dojo_core::util::posix_perm;
 
         posix_perm::set_permissions(path.as_ref(), HOOK_PERMISSIONS)
-    }
-
-    #[cfg(windows)]
-    fn set_hook_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
-        use dojo_core::util::win_perm;
-
-        win_perm::harden_path(path.as_ref())
     }
 
     fn execute_hooks(&mut self, launcher: &LauncherCli) {
@@ -1017,7 +1008,6 @@ impl Service {
         self.set_gossip_permissions(&file)
     }
 
-    #[cfg(not(windows))]
     fn set_gossip_permissions<T: AsRef<Path>>(&self, path: T) -> bool {
         use dojo_core::{os::users,
                         util::posix_perm};
@@ -1034,19 +1024,6 @@ impl Service {
         }
 
         if let Err(e) = posix_perm::set_permissions(path.as_ref(), GOSSIP_FILE_PERMISSIONS) {
-            outputln!(preamble self.service_group,
-                      "Failed to set permissions on cache file {}, {}",
-                      path.as_ref().display(), e);
-            return false;
-        }
-        true
-    }
-
-    #[cfg(windows)]
-    fn set_gossip_permissions<T: AsRef<Path>>(&self, path: T) -> bool {
-        use dojo_core::util::win_perm;
-
-        if let Err(e) = win_perm::harden_path(path.as_ref()) {
             outputln!(preamble self.service_group,
                       "Failed to set permissions on cache file {}, {}",
                       path.as_ref().display(), e);
@@ -1170,8 +1147,6 @@ mod tests {
 
         let ident = if cfg!(target_os = "linux") {
             PackageIdent::new("karate", "tree", Some("1.7.0"), Some("20180609045201"))
-        } else if cfg!(target_os = "windows") {
-            PackageIdent::new("karate", "7zip", Some("16.04"), Some("20170131110814"))
         } else {
             panic!("This is being run on a platform that's not currently supported");
         };

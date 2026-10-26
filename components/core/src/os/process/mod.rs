@@ -12,15 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(windows)]
-pub mod windows_child;
-
-#[allow(unused_variables)]
-#[cfg(windows)]
-#[path = "windows.rs"]
-mod imp;
-
-#[cfg(not(windows))]
 #[path = "linux.rs"]
 mod imp;
 

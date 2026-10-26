@@ -168,68 +168,10 @@ mod inner {
 mod inner {
     use crate::{command::studio::docker,
                 common::ui::UI,
-                error::{Error,
-                        Result},
-                exec,
-                hcore::{crypto::init,
-                        env as henv,
-                        fs::find_command,
-                        os::process,
-                        package::PackageIdent},
-                VERSION};
-    use std::{ffi::OsString,
-              path::PathBuf,
-              str::FromStr};
+                error::Result};
+    use std::ffi::OsString;
 
-    pub fn start(_ui: &mut UI, args: &[OsString]) -> Result<()> {
-        if is_windows_studio(&args) {
-            start_windows_studio(_ui, args)
-        } else {
-            docker::start_docker_studio(_ui, args)
-        }
-    }
-
-    pub fn start_windows_studio(ui: &mut UI, args: &[OsString]) -> Result<()> {
-        let command = match henv::var(super::STUDIO_CMD_ENVVAR) {
-            Ok(command) => PathBuf::from(command),
-            Err(_) => {
-                init();
-                let version: Vec<&str> = VERSION.split('/').collect();
-                let ident = PackageIdent::from_str(&format!("{}/{}",
-                                                            super::STUDIO_PACKAGE_IDENT,
-                                                            version[0]))?;
-                exec::command_from_min_pkg(ui, super::STUDIO_CMD, &ident)?
-            }
-        };
-
-        if let Some(cmd) = find_command(command.to_string_lossy().as_ref()) {
-            process::become_command(cmd, args)?;
-        } else {
-            return Err(Error::ExecCommandNotFound(command));
-        }
-        Ok(())
-    }
-
-    fn is_windows_studio(args: &[OsString]) -> bool {
-        if cfg!(not(target_os = "windows")) {
-            return false;
-        }
-
-        for arg in args.iter() {
-            let str_arg = arg.to_string_lossy();
-            if str_arg == "-D" {
-                return false;
-            }
-        }
-
-        // -w/--windows is deprecated and should be removed in a post 0.64.0 release
-        for arg in args.iter() {
-            let str_arg = arg.to_string_lossy().to_lowercase();
-            if str_arg == "--windows" || str_arg == "-w" {
-                return true;
-            }
-        }
-
-        true
+    pub fn start(ui: &mut UI, args: &[OsString]) -> Result<()> {
+        docker::start_docker_studio(ui, args)
     }
 }

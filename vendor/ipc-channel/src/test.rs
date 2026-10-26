@@ -19,7 +19,6 @@ use std::env;
 use std::iter;
 #[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 use std::process::{self, Command, Stdio};
-#[cfg(not(windows))]
 use std::ptr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
@@ -28,10 +27,10 @@ use std::thread;
 #[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 use ipc::IpcOneShotServer;
 
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 use std::io::Error;
 
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 // I'm not actually sure invoking this is indeed unsafe -- but better safe than sorry...
 pub unsafe fn fork<F: FnOnce()>(child_func: F) -> libc::pid_t {
     match libc::fork() {
@@ -44,12 +43,10 @@ pub unsafe fn fork<F: FnOnce()>(child_func: F) -> libc::pid_t {
     }
 }
 
-#[cfg(not(windows))]
 pub trait Wait {
     fn wait(self);
 }
 
-#[cfg(not(windows))]
 impl Wait for libc::pid_t {
     fn wait(self) {
         unsafe {
@@ -200,7 +197,7 @@ fn cross_process_embedded_senders_spawn() {
     assert_eq!(received_person, person);
 }
 
-#[cfg(not(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios")))]
+#[cfg(not(any(feature = "force-inprocess", target_os = "android", target_os = "ios")))]
 #[test]
 fn cross_process_embedded_senders_fork() {
     let person = ("Patrick Walton".to_owned(), 29);
@@ -362,8 +359,6 @@ fn shared_memory() {
 }
 
 #[test]
-// The Windows implementation can't handle this case due to system API limitations.
-#[cfg_attr(all(target_os = "windows", not(feature = "force-inprocess")), ignore)]
 fn shared_memory_object_equality() {
     let person = ("Patrick Walton".to_owned(), 29);
     let person_and_shared_memory = (person, IpcSharedMemory::from_byte(0xba, 1024 * 1024));

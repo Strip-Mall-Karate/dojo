@@ -1,10 +1,10 @@
 # Dojo Studio
 
-This is the code that creates a dojo studio for linux and windows.
+This is the code that creates a dojo studio for Linux.
 
 The key pieces here are:
 
-* The studio hosting script - `bin/dojo-studio`. The `.sh` sets up a linux studio and the `.ps1` sets up a windows studio.
+* The studio hosting script - `bin/doj-studio.sh`.
 * The studio environment "types" in `libexec`. These tweak the environment of a studio and target it for specific purposes. Most will only be interested in `doj-studio-type-default.sh`.
 * The dojo plans used to create the dojo studio package.
 
@@ -17,10 +17,6 @@ Different studios will run depending on OS platform, doj client version and envi
 If you are run in a Linux host or VM, the dojo client will install the `karate/doj-studio/<version>` if it is not already installed. `<version>` will match the exact version of the `doj` binary you are using. However do note that if you have a later version already installed, it will use that one instead. It will then invoke `bin/doj-studio.sh <doj studio command>` passing whatever studio command you have entered (`enter`, `build`. etc) to the bash script.
 
 The `-t` argument will determine which studio `type` is sourced. The default is `default`.
-
-### Experimental Windows Studio
-
-If you have the `$env:DOJ_WINDOWS_STUDIO` variable set and are running on a Windows host, the doj client will pull down the appropriately versioned `karate/doj-studio` package and invoke its `bin/doj-studio.ps1` script. Note that you must also be using a depot that hosts the windows dojo packages.
 
 ## Building a studio
 

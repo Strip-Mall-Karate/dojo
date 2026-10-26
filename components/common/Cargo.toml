@@ -14,8 +14,8 @@ glob = "*"
 # The handlebars crate has a few issues that require us to lock at 0.28.3
 # until further notice.
 #
-# - 0.30.0 bumps to a version of the `pest` crate that fails to build
-#   on Windows.
+# - 0.30.0 bumps to a version of the `pest` crate that failed to build
+#   on Windows, which Dojo no longer builds for.
 # - 0.29.0 makes a change to array processing that is incompatible
 #   with our templating syntax; we use "foo[0]", but it now requires
 #   "foo.[0]"
@@ -48,9 +48,6 @@ path = "../core"
 
 [dependencies.dojo_api_client]
 path = "../builder-api-client"
-
-[target.'cfg(windows)'.dependencies]
-winapi = { version = "*", features = ["consoleapi", "processenv"] }
 
 [features]
 default = []

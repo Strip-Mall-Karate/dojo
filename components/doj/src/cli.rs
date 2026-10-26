@@ -625,8 +625,6 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                     "Include callback functions in template")
                 (@arg WITH_ALL: --("with-all")
                     "Generate omnibus plan with all available plan options")
-                (@arg WINDOWS: --("windows")
-                    "Use a Windows Powershell plan template")
                 (@arg SCAFFOLDING: --scaffolding -s +takes_value
                     "Specify explicit Scaffolding for your app (ex: node, ruby)")
             )
@@ -846,7 +844,7 @@ fn arg_target() -> Arg<'static, 'static> {
                                 .takes_value(true)
                                 .validator(valid_target)
                                 .env(PACKAGE_TARGET_ENVVAR)
-                                .help("A package target (ex: x86_64-windows) (default: system \
+                                .help("A package target (ex: aarch64-darwin) (default: system \
                                        appropriate target")
 }
 
@@ -876,13 +874,6 @@ fn sub_pkg_build() -> App<'static, 'static> {
                  .arg(Arg::with_name("DOCKER").help("Uses a Dockerized Studio for the build")
                                               .short("D")
                                               .long("docker"));
-    }
-
-    if cfg!(windows) {
-        sub = sub.arg(Arg::with_name("WINDOWS").help("Use a local Windows Studio instead of a \
-                                                      Docker Studio")
-                                               .short("w")
-                                               .long("windows"));
     }
 
     sub
@@ -1114,7 +1105,7 @@ fn sub_svc_stop() -> App<'static, 'static> {
 }
 
 fn sub_svc_load() -> App<'static, 'static> {
-    let mut sub = clap_app!(@subcommand load =>
+    let sub = clap_app!(@subcommand load =>
         (about: "Load a service to be started and supervised by Dojo from a package \
             identifier. If an installed package doesn't satisfy the given package \
             identifier, a suitable package will be installed from Builder.")
@@ -1148,12 +1139,6 @@ fn sub_svc_load() -> App<'static, 'static> {
         (@arg HEALTH_CHECK_INTERVAL: --("health-check-interval") -i +takes_value {valid_health_check_interval}
             "The interval (seconds) on which to run health checks [default: 30]")
     );
-
-    if cfg!(windows) {
-        sub = sub.arg(Arg::with_name("PASSWORD").long("password")
-                                                .takes_value(true)
-                                                .help("Password of the service user"));
-    }
 
     sub
 }

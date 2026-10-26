@@ -41,8 +41,11 @@ longer story.
 
 ## 2026-10-26
 
-- **No Windows packages.** Plans build for Linux (`x86_64-linux`, `aarch64-linux`,
-  `x86_64-linux-kernel2`) and macOS (`x86_64-darwin`, `aarch64-darwin`) only. The PowerShell
-  builder and every `plan.ps1` are gone, and `doj-plan-build` does not compile for Windows.
+- **No Windows.** Dojo neither runs on Windows nor builds packages for it. Plans build for Linux
+  (`x86_64-linux`, `aarch64-linux`, `x86_64-linux-kernel2`) and macOS (`x86_64-darwin`,
+  `aarch64-darwin`), and core no longer knows `x86_64-windows`. The Windows code is gone: the
+  PowerShell builder and every `plan.ps1`, the Windows service and `win-users`, the Windows
+  studio and Docker containers, the Windows branches of core, the Supervisor, the Launcher and
+  `doj`, and ipc-channel's Windows platform.
 - **macOS is a package platform**, Apple silicon included. Homebrew and Nix are the models for how
   macOS packages are built and relocated.

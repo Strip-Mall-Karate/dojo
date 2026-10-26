@@ -15,12 +15,6 @@
 //! Runs a service lifecycle hook on a separate thread, and wraps the
 //! whole execution in a future.
 //!
-//! Ideally, we'd want to use something like
-//! [tokio_process](https://github.com/alexcrichton/tokio-process),
-//! but we're not able to use that based on how our Windows hooks get
-//! executed. If that were to be re-cast in terms of Rust's
-//! `std::process::Command`, we could consider it. In the meantime,
-//! this seems to do the trick.
 
 use super::{hook_timer,
             spawned_future::SpawnedFuture,

@@ -21,15 +21,12 @@ use dojo_common::{outputln,
                                        RenderPair},
                                package::Pkg,
                                TemplateRenderer}};
-#[cfg(windows)]
-use dojo_core::os::process::windows_child::ExitStatus;
 use serde::Serialize;
-#[cfg(not(windows))]
-use std::process::ExitStatus;
 use std::{self,
           io::prelude::*,
           path::{Path,
                  PathBuf},
+          process::ExitStatus,
           sync::Arc};
 
 static LOGKEY: &'static str = "HK";

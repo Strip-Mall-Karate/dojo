@@ -33,10 +33,3 @@ fn render_environment(env: HashMap<String, String>) {
         println!("export {}=\"{}\"", key, value);
     }
 }
-
-#[cfg(windows)]
-fn render_environment(env: HashMap<String, String>) {
-    for (key, value) in env.into_iter() {
-        println!("$env:{}=\"{}\"", key, value);
-    }
-}

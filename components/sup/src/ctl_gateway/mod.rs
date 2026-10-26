@@ -51,7 +51,6 @@ static LOGKEY: &'static str = "AG";
 
 /// The control gateway secret should only be readable by the
 /// Supervisor process
-#[cfg(not(windows))]
 pub const CTL_SECRET_PERMISSIONS: u32 = 0o600;
 
 /// Used by modules outside of the CtlGateway for seamlessly replying to transactional messages.
@@ -284,16 +283,8 @@ pub fn readgen_secret_key<T>(sup_root: T) -> Result<String>
     }
 }
 
-#[cfg(not(windows))]
 fn set_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
     use dojo_core::util::posix_perm;
 
     posix_perm::set_permissions(path.as_ref(), CTL_SECRET_PERMISSIONS)
-}
-
-#[cfg(windows)]
-fn set_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
-    use dojo_core::util::win_perm;
-
-    win_perm::harden_path(path.as_ref())
 }

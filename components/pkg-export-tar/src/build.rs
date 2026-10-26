@@ -31,8 +31,6 @@ use crate::{common::{self,
 use clap;
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
-#[cfg(windows)]
-use std::os::windows::fs::symlink_dir as symlink;
 use std::{fs as stdfs,
           path::Path};
 use tempfile::TempDir;

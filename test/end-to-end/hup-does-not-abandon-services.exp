@@ -18,8 +18,6 @@
 # the Launcher as PID 1, because otherwise, there's no way to verify
 # that the services are actually cleaned up properly.
 
-# TODO: make this work on Windows
-
 # TODO: Find a real test assertion library for TCL
 proc assert {cond {msg "assertion failed"}} {
     if {![uplevel 1 expr $cond]} {error $msg}

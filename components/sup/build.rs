@@ -32,16 +32,9 @@ fn generate_apidocs() {
 }
 
 fn raml2html_cmd(dst: PathBuf, src: PathBuf) -> io::Result<ExitStatus> {
-    let mut cmd = Command::new(if cfg!(windows) { "cmd" } else { "raml2html" });
-
-    let cmd = if cfg!(windows) {
-        // One would think we could directly call the .bat file
-        // see https://github.com/rust-lang/rust/issues/42791
-        // for why this does not work
-        cmd.arg("/c").arg("raml2html.bat")
-    } else {
-        &mut cmd
-    };
-
-    cmd.arg("-i").arg(src).arg("-o").arg(dst).status()
+    Command::new("raml2html").arg("-i")
+                             .arg(src)
+                             .arg("-o")
+                             .arg(dst)
+                             .status()
 }

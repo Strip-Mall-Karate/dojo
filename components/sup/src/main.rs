@@ -53,8 +53,6 @@ use dojo_common::{cli::{cache_key_path_from_matches,
                   ui::{NONINTERACTIVE_ENVVAR,
                        UI},
                   FeatureFlag};
-#[cfg(windows)]
-use dojo_core::crypto::dpapi::encrypt;
 use dojo_core::{crypto::{self,
                          SymKey},
                 url::{bldr_url_from_env,
@@ -433,15 +431,6 @@ fn get_config_from_input(m: &ArgMatches) -> Option<String> {
         Some(config_from.to_string())
     } else {
         None
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn get_password_from_input(m: &ArgMatches) -> Result<Option<String>> {
-    if let Some(password) = m.value_of("PASSWORD") {
-        Ok(Some(encrypt(password.to_string())?))
-    } else {
-        Ok(None)
     }
 }
 

@@ -35,10 +35,3 @@ pub fn create<T>(root: T) -> Result<()>
     util::posix_perm::set_permissions(root.to_str().unwrap(), 0o0750)?;
     Ok(())
 }
-
-#[cfg(windows)]
-pub fn create<T>(_root: T) -> Result<()>
-    where T: AsRef<Path>
-{
-    unimplemented!()
-}

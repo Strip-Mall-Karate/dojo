@@ -253,7 +253,6 @@ pub static HART_FORMAT_VERSION: &'static str = "HART-1";
 pub static BOX_FORMAT_VERSION: &'static str = "BOX-1";
 pub static ANONYMOUS_BOX_FORMAT_VERSION: &'static str = "ANONYMOUS-BOX-1";
 /// Create secret key files with these permissions
-#[cfg(not(windows))]
 static KEY_PERMISSIONS: u32 = 0o400;
 
 pub const PUBLIC_SIG_KEY_VERSION: &str = "SIG-PUB-1";
@@ -263,8 +262,6 @@ pub const SECRET_BOX_KEY_VERSION: &str = "BOX-SEC-1";
 pub const SECRET_SYM_KEY_VERSION: &str = "SYM-SEC-1";
 
 pub mod artifact;
-#[cfg(windows)]
-pub mod dpapi;
 pub mod hash;
 pub mod keys;
 

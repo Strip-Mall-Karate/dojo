@@ -52,9 +52,9 @@ impl Plan {
                 val = val.replace("'", "");
 
                 match parts[0] {
-                    "pkg_name" | "$pkg_name" => name = Some(val),
-                    "pkg_origin" | "$pkg_origin" => origin = Some(val),
-                    "pkg_version" | "$pkg_version" => version = Some(val),
+                    "pkg_name" => name = Some(val),
+                    "pkg_origin" => origin = Some(val),
+                    "pkg_version" => version = Some(val),
                     _ => (),
                 }
             }
@@ -189,25 +189,5 @@ mod test {
         assert_eq!(plan.origin, "neurosis".to_string());
         assert_eq!(plan.name, "testapp".to_string());
         assert_eq!(plan.version, Some("0.1.3".to_string()));
-    }
-
-    #[test]
-    fn parsing_windows_plan_works() {
-        let content = r#"
-        $pkg_name="testapp"
-        $pkg_origin="neurosis"
-        $pkg_version="1.04"
-        $pkg_maintainer="Strip Mall Karate Company"
-
-        function Invoke-Unpack {
-        }
-
-        function Invoke-Install {
-        }
-        "#;
-        let plan = Plan::from_bytes(content.as_bytes()).unwrap();
-        assert_eq!(plan.origin, "neurosis".to_string());
-        assert_eq!(plan.name, "testapp".to_string());
-        assert_eq!(plan.version, Some("1.04".to_string()));
     }
 }

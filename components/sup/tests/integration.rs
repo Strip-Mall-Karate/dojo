@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg(not(windows))]
-
 /// Integration tests for exercising the hook and config recompilation
 /// behavior of the Supervisor
 extern crate dojo_core as hcore;

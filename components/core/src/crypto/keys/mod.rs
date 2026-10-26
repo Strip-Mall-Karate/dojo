@@ -532,20 +532,12 @@ fn write_keypair_files(public_keyfile: Option<&Path>,
     Ok(())
 }
 
-#[cfg(not(windows))]
 fn set_permissions<T: AsRef<Path>>(path: T) -> Result<()> {
     use crate::util::posix_perm;
 
     use super::KEY_PERMISSIONS;
 
     posix_perm::set_permissions(path.as_ref(), KEY_PERMISSIONS)
-}
-
-#[cfg(windows)]
-fn set_permissions<T: AsRef<Path>>(path: T) -> Result<()> {
-    use crate::util::win_perm;
-
-    win_perm::harden_path(path.as_ref())
 }
 
 #[cfg(test)]
@@ -867,17 +859,7 @@ mod test {
         assert_eq!(revisions[0], key.name_with_rev());
     }
 
-    // Windows and Linux platforms handle symlinking differently; this
-    // abstracts that for the purposes of our tests here.
-    #[cfg(target_os = "windows")]
-    fn symlink_file<P, Q>(src: P, dest: Q) -> ::std::io::Result<()>
-        where P: AsRef<Path>,
-              Q: AsRef<Path>
-    {
-        ::std::os::windows::fs::symlink_file(src.as_ref(), dest.as_ref())
-    }
 
-    #[cfg(not(target_os = "windows"))]
     fn symlink_file<P, Q>(src: P, dest: Q) -> ::std::io::Result<()>
         where P: AsRef<Path>,
               Q: AsRef<Path>

@@ -18,6 +18,5 @@ members = [
   "components/sup",
   "components/sup-client",
   "components/sup-protocol",
-  "components/win-users",
 ]
 

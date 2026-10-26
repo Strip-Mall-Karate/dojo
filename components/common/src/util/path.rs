@@ -42,11 +42,6 @@ const INTERPRETER_IDENT: &str = "karate/busybox-static";
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 const INTERPRETER_COMMAND: &str = "busybox";
 
-#[cfg(target_os = "windows")]
-const INTERPRETER_IDENT: &str = "karate/powershell";
-#[cfg(target_os = "windows")]
-const INTERPRETER_COMMAND: &str = "pwsh";
-
 const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 
 /// Returns a list of path entries, one of which should contain the interpreter binary.

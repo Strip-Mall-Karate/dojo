@@ -4,11 +4,6 @@ version = "0.0.0"
 edition = "2018"
 authors = []
 workspace = "../../"
-build = "build.rs"
-
-[build-dependencies]
-base64 = "*"
-gcc = "0.3"
 
 [dependencies]
 base64 = "*"
@@ -32,18 +27,11 @@ toml = { version = "*", default-features = false }
 typemap = "*"
 url = "*"
 
-[target.'cfg(not(windows))'.dependencies]
+[target.'cfg(unix)'.dependencies]
 users = "*"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 caps = "*"
-
-[target.'cfg(windows)'.dependencies]
-ctrlc = "*"
-dojo_win_users = { path = "../win-users" }
-widestring = "*"
-winapi = { version = "*", features = ["dpapi", "ioapiset", "namedpipeapi", "userenv", "winbase", "wincrypt", "winerror"] }
-windows-acl = "*"
 
 [dev-dependencies]
 # Pending upgrade activities

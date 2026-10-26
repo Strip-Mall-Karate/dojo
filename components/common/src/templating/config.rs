@@ -547,13 +547,6 @@ fn set_permissions(path: &Path, user: &str, group: &str) -> hcore::error::Result
     posix_perm::set_permissions(&path, permissions)
 }
 
-#[cfg(windows)]
-fn set_permissions(path: &Path, _user: &str, _group: &str) -> hcore::error::Result<()> {
-    use crate::hcore::util::win_perm;
-
-    win_perm::harden_path(path)
-}
-
 /// Recursively walk the configuration directory and subdirectories to
 /// construct the list of template files
 ///
@@ -1121,21 +1114,6 @@ mod test {
             let str_key = key.to_string_lossy().into_owned();
             assert!(templates.contains_key(&str_key));
         }
-    }
-
-    #[test]
-    #[cfg(target_os = "linux")]
-    #[should_panic(expected = "Not a directory")]
-    #[cfg(target_os = "windows")]
-    #[should_panic(expected = "The directory name is invalid")]
-    /// Check we get an error if we pass in a file to `load_templates`
-    fn test_load_templates_file() {
-        let tmp = TempDir::new().expect("create temp dir");
-
-        let file = tmp.path().join("bar.txt");
-        create_with_content(&file, "Hello world!");
-
-        load_templates(&file, &PathBuf::new(), TemplateRenderer::new())?;
     }
 
     #[test]

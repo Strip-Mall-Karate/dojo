@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(windows)]
-use std::env;
 use std::{path::Path,
           result};
 
-#[cfg(windows)]
-use crate::common::cli::{DEFAULT_BINLINK_DIR,
-                         FS_ROOT};
 use crate::{common::ui::{UIReader,
                          UIWriter,
                          UI},
@@ -27,24 +22,7 @@ use crate::{common::ui::{UIReader,
                     env as henv,
                     package::ident,
                     Error::InvalidOrigin}};
-#[cfg(windows)]
-use std::ptr;
 use url::Url;
-#[cfg(windows)]
-use widestring::WideCString;
-#[cfg(windows)]
-use winapi::shared::minwindef::LPARAM;
-#[cfg(windows)]
-use winapi::um::winuser::{self,
-                          HWND_BROADCAST,
-                          SMTO_ABORTIFHUNG,
-                          WM_SETTINGCHANGE};
-#[cfg(windows)]
-use winreg::enums::{HKEY_LOCAL_MACHINE,
-                    KEY_ALL_ACCESS,
-                    KEY_READ};
-#[cfg(windows)]
-use winreg::RegKey;
 
 use crate::{command,
             config,
@@ -162,26 +140,6 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
         write_cli_config_ctl_secret(&ctl_secret)?;
     } else {
         ui.para("Okay, maybe another time.")?;
-    }
-    #[cfg(windows)]
-    {
-        let binlink_path =
-            Path::new(&*FS_ROOT).join(Path::new(DEFAULT_BINLINK_DIR).strip_prefix("/").unwrap());
-        ui.heading("Dojo Binlink Path")?;
-        ui.para("The `doj` command-line tool can create binlinks for package binaries in the \
-                 'PATH' when using the 'pkg binlink' or 'pkg install --binlink' commands. By \
-                 default, Dojo will create these binlinks in the '/doj/bin' directory. This \
-                 directory will always be included in your 'PATH' when inside a Studio \
-                 environment. However, you will want this directory on your machine's \
-                 persistent 'PATH' in order to access binlinks outside of a Studio.")?;
-        if ui.prompt_yes_no("Add binlink directory to PATH?", Some(true))? {
-            set_binlink_path(&binlink_path)?;
-            ui.para(&format!("{} has been added to your path. You will need to open a new \
-                              console window for this added entry to take effect.",
-                             binlink_path.display()))?;
-        } else {
-            ui.para("Okay, maybe another time.")?;
-        }
     }
     ui.heading("CLI Setup Complete")?;
     ui.para("That's all for now. Thanks for using Dojo!")?;
@@ -314,53 +272,4 @@ fn valid_url(val: &str) -> result::Result<(), String> {
         Ok(_) => Ok(()),
         Err(_) => Err(format!("URL: '{}' is not valid", &val)),
     }
-}
-
-#[cfg(windows)]
-fn binlink_is_on_path(binlink_path: &Path) -> bool {
-    match RegKey::predef(HKEY_LOCAL_MACHINE).open_subkey_with_flags(
-        r"System\CurrentControlSet\Control\Session Manager\Environment",
-        KEY_READ,
-    ) {
-        Ok(env) => {
-            let path: String = env
-                .get_value("path")
-                .expect("could not find a machine PATH");
-            env::split_paths(&path).any(|p| p == binlink_path)
-        }
-        _ => false,
-    }
-}
-
-/// this sets the permanent machine PATH and not
-/// the path of this process. These are maintained
-/// in the Windows registry
-#[cfg(windows)]
-fn set_binlink_path(binlink_path: &Path) -> Result<()> {
-    if !binlink_is_on_path(binlink_path) {
-        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        let env = hklm.open_subkey_with_flags(
-            r"System\CurrentControlSet\Control\Session Manager\Environment",
-            KEY_ALL_ACCESS,
-        )?;
-        let mut paths = vec![binlink_path.to_path_buf()];
-        let path: String = env.get_value("path")?;
-        paths.append(&mut env::split_paths(&path).collect());
-        env.set_value("path", &env::join_paths(paths)?.to_str().unwrap())?;
-
-        // After altering the machine environment, we must broadcast
-        // a WM_SETTINGCHANGE message to all windows so the user
-        // will not need to sign out/in for the new path to take effect
-        unsafe {
-            winuser::SendMessageTimeoutW(HWND_BROADCAST,
-                                         WM_SETTINGCHANGE,
-                                         0,
-                                         WideCString::from_str("Environment").unwrap().as_ptr()
-                                         as LPARAM,
-                                         SMTO_ABORTIFHUNG,
-                                         5000,
-                                         ptr::null_mut());
-        }
-    }
-    Ok(())
 }

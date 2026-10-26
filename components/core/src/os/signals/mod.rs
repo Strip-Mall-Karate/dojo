@@ -21,7 +21,7 @@ use crate::os::process;
 
 #[allow(dead_code)]
 pub enum SignalEvent {
-    /// SIGTERM, or Ctrl-C on Windows.
+    /// SIGTERM.
     Shutdown,
     /// SIGINT. Most processes treat it as `Shutdown`; to a Launcher that is the machine's init it
     /// is the kernel's Ctrl-Alt-Del, a reboot.
@@ -33,13 +33,6 @@ pub enum SignalEvent {
 #[cfg(unix)]
 mod unix;
 
-#[cfg(windows)]
-mod windows;
-
 #[cfg(unix)]
 pub use self::unix::{check_for_signal,
                      init};
-
-#[cfg(windows)]
-pub use self::windows::{check_for_signal,
-                        init};

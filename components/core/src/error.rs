@@ -156,14 +156,6 @@ pub enum Error {
     WaitpidFailed(String),
     /// Occurs when a `kill` libc call returns an error.
     SignalFailed(i32, io::Error),
-    /// Occurs when a `CreateToolhelp32Snapshot` win32 call returns an error.
-    CreateToolhelp32SnapshotFailed(String),
-    /// Occurs when a `GetExitCodeProcess` win32 call returns an error.
-    GetExitCodeProcessFailed(String),
-    /// Occurs when a `WaitForSingleObject` win32 call returns an error.
-    WaitForSingleObjectFailed(String),
-    /// Occurs when a `TerminateProcess` win32 call returns an error.
-    TerminateProcessFailed(String),
     /// When an error occurs attempting to interpret a sequence of u8 as a string.
     Utf8Error(str::Utf8Error),
     /// When a `PackageTaget` for a package does not match the active `PackageTarget` for this
@@ -343,10 +335,6 @@ impl fmt::Display for Error {
             Error::SignalFailed(ref r, ref e) => {
                 format!("Failed to send a signal to the child process: {}, {}", r, e)
             }
-            Error::GetExitCodeProcessFailed(ref e) => e.to_string(),
-            Error::CreateToolhelp32SnapshotFailed(ref e) => e.to_string(),
-            Error::WaitForSingleObjectFailed(ref e) => e.to_string(),
-            Error::TerminateProcessFailed(ref e) => e.to_string(),
             Error::Utf8Error(ref e) => format!("{}", e),
             Error::WrongActivePackageTarget(ref active, ref wrong) => {
                 format!("Package target '{}' is not supported as this system has a different \
@@ -481,11 +469,7 @@ impl error::Error for Error {
             Error::TargetMatchError(_) => "System target does not match package target",
             Error::UnameFailed(_) => "uname failed",
             Error::SignalFailed(..) => "Failed to send a signal to the child process",
-            Error::CreateToolhelp32SnapshotFailed(_) => "CreateToolhelp32Snapshot failed",
             Error::WaitpidFailed(_) => "waitpid failed",
-            Error::GetExitCodeProcessFailed(_) => "GetExitCodeProcess failed",
-            Error::WaitForSingleObjectFailed(_) => "WaitForSingleObjectFailed failed",
-            Error::TerminateProcessFailed(_) => "Failed to call TerminateProcess",
             Error::Utf8Error(_) => "Failed to interpret a sequence of bytes as a string",
             Error::WrongActivePackageTarget(..) => {
                 "Package target is not supported as this system has a different active package \

@@ -12,21 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[allow(unused_variables)]
-#[cfg(windows)]
-mod windows;
-
-#[cfg(windows)]
-pub use self::windows::{assert_pkg_user_and_group,
-                        can_run_services_as_svc_user,
-                        get_current_groupname,
-                        get_current_username,
-                        get_effective_uid,
-                        get_gid_by_name,
-                        get_home_for_user,
-                        get_uid_by_name,
-                        root_level_account};
-
 #[cfg(unix)]
 pub mod linux;
 

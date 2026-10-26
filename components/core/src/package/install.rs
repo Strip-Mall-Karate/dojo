@@ -239,16 +239,7 @@ impl PackageInstall {
         // present for backwards compatibility with older Dojo releases.
         env.remove(PATH_KEY);
 
-        let mut paths = self.runtime_paths()?;
-
-        // Let's join the paths to the FS_ROOT
-        // In most cases, this does nothing and should only mutate
-        // the paths in a windows studio where FS_ROOT_PATH will
-        // be the studio root path (ie c:\doj\studios\...)
-        for path in &mut paths {
-            *path = fs::fs_rooted_path(&path, &self.fs_root_path);
-        }
-
+        let paths = self.runtime_paths()?;
         let joined = env::join_paths(paths)?.into_string()
                                             .map_err(Error::InvalidPathString)?;
         // Only insert a PATH entry if the resulting path string is non-empty
@@ -413,33 +404,7 @@ impl PackageInstall {
                                                .collect();
                 Ok(v)
             }
-            Err(Error::MetaFileNotFound(MetaFile::Path)) => {
-                if cfg!(windows) {
-                    // This check is for any packages built by 0.53.0 (2018-02-05) and later,
-                    // which stopped producing `PATH` metafiles. This
-                    // workaround attempts to fallback to the `RUNTIME_ENVIRONMENT` metafile and
-                    // use the value of the `PATH` key as a stand-in for the `PATH` metafile.
-                    let pkg_prefix = fs::pkg_install_path(self.ident(), None::<&Path>);
-                    match self.read_metafile(MetaFile::RuntimeEnvironment) {
-                        Ok(ref body) => {
-                            match Self::parse_runtime_environment_metafile(body)?.get(PATH_KEY) {
-                                Some(env_path) => {
-                                    let v = env::split_paths(env_path).filter(|p| {
-                                                                          p.starts_with(&pkg_prefix)
-                                                                      })
-                                                                      .collect();
-                                    Ok(v)
-                                }
-                                None => Ok(vec![]),
-                            }
-                        }
-                        Err(Error::MetaFileNotFound(MetaFile::RuntimeEnvironment)) => Ok(vec![]),
-                        Err(e) => Err(e),
-                    }
-                } else {
-                    Ok(vec![])
-                }
-            }
+            Err(Error::MetaFileNotFound(MetaFile::Path)) => Ok(vec![]),
             Err(e) => Err(e),
         }
     }
@@ -1160,27 +1125,6 @@ karate/bar=pub:karate/publish sub:karate/subscribe
                    pkg_install.paths().unwrap());
     }
 
-    #[cfg(windows)]
-    #[test]
-    fn win_legacy_paths_metafile_missing_with_runtime_metafile() {
-        let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
-        let pkg_install = testing_package_install("acme/pathy", fs_root.path());
-        let other_pkg_install = testing_package_install("acme/prophets-of-rage", fs_root.path());
-
-        // Create `RUNTIME_ENVIROMENT` metafile which has path entries from another package to
-        // replicate certain older packages
-        let path_val =
-            env::join_paths(vec![pkg_prefix_for(&pkg_install).join("bin"),
-                                 pkg_prefix_for(&other_pkg_install).join("bin"),
-                                 pkg_prefix_for(&other_pkg_install).join("sbin"),].iter()).unwrap();
-        write_metafile(&pkg_install,
-                       MetaFile::RuntimeEnvironment,
-                       &format!("PATH={}\n", path_val.to_string_lossy().as_ref()));
-
-        assert_eq!(vec![pkg_prefix_for(&pkg_install).join("bin")],
-                   pkg_install.paths().unwrap());
-    }
-
     #[test]
     fn runtime_paths_single_package_single_path() {
         let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
@@ -1350,21 +1294,14 @@ karate/bar=pub:karate/publish sub:karate/subscribe
                        "PATH=/should/be/ignored\nJAVA_HOME=/my/java/home\nFOO=bar\n");
 
         let mut expected = HashMap::new();
-        let fs_root_path = fs_root.into_path();
         expected.insert("FOO".to_string(), "bar".to_string());
         expected.insert("JAVA_HOME".to_string(), "/my/java/home".to_string());
-        expected.insert(
-                        "PATH".to_string(),
-                        env::join_paths(vec![
-            fs::fs_rooted_path(&pkg_prefix_for(&pkg_install).join("bin"), &fs_root_path),
-            fs::fs_rooted_path(
-                &pkg_prefix_for(&other_pkg_install).join("sbin"),
-                &fs_root_path,
-            ),
-        ]).unwrap()
+        expected.insert("PATH".to_string(),
+                        env::join_paths(vec![pkg_prefix_for(&pkg_install).join("bin"),
+                                             pkg_prefix_for(&other_pkg_install).join("sbin")])
+                        .unwrap()
                         .to_string_lossy()
-                        .into_owned(),
-        );
+                        .into_owned());
 
         assert_eq!(expected, pkg_install.environment_for_command().unwrap());
     }

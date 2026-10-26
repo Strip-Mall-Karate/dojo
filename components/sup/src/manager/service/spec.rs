@@ -677,11 +677,6 @@ mod test {
                               "test-bind",
                               Some("0.1.0"),
                               Some("20190219230309"))
-        } else if cfg!(target_os = "windows") {
-            PackageIdent::new("test-bind",
-                              "test-bind-win",
-                              Some("0.1.0"),
-                              Some("20190219231616"))
         } else {
             panic!("This is being run on a platform that's not currently supported");
         };

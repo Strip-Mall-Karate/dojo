@@ -12,11 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(windows)]
-mod windows;
-
-#[cfg(windows)]
-pub use self::windows::OsStrExt3 as OsStrExt;
-
-#[cfg(not(windows))]
 pub use std::os::unix::ffi::OsStrExt;

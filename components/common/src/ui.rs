@@ -76,9 +76,6 @@ pub enum GlyphStyle {
 }
 
 impl Default for GlyphStyle {
-    #[cfg(windows)]
-    fn default() -> GlyphStyle { GlyphStyle::Limited }
-
     #[cfg(unix)]
     fn default() -> GlyphStyle { GlyphStyle::Full }
 }
@@ -807,24 +804,6 @@ mod tty {
         };
 
         unsafe { libc::isatty(fd) != 0 }
-    }
-    #[cfg(windows)]
-    pub fn isatty(output: StdStream) -> bool {
-        use winapi::um::{consoleapi,
-                         processenv,
-                         winbase};
-
-        let handle = match output {
-            StdStream::Stdin => winbase::STD_INPUT_HANDLE,
-            StdStream::Stdout => winbase::STD_OUTPUT_HANDLE,
-            StdStream::Stderr => winbase::STD_ERROR_HANDLE,
-        };
-
-        unsafe {
-            let handle = processenv::GetStdHandle(handle);
-            let mut out = 0;
-            consoleapi::GetConsoleMode(handle, &mut out) != 0
-        }
     }
 }
 

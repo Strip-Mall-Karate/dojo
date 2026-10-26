@@ -32,13 +32,6 @@ extern crate serde_derive;
 
 extern crate serde_json;
 
-#[cfg(windows)]
-extern crate widestring;
-#[cfg(windows)]
-extern crate winapi;
-#[cfg(windows)]
-extern crate winreg;
-
 pub mod cli;
 pub mod command;
 pub mod config;

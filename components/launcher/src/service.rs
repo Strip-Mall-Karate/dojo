@@ -13,10 +13,6 @@
 // limitations under the License.
 
 use crate::protocol;
-#[cfg(windows)]
-use core::os::process::windows_child::{ChildStderr,
-                                       ChildStdout,
-                                       ExitStatus};
 use dojo_common::output::{self,
                           StructuredOutput};
 #[cfg(unix)]
