@@ -256,6 +256,29 @@ fn a_scaffolding_adds_metadata_and_reads_the_plans_settings() {
 }
 
 #[test]
+fn packaging_uses_the_builders_tools_not_a_dependencys() {
+    // A run dependency's xz (busybox's only decompresses) is first on the
+    // build's PATH; the package is still compressed with the builder's.
+    let mut sandbox = Sandbox::new("packager-path");
+    let shadow = sandbox.package("test/shadow");
+    fs::create_dir_all(shadow.join("bin")).unwrap();
+    for tool in ["xz", "tar"] {
+        fs::write(shadow.join("bin").join(tool), "#!/bin/sh\nexit 7\n").unwrap();
+        fs::set_permissions(shadow.join("bin").join(tool),
+                            fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    fs::write(shadow.join("PATH"),
+              format!("{}\n", shadow.join("bin").display())).unwrap();
+    let source = plan("shadowed",
+                      r#":deps ["test/shadow"]"#,
+                      r#" :build (fn [b] (b:write "shadowed" (tostring (b:run ["xz"] {:check false}))))"#);
+    let built = sandbox.build(&source).expect("builds and packages");
+    assert_eq!(read(&built.prefix.join("shadowed")),
+               "7",
+               "the build itself sees the dependency's xz");
+}
+
+#[test]
 fn a_version_function_runs_with_b_and_sets_the_prefix() {
     let sandbox = Sandbox::new("version");
     let source = plan("versioned",
