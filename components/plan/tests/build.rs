@@ -937,6 +937,34 @@ fn run_with_check_false_returns_the_code_and_goes_on() {
 }
 
 #[test]
+fn stdin_is_the_programs_input() {
+    let sandbox = Sandbox::new("run-stdin");
+    // More than a pipe holds, so a feeder that blocked on a full pipe would hang the test.
+    let source = plan("fed",
+                      "",
+                      r#" :build (fn [b]
+                                   (let [big (string.rep "line\n" 100000)]
+                                     (b:write "count" (b:capture ["wc" "-l"] {:stdin big})))
+                                   (b:run ["sh" "-c" "cat > fed"] {:stdin "one\ntwo\n" :cwd b.prefix})
+                                   (b:write "code" (tostring (b:run ["grep" "-q" "x"] {:stdin "abc" :check false})))
+                                   (b:write "early" (b:capture ["head" "-c" "3"] {:stdin (string.rep "y" 1000000)}))
+                                   (b:write "empty" (b:capture ["cat"])))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("count")).trim(), "100000");
+    assert_eq!(read(&built.prefix.join("fed")), "one\ntwo\n");
+    assert_eq!(read(&built.prefix.join("code")), "1");
+    assert_eq!(read(&built.prefix.join("early")),
+               "yyy",
+               "a program that stops reading is no error");
+    assert_eq!(read(&built.prefix.join("empty")),
+               "",
+               "without stdin the input is empty");
+
+    let bad = plan("fed", "", r#" :build (fn [b] (b:run ["cat"] {:stdin {}}))"#);
+    assert_refused(sandbox.build(&bad), "`stdin` is a table");
+}
+
+#[test]
 fn unsetenv_takes_a_variable_out_of_the_build() {
     let sandbox = Sandbox::new("unsetenv");
     let source = plan("unset",

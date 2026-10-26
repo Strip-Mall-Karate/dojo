@@ -221,6 +221,7 @@ impl State {
              argv: &[String],
              cwd: Option<&Path>,
              extra: &[(String, String)],
+             stdin: Option<&[u8]>,
              capture: bool)
              -> Result<(std::process::Output, String), String> {
         let shown = show_argv(argv);
@@ -240,19 +241,43 @@ impl State {
                .current_dir(&cwd)
                .env_clear()
                .envs(env.vars().iter().map(|(n, v)| (n, v)))
-               .stdin(Stdio::null())
+               .stdin(if stdin.is_some() {
+                          Stdio::piped()
+                      } else {
+                          Stdio::null()
+                      })
+               .stdout(if capture {
+                           Stdio::piped()
+                       } else {
+                           Stdio::inherit()
+                       })
                .stderr(Stdio::inherit());
-        let output = if capture {
-            command.output()
-        } else {
-            command.status().map(|status| {
-                                std::process::Output { status,
-                                                       stdout: Vec::new(),
-                                                       stderr: Vec::new() }
-                            })
+        let mut child =
+            command.spawn()
+                   .map_err(|e| format!("`{shown}` could not start in {}: {e}", cwd.display()))?;
+        // The program reads its input while it writes its output, so the input
+        // goes in from another thread. A program that stops reading early ends
+        // the write, which is no error of the build's.
+        let feeder = match (stdin, child.stdin.take()) {
+            (Some(input), Some(mut pipe)) => {
+                let input = input.to_vec();
+                Some(std::thread::spawn(move || {
+                         use std::io::Write as _;
+                         match pipe.write_all(&input) {
+                             Err(e) if e.kind() != std::io::ErrorKind::BrokenPipe => Err(e),
+                             _ => Ok(()),
+                         }
+                     }))
+            }
+            _ => None,
         };
-        let output =
-            output.map_err(|e| format!("`{shown}` could not start in {}: {e}", cwd.display()))?;
+        let output = child.wait_with_output()
+                          .map_err(|e| format!("`{shown}` could not be waited for: {e}"))?;
+        if let Some(feeder) = feeder {
+            feeder.join()
+                  .map_err(|_| format!("`{shown}`: writing its input panicked"))?
+                  .map_err(|e| format!("`{shown}`: writing its input failed: {e}"))?;
+        }
         Ok((output, shown))
     }
 
@@ -261,9 +286,10 @@ impl State {
     pub fn run_status(&self,
                       argv: &[String],
                       cwd: Option<&Path>,
-                      extra: &[(String, String)])
+                      extra: &[(String, String)],
+                      stdin: Option<&[u8]>)
                       -> Result<i32, String> {
-        let (output, shown) = self.spawn(argv, cwd, extra, false)?;
+        let (output, shown) = self.spawn(argv, cwd, extra, stdin, false)?;
         match output.status.code() {
             Some(0) => Ok(0),
             Some(code) => {
@@ -282,7 +308,19 @@ impl State {
                extra: &[(String, String)],
                capture: bool)
                -> Result<Option<String>, String> {
-        let (output, shown) = self.spawn(argv, cwd, extra, capture)?;
+        self.run_fed(argv, cwd, extra, None, capture)
+    }
+
+    /// [`State::run`] with `stdin` as the program's input; with none, the
+    /// program reads an empty input.
+    pub fn run_fed(&self,
+                   argv: &[String],
+                   cwd: Option<&Path>,
+                   extra: &[(String, String)],
+                   stdin: Option<&[u8]>,
+                   capture: bool)
+                   -> Result<Option<String>, String> {
+        let (output, shown) = self.spawn(argv, cwd, extra, stdin, capture)?;
         if !output.status.success() {
             return Err(match output.status.code() {
                 Some(code) => format!("`{shown}` exited with code {code}"),
@@ -846,13 +884,14 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
               lua.create_function(move |_, (this, argv, opts): (Value, Value, Value)| {
                      s.check_this(&this, "b:run")?;
                      let argv = texts(&argv, "b:run: argv")?;
-                     let (cwd, env, check) = run_options(&opts, "b:run", true)?;
-                     if check {
-                         s.run(&argv, cwd.as_deref(), &env, false)
+                     let opts = run_options(&opts, "b:run", true)?;
+                     let stdin = opts.stdin.as_deref().map(str::as_bytes);
+                     if opts.check {
+                         s.run_fed(&argv, opts.cwd.as_deref(), &opts.env, stdin, false)
                           .map_err(mlua::Error::runtime)?;
                          Ok(0)
                      } else {
-                         s.run_status(&argv, cwd.as_deref(), &env)
+                         s.run_status(&argv, opts.cwd.as_deref(), &opts.env, stdin)
                           .map_err(mlua::Error::runtime)
                      }
                  })?)?;
@@ -862,8 +901,9 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
               lua.create_function(move |_, (this, argv, opts): (Value, Value, Value)| {
                      s.check_this(&this, "b:capture")?;
                      let argv = texts(&argv, "b:capture: argv")?;
-                     let (cwd, env, _) = run_options(&opts, "b:capture", false)?;
-                     s.run(&argv, cwd.as_deref(), &env, true)
+                     let opts = run_options(&opts, "b:capture", false)?;
+                     let stdin = opts.stdin.as_deref().map(str::as_bytes);
+                     s.run_fed(&argv, opts.cwd.as_deref(), &opts.env, stdin, true)
                       .map(Option::unwrap_or_default)
                       .map_err(mlua::Error::runtime)
                  })?)?;
@@ -1496,17 +1536,25 @@ fn install_mode(opts: &Value) -> mlua::Result<Option<u32>> {
     octal_mode(&mode, "b:install").map(Some)
 }
 
-/// Reads `b:run` and `b:capture` options: `cwd`, `env`, a table of names to
-/// values, and for `b:run` only `check`.
-/// A working directory, extra environment variables, and whether a nonzero
-/// exit stops the build (`check`, true unless the plan says false).
-type RunOptions = (Option<PathBuf>, Vec<(String, String)>, bool);
+/// `b:run` and `b:capture` options.
+struct RunOptions {
+    /// The working directory, relative to the default one.
+    cwd:   Option<PathBuf>,
+    /// Environment variables set for this program only.
+    env:   Vec<(String, String)>,
+    /// Whether a nonzero exit stops the build: true unless the plan says false.
+    check: bool,
+    /// Text the program reads as its input.
+    stdin: Option<String>,
+}
 
+/// Reads `b:run` and `b:capture` options: `cwd`, `env`, a table of names to
+/// values, `stdin`, and for `b:run` only `check`.
 fn run_options(opts: &Value, what: &str, may_tolerate: bool) -> mlua::Result<RunOptions> {
     let allowed: &[&str] = if may_tolerate {
-        &["cwd", "env", "check"]
+        &["cwd", "env", "stdin", "check"]
     } else {
-        &["cwd", "env"]
+        &["cwd", "env", "stdin"]
     };
     let opts = options(opts, what, allowed)?;
     let check = match opts.get("check") {
@@ -1524,7 +1572,13 @@ fn run_options(opts: &Value, what: &str, may_tolerate: bool) -> mlua::Result<Run
             env.push((name, value));
         }
     }
-    Ok((cwd, env, check))
+    let stdin = opts.get("stdin")
+                    .map(|stdin| text_of(stdin, &format!("{what}: `stdin`")))
+                    .transpose()?;
+    Ok(RunOptions { cwd,
+                    env,
+                    check,
+                    stdin })
 }
 
 /// A table of string keys, read raw. `allowed` lists the keys it may have;
