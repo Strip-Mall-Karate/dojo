@@ -286,6 +286,42 @@ fn packaging_uses_the_builders_tools_not_a_dependencys() {
 }
 
 #[test]
+fn a_package_naming_host_paths_is_refused_when_asked() {
+    let sandbox = Sandbox::new("host-paths");
+    let mut options = sandbox.options();
+    options.refuse_host_paths = true;
+    let source = plan("leaky",
+                      r#":bin_dirs ["bin"]"#,
+                      r##" :install (fn [b]
+                                      (b:mkdir (.. b.prefix "/bin"))
+                                      (b:write (.. b.prefix "/bin/tool") "#!/bin/bash\necho hi\n")
+                                      (b:chmod (.. b.prefix "/bin/tool") "755")
+                                      (b:run ["cp" "/bin/true" (.. b.prefix "/bin/true")]))"##);
+    let error = sandbox.build_with(&source, &options).expect_err("names the host's bash and linker");
+    assert!(error.contains("bin/tool: interpreter /bin/bash"), "{error}");
+    assert!(error.contains("bin/true: dynamic linker /"), "{error}");
+    assert!(error.contains("2 files name paths outside"), "{error}");
+
+    // The same plan builds when not asked to refuse.
+    sandbox.build(&source).expect("builds without the check");
+}
+
+#[test]
+fn a_package_naming_only_its_root_passes_the_host_path_check() {
+    let sandbox = Sandbox::new("root-paths");
+    let mut options = sandbox.options();
+    options.refuse_host_paths = true;
+    let source = plan("tidy",
+                      r#":bin_dirs ["bin"]"#,
+                      r##" :install (fn [b]
+                                      (b:mkdir (.. b.prefix "/bin"))
+                                      (b:write (.. b.prefix "/bin/plain") "#!/bin/sh\necho hi\n")
+                                      (b:write (.. b.prefix "/bin/env") "#!/usr/bin/env sh\necho hi\n")
+                                      (b:write (.. b.prefix "/bin/own") (.. "#!" b.prefix "/bin/plain\n")))"##);
+    sandbox.build_with(&source, &options).expect("names only the root and shared interpreters");
+}
+
+#[test]
 fn b_write_replaces_a_read_only_file_in_the_source() {
     // Archives ship read-only files (libtool's build-aux/ltmain.sh); the bash
     // plans rewrote them with sed -i, which replaces the file.
