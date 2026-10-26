@@ -3,7 +3,7 @@
 # A simple test that the launcher doesn't go into a tight loop restarting the
 # supervisor if the supervisor fails to start up. To override and test
 # locally-built code, set overrides in the environment of the script.
-# See https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
+# See https://github.com/StripMallKarateCompany/dojo/blob/master/BUILDING.md#testing-changes
 
 set -eou pipefail
 

@@ -42,7 +42,7 @@ else
 endif
 
 # launcher is intentionally omitted from the standard build process
-# see https://github.com/Strip-Mall-Karate/dojo/blob/master/components/launcher/README.md
+# see https://github.com/StripMallKarateCompany/dojo/blob/master/components/launcher/README.md
 BIN = doj pkg-export-docker sup
 LIB = butterfly common builder-api-client sup-protocol sup-client
 ALL = $(BIN) $(LIB)

@@ -1508,7 +1508,7 @@ _resolve_dependencies() {
 # `_resolve_dependencies()` function.
 #
 # Reference implementation:
-# https://github.com/Strip-Mall-Karate/dojo/blob/3d63753468ace168bbbe4c52e600d408c4981b03/components/plan-build/bin/doj-plan-build.sh#L1584-L1638
+# https://github.com/StripMallKarateCompany/dojo/blob/3d63753468ace168bbbe4c52e600d408c4981b03/components/plan-build/bin/doj-plan-build.sh#L1584-L1638
 _set_build_path() {
   local paths=()
   local dir dep data

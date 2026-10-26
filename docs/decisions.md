@@ -15,7 +15,7 @@ longer story.
   `DOJ_*`, `/doj`). The old name appears nowhere in the tree; Chef Software's copyright lines stay.
 - **Everything under karate.company:** package origin `karate`, Builder `bldr.karate.company`,
   Strip Mall Karate Company as maintainer and copyright holder, repository
-  `Strip-Mall-Karate/dojo` on GitHub, public.
+  `StripMallKarateCompany/dojo` on GitHub, public.
 - **Removed:** the old CI and release automation, governance files, website, changelog, CLI
   analytics, and exporters and publishers for retired services (Bintray, ACI, Mesos, Cloud
   Foundry, Kubernetes, Helm). No Expeditor, no Dependabot, no third-party package feeds.

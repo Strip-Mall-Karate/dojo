@@ -507,7 +507,7 @@ impl PackageInstall {
     /// present once in the order of their first appearance.
     ///
     /// Preserved reference implementation:
-    /// https://github.com/Strip-Mall-Karate/dojo/blob/333b75d6234db0531cf4a5bdcb859f7d4adc2478/components/core/src/package/install.rs#L321-L350
+    /// https://github.com/StripMallKarateCompany/dojo/blob/333b75d6234db0531cf4a5bdcb859f7d4adc2478/components/core/src/package/install.rs#L321-L350
     fn legacy_runtime_paths(&self) -> Result<Vec<PathBuf>> {
         let mut paths = Vec::new();
         let mut seen = HashSet::new();
