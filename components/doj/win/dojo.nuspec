@@ -15,12 +15,12 @@ Dojo provides automation that can programmatically and declaratively build, depl
 
 Dojo can be deployed and run on various infrastructure environments including bare metal, VM, containers, and PaaS. 
     </description>
-    <projectUrl>https://github.com/Strip-Mall-Karate/dojo</projectUrl>
-    <projectSourceUrl>https://github.com/Strip-Mall-Karate/dojo</projectSourceUrl>
-    <bugTrackerUrl>https://github.com/Strip-Mall-Karate/dojo/issues</bugTrackerUrl>
+    <projectUrl>https://github.com/StripMallKarateCompany/dojo</projectUrl>
+    <projectSourceUrl>https://github.com/StripMallKarateCompany/dojo</projectSourceUrl>
+    <bugTrackerUrl>https://github.com/StripMallKarateCompany/dojo/issues</bugTrackerUrl>
     <tags>dojo</tags>
     <copyright>Copyright (c) 2016-2017 Chef Software Inc. and/or applicable contributors</copyright>
-    <licenseUrl>https://github.com/Strip-Mall-Karate/dojo/blob/master/LICENSE</licenseUrl>
+    <licenseUrl>https://github.com/StripMallKarateCompany/dojo/blob/master/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
   </metadata>
 </package>
