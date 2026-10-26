@@ -210,6 +210,9 @@ struct Export {
 }
 
 impl State {
+    /// The directory the source unpacks into, the build's working directory.
+    pub fn src_dir(&self) -> PathBuf { self.src.borrow().clone() }
+
     pub fn windows(&self) -> bool { self.os == "windows" }
 
     fn separator(&self) -> &'static str { if self.windows() { ";" } else { ":" } }
