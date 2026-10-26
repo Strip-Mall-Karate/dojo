@@ -3,7 +3,8 @@
 // Licensed under the MIT license. See LICENSE in the repository root.
 
 //! `doj-plan-build`: loads a Fennel plan. `show` prints its metadata as JSON;
-//! `build` builds it for this host and installs it under Dojo's root.
+//! `build` builds it for this host, installs it under Dojo's root and writes
+//! its signed `.hart` to `results`.
 
 use std::{env,
           path,

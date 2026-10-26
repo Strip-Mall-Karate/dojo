@@ -16,6 +16,8 @@ use std::{collections::BTreeMap,
                  PathBuf},
           process::Command};
 
+use blake2::{Blake2b,
+             digest::consts::U32};
 use dojo_plan::{Built,
                 Options,
                 Plan,
@@ -52,6 +54,18 @@ impl Sandbox {
                                                         .join(test);
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("context")).expect("create the sandbox");
+        fs::create_dir_all(dir.join("keys")).expect("create the key cache");
+        fs::write(dir.join("keys").join(format!("test-{RELEASE}.sig.key")), "")
+            .expect("write the key");
+        // Signs by copying behind a header, so a test can see what was
+        // signed, by whom and with which key cache.
+        fs::create_dir_all(dir.join("bin")).expect("create bin");
+        let doj = dir.join("bin/doj");
+        fs::write(&doj,
+                  "#!/bin/sh\n[ \"$1 $2 $3\" = \"pkg sign --origin\" ] || exit 64\n[ -d \
+                   \"$DOJ_CACHE_KEY_PATH\" ] || exit 65\n{ echo \"signed by $4\"; cat \"$5\"; } \
+                   > \"$6\"\n").expect("write doj");
+        fs::set_permissions(&doj, fs::Permissions::from_mode(0o755)).expect("make doj runnable");
         Sandbox { dir,
                   packages: Packages::default() }
     }
@@ -76,6 +90,9 @@ impl Sandbox {
         options.root = self.dir.join("doj");
         options.release = RELEASE.to_string();
         options.env = vec![("PATH".to_string(), std::env::var("PATH").expect("PATH is set"))];
+        options.keys = self.dir.join("keys");
+        options.output = self.dir.join("results");
+        options.doj = self.dir.join("bin/doj").into();
         options
     }
 
@@ -84,6 +101,7 @@ impl Sandbox {
     }
 
     fn build_with(&self, source: &str, options: &Options) -> Result<Built, String> {
+        fs::write(options.plan_dir.join("plan.fnl"), source).expect("write the plan");
         let plan = Plan::from_source(source).map_err(|e| format!("load: {e}"))?;
         plan.build(options, &self.packages)
             .map_err(|e| e.to_string())
@@ -107,6 +125,11 @@ fn plan(name: &str, extra: &str, phases: &str) -> String {
     source.push_str(phases);
     source.push('}');
     source
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter()
+         .fold(String::new(), |hex, b| hex + &format!("{b:02x}"))
 }
 
 fn read(path: &Path) -> String {
@@ -362,10 +385,7 @@ fn a_source_is_downloaded_verified_and_unpacked() {
                                     .expect("run tar");
     assert!(status.success());
     let tarball = upstream.join("hello-2.0.tar.gz");
-    let sha = Sha256::digest(fs::read(&tarball).unwrap()).iter()
-                                                         .fold(String::new(), |hex, b| {
-                                                             hex + &format!("{b:02x}")
-                                                         });
+    let sha = hex(&Sha256::digest(fs::read(&tarball).unwrap()));
     let with_sha = |sha: &str| {
         plan("hello",
              &format!(r#":version "2.0" :source {{:url "file://{}" :sha256 "{sha}"}}"#,
@@ -424,4 +444,237 @@ fn a_target_the_plan_does_not_list_is_refused() {
     options.target = "aarch64-linux".to_string();
     assert_refused(sandbox.build_with(&plan("t", "", ""), &options),
                    "the plan does not build for `aarch64-linux`");
+}
+
+/// The files directly in `dir`, sorted.
+fn names(dir: &Path) -> Vec<String> {
+    let mut names: Vec<String> =
+        fs::read_dir(dir).unwrap()
+                         .map(|e| e.unwrap().file_name().into_string().unwrap())
+                         .collect();
+    names.sort();
+    names
+}
+
+/// A package built from a plan that sets every metadata key, with a run
+/// dependency that has its own, and a run hook, config and default.toml.
+struct Packaged {
+    sandbox: Sandbox,
+    built:   Built,
+    source:  String,
+    /// The direct run dependency.
+    lib:     PathBuf,
+}
+
+fn packaged(test: &str) -> Packaged {
+    let mut sandbox = Sandbox::new(test);
+    let base = sandbox.package("test/base");
+    fs::write(base.join("IDENT"), format!("test/base/1.0/{RELEASE}\n")).unwrap();
+    fs::write(base.join("RUNTIME_ENVIRONMENT"),
+              "GEM_PATH=/base/gems\nJAVA_HOME=/base\n").unwrap();
+    let lib = sandbox.package("test/lib");
+    fs::write(lib.join("IDENT"), format!("test/lib/1.0/{RELEASE}\n")).unwrap();
+    fs::write(lib.join("TDEPS"), format!("test/base/1.0/{RELEASE}\n")).unwrap();
+    fs::write(lib.join("PATH"),
+              format!("{}:/usr/elsewhere\n", lib.join("bin").display())).unwrap();
+    fs::write(lib.join("RUNTIME_ENVIRONMENT"),
+              "GEM_PATH=/lib/gems\nJAVA_HOME=/lib\nPATH=/ignored\n").unwrap();
+    let context = sandbox.context();
+    fs::create_dir_all(context.join("hooks")).unwrap();
+    fs::write(context.join("hooks/run"), "#!/bin/sh\nexec tool\n").unwrap();
+    fs::create_dir_all(context.join("config/sub")).unwrap();
+    fs::write(context.join("config/sub/app.toml"), "x = 1\n").unwrap();
+    fs::write(context.join("config/app.toml.bak"), "old\n").unwrap();
+    fs::write(context.join("default.toml"), "[http]\nport = 8080\n").unwrap();
+
+    let source = plan("pkg",
+                      r#":deps ["test/base" "test/lib"]
+                         :description "A package." :license ["MIT" "Apache-2.0"]
+                         :bin_dirs ["bin"] :lib_dirs ["lib"] :include_dirs ["include"]
+                         :interpreters ["bin/tool"] :svc {:run "tool"}
+                         :exports {:port "http.port"} :exposes ["port"]
+                         :binds {:db ["port" "host"]}"#,
+                      r##" :install (fn [b]
+                                     (b:write "bin/tool" "#!/bin/sh\n")
+                                     (b:write "env" (b:capture ["sh" "-c" "echo \"$GEM_PATH|$JAVA_HOME\""])))"##);
+    let built = sandbox.build(&source).expect("builds");
+    Packaged { sandbox,
+               built,
+               source,
+               lib }
+}
+
+#[test]
+fn metadata_files_describe_the_package_and_its_dependencies() {
+    let Packaged { built, lib, .. } = packaged("metadata");
+    let prefix = &built.prefix;
+    let ident = format!("test/pkg/1.0.0/{RELEASE}");
+    // Run dependencies' environments reach the build: lists join, the rest
+    // take the last dependency's value.
+    assert_eq!(read(&prefix.join("env")), "/lib/gems:/base/gems|/lib");
+
+    assert_eq!(names(prefix),
+               ["BINDS",
+                "CFLAGS",
+                "CPPFLAGS",
+                "CXXFLAGS",
+                "DEPS",
+                "EXPORTS",
+                "EXPOSES",
+                "FILES",
+                "IDENT",
+                "INTERPRETERS",
+                "LDFLAGS",
+                "LD_RUN_PATH",
+                "MANIFEST",
+                "PATH",
+                "RUNTIME_ENVIRONMENT",
+                "RUNTIME_ENVIRONMENT_PROVENANCE",
+                "RUNTIME_PATH",
+                "SVC_GROUP",
+                "SVC_USER",
+                "TARGET",
+                "TDEPS",
+                "bin",
+                "config",
+                "default.toml",
+                "env",
+                "hooks",
+                "include",
+                "lib"]);
+    let p = prefix.display();
+    let expected = [("IDENT", format!("{ident}\n")),
+                    ("TARGET", format!("{TARGET}\n")),
+                    ("DEPS", format!("test/base/1.0/{RELEASE}\ntest/lib/1.0/{RELEASE}\n")),
+                    ("TDEPS", format!("test/base/1.0/{RELEASE}\ntest/lib/1.0/{RELEASE}\n")),
+                    ("PATH", format!("{p}/bin\n")),
+                    ("RUNTIME_PATH", format!("{p}/bin:{}\n", lib.join("bin").display())),
+                    ("LD_RUN_PATH", format!("{p}/lib\n")),
+                    ("LDFLAGS", format!("-L{p}/lib\n")),
+                    ("CFLAGS", format!("-I{p}/include\n")),
+                    ("INTERPRETERS", format!("{p}/bin/tool\n")),
+                    ("EXPORTS", "port=http.port\n".to_string()),
+                    ("EXPOSES", "8080\n".to_string()),
+                    ("BINDS", "db=port host\n".to_string()),
+                    ("SVC_USER", "doj\n".to_string()),
+                    ("SVC_GROUP", "doj\n".to_string()),
+                    ("RUNTIME_ENVIRONMENT",
+                     format!("GEM_PATH=/lib/gems:/base/gems\nJAVA_HOME=/lib\nPATH={p}/bin:{}\n",
+                             lib.join("bin").display())),
+                    ("RUNTIME_ENVIRONMENT_PROVENANCE",
+                     format!("GEM_PATH=test/lib/1.0/{RELEASE} \
+                              test/base/1.0/{RELEASE}\nJAVA_HOME=test/lib/1.0/{RELEASE}\n"))];
+    for (file, contents) in expected {
+        assert_eq!(read(&prefix.join(file)), contents, "{file}");
+    }
+    assert_eq!(names(&prefix.join("config")),
+               ["sub"],
+               "backup files stay out");
+    assert_eq!(read(&prefix.join("hooks/run")), "#!/bin/sh\nexec tool\n");
+    assert!(!prefix.join("run").exists(),
+            "a run hook replaces the run script");
+}
+
+#[test]
+fn files_and_manifest_list_the_package() {
+    let Packaged { built, source, .. } = packaged("manifest");
+    let prefix = &built.prefix;
+    let p = prefix.display();
+    let ident = format!("test/pkg/1.0.0/{RELEASE}");
+    // FILES lists every file but itself and MANIFEST, signed.
+    let files = read(&prefix.join("FILES"));
+    let mut lines = files.lines();
+    assert_eq!(lines.next(), Some("signed by test"));
+    let listed: Vec<&str> = lines.collect();
+    let ident_line = format!("{}  {p}/IDENT",
+                             hex(&Blake2b::<U32>::digest(format!("{ident}\n"))));
+    assert!(listed.contains(&ident_line.as_str()),
+            "{ident_line} in {listed:?}");
+    assert_eq!(listed.len(), 24, "{listed:?}");
+    assert!(!files.contains("/MANIFEST") && !files.contains("/FILES"));
+
+    let manifest = read(&prefix.join("MANIFEST"));
+    for line in ["# test / pkg\nA package.\n",
+                 "* __Release__: 20261025000000\n",
+                 "* __License__: MIT Apache-2.0 \n",
+                 "* __Dependencies__: `test/base test/lib `\n",
+                 "* __Build Dependencies__: no build dependencies or undefined\n",
+                 "* __Source__: source URL not provided or required\n",
+                 "CFLAGS: no CFLAGS\n"]
+    {
+        assert!(manifest.contains(line),
+                "MANIFEST has {line:?}:\n{manifest}");
+    }
+    assert!(manifest.ends_with(&format!("## Plan Source\n\n```fennel\n{source}\n```\n")));
+}
+
+#[test]
+fn the_artifact_is_the_prefix_tarred_compressed_and_signed() {
+    let Packaged { sandbox, built, .. } = packaged("artifact");
+    let p = built.prefix.display();
+    let ident = format!("test/pkg/1.0.0/{RELEASE}");
+    let artifact = &built.artifact;
+    assert_eq!(artifact.path,
+               sandbox.dir
+                      .join(format!("results/test-pkg-1.0.0-{RELEASE}-{TARGET}.hart")));
+    let hart = fs::read(&artifact.path).unwrap();
+    assert_eq!(hex(&Sha256::digest(&hart)), artifact.sha256);
+    let body = hart.strip_prefix(b"signed by test\n".as_slice())
+                   .expect("signed");
+    let xz = sandbox.dir.join("body.tar.xz");
+    fs::write(&xz, body).unwrap();
+    let listing = Command::new("sh").arg("-c")
+                                    .arg(format!("xz -dc '{}' | tar -tf -", xz.display()))
+                                    .output()
+                                    .unwrap();
+    let listing = String::from_utf8(listing.stdout).unwrap();
+    let member = format!("{}/bin/tool", p.to_string().trim_start_matches('/'));
+    assert!(listing.lines().any(|line| line == member),
+            "{member} in:\n{listing}");
+
+    let report = read(&sandbox.dir.join("results/last_build.env"));
+    let head = ["pkg_origin=test".to_string(),
+                "pkg_name=pkg".to_string(),
+                "pkg_version=1.0.0".to_string(),
+                format!("pkg_release={RELEASE}"),
+                format!("pkg_target={TARGET}"),
+                format!("pkg_ident={ident}")];
+    assert!(report.starts_with(&(head.join("\n") + "\n")), "{report}");
+    assert!(report.contains(&format!("pkg_sha256sum={}\n", artifact.sha256)));
+    assert!(report.contains(&format!("pkg_blake2bsum={}\n", artifact.blake2b)));
+    assert!(!sandbox.dir.join("results/pre_build.env").exists());
+}
+
+#[test]
+fn a_service_without_a_run_hook_gets_a_run_script() {
+    let sandbox = Sandbox::new("service");
+    let source = plan("svc", r#":svc {:run "tool --serve" :user "web"}"#, "");
+    let built = sandbox.build(&source).expect("builds");
+    let run = read(&built.prefix.join("run"));
+    assert!(run.contains("    -U web:doj \\\n    -u web:doj \\\n    tool --serve 2>&1\n"),
+            "{run}");
+    assert!(run.contains(&format!("export HOME={}\n",
+                                  sandbox.dir.join("doj/svc/svc/data").display())));
+    assert_eq!(read(&built.prefix.join("SVC_USER")), "web\n");
+    assert_eq!(read(&built.prefix.join("SVC_GROUP")), "doj\n");
+}
+
+#[test]
+fn a_missing_signing_key_stops_the_build_before_plan_code_runs() {
+    let sandbox = Sandbox::new("key");
+    fs::remove_dir_all(sandbox.dir.join("keys")).unwrap();
+    fs::create_dir_all(sandbox.dir.join("keys")).unwrap();
+    fs::write(sandbox.dir.join("keys/other-20261025000000.sig.key"), "").unwrap();
+    let source = plan("key", "", r#" :build (fn [b] (b:write "built" ""))"#);
+    assert_refused(sandbox.build(&source), "no signing key for origin `test`");
+    assert!(!sandbox.dir.join("doj/pkgs/test/key").exists());
+}
+
+#[test]
+fn hooks_with_windows_line_endings_are_refused() {
+    let sandbox = Sandbox::new("crlf");
+    fs::create_dir_all(sandbox.context().join("hooks")).unwrap();
+    fs::write(sandbox.context().join("hooks/init"),
+              "#!/bin/sh\r\ntrue\r\n").unwrap();
+    assert_refused(sandbox.build(&plan("crlf", "", "")), "CR+LF line endings");
 }

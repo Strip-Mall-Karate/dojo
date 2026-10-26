@@ -14,6 +14,7 @@ use std::{cell::{Cell,
                  RefCell},
           collections::BTreeMap,
           env,
+          ffi::OsString,
           fs,
           path::{Component,
                  Path,
@@ -41,9 +42,13 @@ use crate::{Error,
                    Resolved,
                    package_path},
             env::{self as build_env,
-                  Env},
+                  Env,
+                  Inherited},
             fennel,
             message,
+            package::{self,
+                      Artifact,
+                      Package},
             sandbox,
             schema::PHASES};
 
@@ -76,6 +81,14 @@ pub struct Options {
     pub jobs:     usize,
     /// The environment the build starts from.
     pub env:      Vec<(String, String)>,
+    /// Where origin signing keys are: `DOJ_CACHE_KEY_PATH`, else
+    /// `cache/keys` under the root.
+    pub keys:     PathBuf,
+    /// Where the artifact and build report are copied: `DOJ_OUTPUT_PATH`,
+    /// else `results` in the current directory.
+    pub output:   PathBuf,
+    /// The `doj` program that signs packages: `DOJ_BIN`, else `doj`.
+    pub doj:      OsString,
 }
 
 impl Options {
@@ -85,17 +98,24 @@ impl Options {
     /// parallelism.
     #[must_use]
     pub fn new(target: &str, plan_dir: &Path, context: &Path) -> Options {
-        Options { target:   target.to_string(),
-                  root:     env::var_os("DOJ_ROOT_PATH").map_or_else(|| {
-                                                                         PathBuf::from(DEFAULT_ROOT)
-                                                                     },
+        let root =
+            env::var_os("DOJ_ROOT_PATH").map_or_else(|| PathBuf::from(DEFAULT_ROOT), PathBuf::from);
+        Options { target: target.to_string(),
+                  keys: env::var_os("DOJ_CACHE_KEY_PATH").map_or_else(|| {
+                                                                          root.join("cache")
+                                                                              .join("keys")
+                                                                      },
+                                                                      PathBuf::from),
+                  output: env::var_os("DOJ_OUTPUT_PATH").map_or_else(|| PathBuf::from("results"),
                                                                      PathBuf::from),
-                  release:  release_now(),
+                  doj: env::var_os("DOJ_BIN").unwrap_or_else(|| "doj".into()),
+                  root,
+                  release: release_now(),
                   plan_dir: plan_dir.to_path_buf(),
-                  context:  context.to_path_buf(),
-                  check:    false,
-                  jobs:     thread::available_parallelism().map_or(1, usize::from),
-                  env:      env::vars().collect(), }
+                  context: context.to_path_buf(),
+                  check: false,
+                  jobs: thread::available_parallelism().map_or(1, usize::from),
+                  env: env::vars().collect() }
     }
 }
 
@@ -103,9 +123,11 @@ impl Options {
 #[derive(Debug)]
 pub struct Built {
     /// `origin/name/version/release`.
-    pub ident:  String,
+    pub ident:    String,
     /// Where the package was installed.
-    pub prefix: PathBuf,
+    pub prefix:   PathBuf,
+    /// The signed package.
+    pub artifact: Artifact,
 }
 
 /// The source a plan downloads.
@@ -128,12 +150,12 @@ pub struct Settings {
 
 /// The state behind `b`, shared by its functions and the builtin phases.
 pub struct State {
-    name:         String,
+    pub name:     String,
     pub os:       &'static str,
     pub settings: Settings,
     pub cache:    PathBuf,
     context:      PathBuf,
-    env:          RefCell<Env>,
+    pub env:      RefCell<Env>,
     prefix:       RefCell<Option<PathBuf>>,
     src:          RefCell<PathBuf>,
     deps:         Vec<Dep>,
@@ -310,9 +332,11 @@ impl State {
 
 /// A build ready to run its first plan code.
 struct Started {
-    state: Rc<State>,
-    b:     Table,
-    deps:  Resolved,
+    state:     Rc<State>,
+    b:         Table,
+    deps:      Resolved,
+    runtime:   Inherited,
+    buildtime: Inherited,
 }
 
 /// Where a build's files go, known once its version is.
@@ -387,7 +411,11 @@ impl Plan {
     /// [`Error::Build`] names the step or phase that failed and why;
     /// [`Error::Compile`] when the scaffolding module does not compile.
     pub fn build(&self, options: &Options, packages: &dyn Resolve) -> Result<Built, Error> {
-        let Started { state, b, deps } = self.start(options, packages)?;
+        let Started { state,
+                      b,
+                      deps,
+                      runtime,
+                      buildtime, } = self.start(options, packages)?;
         let target = options.target.as_str();
         let version = match &self.metadata().to_json(Some(target))["version"] {
             Json::String(version) => version.clone(),
@@ -397,6 +425,7 @@ impl Plan {
         let layout = Layout::place(&state, &b, options, &version)?;
         let prefix = layout.prefix.clone();
         state.log(&format!("Building {} for {target}", layout.ident));
+        package::write_pre_build(options, &layout.ident).map_err(Error::Build)?;
 
         create_dir(&state.cache)?;
         self.run_phase(&state, &b, "download")?;
@@ -417,6 +446,7 @@ impl Plan {
         if state.settings.source.is_some() {
             builtin::fix_libtool(&state, &layout.src).map_err(Error::Build)?;
         }
+        package::check_hooks(&options.plan_dir).map_err(Error::Build)?;
         self.run_phase(&state, &b, "prepare")?;
         self.run_phase(&state, &b, "build")?;
         if options.check {
@@ -432,8 +462,20 @@ impl Plan {
         self.run_phase(&state, &b, "install")?;
         self.run_phase(&state, &b, "strip")?;
         state.log(&format!("Installed {} in {}", layout.ident, prefix.display()));
+        let json = self.metadata().to_json(Some(target));
+        let artifact = Package { state: &state,
+                                 options,
+                                 json: &json,
+                                 deps: &deps,
+                                 ident: &layout.ident,
+                                 prefix: &prefix,
+                                 work: &layout.work,
+                                 runtime,
+                                 buildtime: &buildtime }.write()
+                                                        .map_err(Error::Build)?;
         Ok(Built { ident: layout.ident,
-                   prefix })
+                   prefix,
+                   artifact })
     }
 
     /// Checks the target, resolves the dependencies, loads the scaffolding
@@ -453,6 +495,7 @@ impl Plan {
         }
         let name = json["name"].as_str().unwrap_or_default().to_string();
         let origin = json["origin"].as_str().unwrap_or_default();
+        package::check_key(&options.keys, origin).map_err(Error::Build)?;
 
         let deps = Resolved::resolve(&strings(&json["deps"]),
                                      &strings(&json["build_deps"]),
@@ -479,7 +522,10 @@ impl Plan {
             chains.insert(*phase, [own, scaffolded]);
         }
 
+        let runtime = Inherited::from_deps(deps.deps.iter().map(|dep| dep.path.as_path()));
+        let buildtime = Inherited::from_deps(deps.build_deps.iter().map(|dep| dep.path.as_path()));
         let mut env = Env::new(options.env.iter().cloned(), os == "windows");
+        build_env::layer(&mut env, &runtime, &buildtime);
         let initial_path = env.get("PATH").unwrap_or_default().to_string();
         build_env::set_path(&mut env,
                             &initial_path,
@@ -502,7 +548,11 @@ impl Plan {
         let b =
             context(&self.lua, &state, options, origin, scaffolding).map_err(|e| lua_error(&e))?;
         state.b.set(b.to_pointer() as usize);
-        Ok(Started { state, b, deps })
+        Ok(Started { state,
+                     b,
+                     deps,
+                     runtime,
+                     buildtime })
     }
 
     /// The plan's value for `key` on `target`: its `on` entry's, else the

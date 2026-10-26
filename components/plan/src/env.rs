@@ -5,7 +5,8 @@
 //! The environment a build's programs run with: the builder's own, the
 //! settings its dependencies publish, and what the plan sets with `b:env`.
 
-use std::{fs,
+use std::{collections::BTreeMap,
+          fs,
           path::{Path,
                  PathBuf}};
 
@@ -137,9 +138,150 @@ pub fn set_flags(env: &mut Env,
     env.set("PREFIX", text(prefix));
 }
 
+/// Variables whose values are lists, and their separators. Dependencies'
+/// values for these are joined rather than overwritten.
+const AGGREGATES: &[(&str, &str)] = &[("PATH", ":"),
+                                      ("GOPATH", ":"),
+                                      ("CLASSPATH", ";"),
+                                      ("NODE_PATH", ":"),
+                                      ("PYTHONPATH", ":"),
+                                      ("BUNDLE_PATH", ":"),
+                                      ("BUNDLE_WITHOUT", ":"),
+                                      ("GEM_PATH", ":"),
+                                      ("RUBYLIB", ":"),
+                                      ("RUBYPATH", ":")];
+
+fn aggregate_separator(name: &str) -> Option<&'static str> {
+    AGGREGATES.iter()
+              .find(|(n, _)| *n == name)
+              .map(|(_, separator)| *separator)
+}
+
+/// `item` in front of `list`, then each entry once, in order of first
+/// appearance.
+fn push_to_path(item: &str, list: &str, separator: &str) -> String {
+    let mut entries: Vec<&str> = Vec::new();
+    for entry in item.split(separator).chain(list.split(separator)) {
+        if !entry.is_empty() && !entries.contains(&entry) {
+            entries.push(entry);
+        }
+    }
+    entries.join(separator)
+}
+
+/// An environment a package passes on, with the ident that set each
+/// variable: `RUNTIME_ENVIRONMENT` and its provenance, or the build-time
+/// pair.
+#[derive(Debug, Default)]
+pub struct Inherited {
+    pub vars:       BTreeMap<String, String>,
+    pub provenance: BTreeMap<String, String>,
+}
+
+impl Inherited {
+    /// Collects `deps`' `RUNTIME_ENVIRONMENT` files, as the shell builder
+    /// did: `PATH` is left out, a list variable gets each value in front of
+    /// the last, and any other variable takes the last value.
+    pub fn from_deps<'a>(deps: impl IntoIterator<Item = &'a Path>) -> Inherited {
+        let mut inherited = Inherited::default();
+        for dep in deps {
+            let Ok(text) = fs::read_to_string(dep.join("RUNTIME_ENVIRONMENT")) else {
+                continue;
+            };
+            let ident = metadata(dep, "IDENT").unwrap_or_default();
+            for line in text.lines() {
+                let (name, value) = line.split_once('=').unwrap_or((line, ""));
+                if name.is_empty() || name == "PATH" {
+                    continue;
+                }
+                inherited.set_from(name, value, &ident);
+            }
+        }
+        inherited
+    }
+
+    fn set_from(&mut self, name: &str, value: &str, ident: &str) {
+        let current = self.vars.get(name).map_or("", String::as_str);
+        if current.is_empty() {
+            self.vars.insert(name.to_string(), value.to_string());
+            self.provenance.insert(name.to_string(), ident.to_string());
+            return;
+        }
+        if current == value {
+            return;
+        }
+        if let Some(separator) = aggregate_separator(name) {
+            let joined = push_to_path(value, current, separator);
+            let from = self.provenance.get(name).map_or("", String::as_str);
+            let from = push_to_path(ident, from, " ");
+            self.vars.insert(name.to_string(), joined);
+            self.provenance.insert(name.to_string(), from);
+        } else {
+            self.vars.insert(name.to_string(), value.to_string());
+            self.provenance.insert(name.to_string(), ident.to_string());
+        }
+    }
+
+    /// Writes the variables to `file` and the provenance to
+    /// `file_PROVENANCE` under `prefix`, one `name=value` per line sorted by
+    /// name. Nothing is written for an empty environment.
+    pub fn write(&self, prefix: &Path, file: &str) -> Result<(), String> {
+        for (map, name) in [(&self.vars, file.to_string()),
+                            (&self.provenance, format!("{file}_PROVENANCE"))]
+        {
+            if map.is_empty() {
+                continue;
+            }
+            let text = map.iter().fold(String::new(), |text, (name, value)| {
+                                     text + name + "=" + value + "\n"
+                                 });
+            let path = prefix.join(name);
+            fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+        }
+        Ok(())
+    }
+}
+
+/// Layers the dependencies' environments over the build's: the run
+/// dependencies' values replace the build's, then the build dependencies'
+/// values join list variables or replace the rest.
+pub fn layer(env: &mut Env, runtime: &Inherited, buildtime: &Inherited) {
+    for (name, value) in &runtime.vars {
+        env.set(name, value.clone());
+    }
+    for (name, value) in &buildtime.vars {
+        match env.get(name) {
+            Some(current) if !current.is_empty() => {
+                if current == value {
+                    continue;
+                }
+                let layered = match aggregate_separator(name) {
+                    Some(separator) => push_to_path(value, current, separator),
+                    None => value.clone(),
+                };
+                env.set(name, layered);
+            }
+            _ => env.set(name, value.clone()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn list_variables_join_and_others_take_the_last_value() {
+        let mut inherited = Inherited::default();
+        inherited.set_from("GEM_PATH", "/a", "o/a/1/1");
+        inherited.set_from("GEM_PATH", "/b:/a", "o/b/1/1");
+        inherited.set_from("JAVA_HOME", "/a", "o/a/1/1");
+        inherited.set_from("JAVA_HOME", "/b", "o/b/1/1");
+        assert_eq!(inherited.vars["GEM_PATH"], "/b:/a");
+        assert_eq!(inherited.provenance["GEM_PATH"], "o/b/1/1 o/a/1/1");
+        assert_eq!(inherited.vars["JAVA_HOME"], "/b");
+        assert_eq!(inherited.provenance["JAVA_HOME"], "o/b/1/1");
+    }
 
     #[test]
     fn names_ignore_case_only_when_asked() {

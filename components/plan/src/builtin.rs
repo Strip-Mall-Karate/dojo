@@ -13,6 +13,8 @@ use std::{fmt::Write as _,
           path::{Path,
                  PathBuf}};
 
+use blake2::{Blake2b,
+             digest::consts::U32};
 use sha2::{Digest,
            Sha256};
 
@@ -133,7 +135,7 @@ fn strip(state: &State) -> Result<(), String> {
                     .iter()
                     .chain(&state.settings.lib_dirs)
     {
-        walk(&prefix.join(dir), &mut files)?;
+        walk(&prefix.join(dir), &mut files, true)?;
     }
     files.sort();
     files.dedup();
@@ -157,9 +159,9 @@ fn strip(state: &State) -> Result<(), String> {
     Ok(())
 }
 
-/// Collects the regular files under `dir` the owner can write, without
-/// following symbolic links. A missing `dir` has none.
-fn walk(dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
+/// Collects the regular files under `dir`, or only those the owner can
+/// write, without following symbolic links. A missing `dir` has none.
+pub fn walk(dir: &Path, files: &mut Vec<PathBuf>, writable: bool) -> Result<(), String> {
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
@@ -172,8 +174,8 @@ fn walk(dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
                                                       format!("cannot read {}: {e}", path.display())
                                                   })?;
         if metadata.is_dir() {
-            walk(&path, files)?;
-        } else if metadata.is_file() && owner_can_write(&metadata) {
+            walk(&path, files, writable)?;
+        } else if metadata.is_file() && (!writable || owner_can_write(&metadata)) {
             files.push(path);
         }
     }
@@ -221,10 +223,12 @@ fn kind(file: &Path) -> Result<Option<Binary>, String> {
 }
 
 /// The SHA-256 of `file` in lowercase hexadecimal.
-pub fn sha256(file: &Path) -> Result<String, String> {
+pub fn sha256(file: &Path) -> Result<String, String> { digest::<Sha256>(file) }
+
+fn digest<D: Digest>(file: &Path) -> Result<String, String> {
     let mut input =
         fs::File::open(file).map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-    let mut hasher = Sha256::new();
+    let mut hasher = D::new();
     let mut buffer = vec![0; 64 * 1024];
     loop {
         let read = input.read(&mut buffer)
@@ -241,6 +245,10 @@ pub fn sha256(file: &Path) -> Result<String, String> {
     }
     Ok(hex)
 }
+
+/// The BLAKE2b-256 of `file` in lowercase hexadecimal, as `doj pkg hash`
+/// prints it.
+pub fn blake2b(file: &Path) -> Result<String, String> { digest::<Blake2b<U32>>(file) }
 
 /// Empties `dir`, creating it if needed.
 pub fn clean(dir: &Path) -> Result<(), String> {

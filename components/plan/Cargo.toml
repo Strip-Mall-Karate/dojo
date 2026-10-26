@@ -16,9 +16,11 @@ name = "doj-plan-build"
 path = "src/main.rs"
 
 [dependencies]
+blake2 = "0.11.0"
 mlua = { version = "0.12.2", features = ["lua55", "vendored"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 sha2 = "0.11.1"
+toml = "1.1.8"
 
 [lints.rust]
 warnings = "deny"

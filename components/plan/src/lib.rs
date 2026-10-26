@@ -14,6 +14,7 @@ mod builtin;
 mod deps;
 mod env;
 mod fennel;
+mod package;
 mod sandbox;
 mod schema;
 
@@ -33,6 +34,7 @@ pub use crate::{build::{Built,
                         target_os},
                 deps::{DojPkgPath,
                        Resolve},
+                package::Artifact,
                 schema::{Metadata,
                          PHASES,
                          TARGETS}};

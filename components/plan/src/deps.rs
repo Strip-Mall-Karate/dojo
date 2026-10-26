@@ -68,13 +68,19 @@ pub struct Dep {
 #[derive(Debug, Default)]
 pub struct Resolved {
     /// Direct run dependencies.
-    pub deps:       Vec<Dep>,
+    pub deps:        Vec<Dep>,
     /// Direct build dependencies, the scaffolding and its run dependencies
     /// first.
-    pub build_deps: Vec<Dep>,
+    pub build_deps:  Vec<Dep>,
+    /// The run dependencies followed by their transitive run
+    /// dependencies, without repeats.
+    pub tdeps:       Vec<PathBuf>,
+    /// The build dependencies followed by their transitive run
+    /// dependencies, without repeats.
+    pub build_tdeps: Vec<PathBuf>,
     /// The direct dependencies, run then build, followed by each one's
     /// transitive run dependencies, without repeats.
-    pub all_tdeps:  Vec<PathBuf>,
+    pub all_tdeps:   Vec<PathBuf>,
 }
 
 impl Resolved {
@@ -111,15 +117,12 @@ impl Resolved {
                                      path:  packages.resolve(ident)?, });
         }
 
-        let direct = resolved.deps.iter().chain(&resolved.build_deps);
+        resolved.tdeps = transitive(&resolved.deps, pkgs);
+        resolved.build_tdeps = transitive(&resolved.build_deps, pkgs);
         let mut all: Vec<PathBuf> = Vec::new();
-        for dep in direct.clone() {
-            add(&mut all, dep.path.clone());
-        }
-        for dep in direct {
-            for ident in ident_list(&dep.path, "TDEPS") {
-                add(&mut all, package_path(pkgs, &ident));
-            }
+        let direct = resolved.direct().map(|dep| &dep.path);
+        for path in direct.chain(&resolved.tdeps).chain(&resolved.build_tdeps) {
+            add(&mut all, path.clone());
         }
         resolved.all_tdeps = all;
         Ok(resolved)
@@ -127,6 +130,17 @@ impl Resolved {
 
     /// The direct dependencies, run then build.
     pub fn direct(&self) -> impl Iterator<Item = &Dep> { self.deps.iter().chain(&self.build_deps) }
+}
+
+/// `deps` followed by the packages in each one's `TDEPS`, without repeats.
+fn transitive(deps: &[Dep], pkgs: &Path) -> Vec<PathBuf> {
+    let mut set: Vec<PathBuf> = deps.iter().map(|dep| dep.path.clone()).collect();
+    for dep in deps {
+        for ident in ident_list(&dep.path, "TDEPS") {
+            add(&mut set, package_path(pkgs, &ident));
+        }
+    }
+    set
 }
 
 fn add(set: &mut Vec<PathBuf>, path: PathBuf) {
