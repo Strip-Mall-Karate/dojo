@@ -19,6 +19,17 @@
 //! Each phase resolves to the plan's function for the target, then the
 //! scaffolding's, then the builtin. `b.default.<phase>` runs the next one
 //! down from wherever it is called.
+//!
+//! A scaffolding is a package shipping `lib/scaffolding.fnl`, a module of
+//! phase functions. Its `metadata` function, if it has one, gets the plan's
+//! metadata, the plan's settings for it (`:scaffolding {:package <ident>
+//! :settings <data>}`) and read-only views of the build's source context
+//! and the plan's directory, before dependencies resolve. It may return
+//! dependencies, directories, `svc`, exports, binds and the descriptive keys
+//! to add: lists gain its entries, tables its keys, and whatever the plan sets
+//! itself stays the plan's. A `default.toml` the build installs follows the
+//! plan's in the package. Phases read the settings as `b.scaffolding_settings` and the
+//! plan's source as `b.source`.
 
 use std::{cell::{Cell,
                  RefCell},
@@ -60,7 +71,8 @@ use crate::{Error,
                       Artifact,
                       Package},
             sandbox,
-            schema::PHASES};
+            schema::{self,
+                     PHASES}};
 
 /// Where Dojo keeps packages and caches when `DOJ_ROOT_PATH` is unset.
 #[cfg(not(windows))]
@@ -181,6 +193,9 @@ pub struct State {
     /// What the plan passes on to the packages that depend on it, in the
     /// order it said so.
     exports:      RefCell<Vec<Export>>,
+    /// `PATH` as the builder was started with it, for the tools that work on
+    /// the package rather than build it.
+    pub builder_path: Option<String>,
 }
 
 /// A variable a plan passes on: at run time (`RUNTIME_ENVIRONMENT`) or only
@@ -224,14 +239,16 @@ impl State {
         }
     }
 
-    /// Runs `argv` with the build environment plus `extra`. Returns stdout
-    /// without its trailing newline when `capture` is set.
-    pub fn run(&self,
-               argv: &[String],
-               cwd: Option<&Path>,
-               extra: &[(String, String)],
-               capture: bool)
-               -> Result<Option<String>, String> {
+    /// Starts `argv` with the build environment plus `extra` and waits for
+    /// it, collecting stdout when `capture` is set; how it ended is the
+    /// caller's to judge.
+    fn spawn(&self,
+             argv: &[String],
+             cwd: Option<&Path>,
+             extra: &[(String, String)],
+             stdin: Option<&[u8]>,
+             capture: bool)
+             -> Result<(std::process::Output, String), String> {
         let shown = show_argv(argv);
         let Some((program, rest)) = argv.split_first() else {
             return Err("the argv is empty".to_string());
@@ -249,19 +266,86 @@ impl State {
                .current_dir(&cwd)
                .env_clear()
                .envs(env.vars().iter().map(|(n, v)| (n, v)))
-               .stdin(Stdio::null())
+               .stdin(if stdin.is_some() {
+                          Stdio::piped()
+                      } else {
+                          Stdio::null()
+                      })
+               .stdout(if capture {
+                           Stdio::piped()
+                       } else {
+                           Stdio::inherit()
+                       })
                .stderr(Stdio::inherit());
-        let output = if capture {
-            command.output()
-        } else {
-            command.status().map(|status| {
-                                std::process::Output { status,
-                                                       stdout: Vec::new(),
-                                                       stderr: Vec::new() }
-                            })
+        let mut child =
+            command.spawn()
+                   .map_err(|e| format!("`{shown}` could not start in {}: {e}", cwd.display()))?;
+        // The program reads its input while it writes its output, so the input
+        // goes in from another thread. A program that stops reading early ends
+        // the write, which is no error of the build's.
+        let feeder = match (stdin, child.stdin.take()) {
+            (Some(input), Some(mut pipe)) => {
+                let input = input.to_vec();
+                Some(std::thread::spawn(move || {
+                         use std::io::Write as _;
+                         match pipe.write_all(&input) {
+                             Err(e) if e.kind() != std::io::ErrorKind::BrokenPipe => Err(e),
+                             _ => Ok(()),
+                         }
+                     }))
+            }
+            _ => None,
         };
-        let output =
-            output.map_err(|e| format!("`{shown}` could not start in {}: {e}", cwd.display()))?;
+        let output = child.wait_with_output()
+                          .map_err(|e| format!("`{shown}` could not be waited for: {e}"))?;
+        if let Some(feeder) = feeder {
+            feeder.join()
+                  .map_err(|_| format!("`{shown}`: writing its input panicked"))?
+                  .map_err(|e| format!("`{shown}`: writing its input failed: {e}"))?;
+        }
+        Ok((output, shown))
+    }
+
+    /// Runs `argv` and returns its exit code, whatever it is. A program that
+    /// cannot start, or that a signal ends, is still an error.
+    pub fn run_status(&self,
+                      argv: &[String],
+                      cwd: Option<&Path>,
+                      extra: &[(String, String)],
+                      stdin: Option<&[u8]>)
+                      -> Result<i32, String> {
+        let (output, shown) = self.spawn(argv, cwd, extra, stdin, false)?;
+        match output.status.code() {
+            Some(0) => Ok(0),
+            Some(code) => {
+                self.log(&format!("`{shown}` exited with code {code}; going on"));
+                Ok(code)
+            }
+            None => Err(format!("`{shown}` was killed by a signal")),
+        }
+    }
+
+    /// Runs `argv` with the build environment plus `extra`. Returns stdout
+    /// without its trailing newline when `capture` is set.
+    pub fn run(&self,
+               argv: &[String],
+               cwd: Option<&Path>,
+               extra: &[(String, String)],
+               capture: bool)
+               -> Result<Option<String>, String> {
+        self.run_fed(argv, cwd, extra, None, capture)
+    }
+
+    /// [`State::run`] with `stdin` as the program's input; with none, the
+    /// program reads an empty input.
+    pub fn run_fed(&self,
+                   argv: &[String],
+                   cwd: Option<&Path>,
+                   extra: &[(String, String)],
+                   stdin: Option<&[u8]>,
+                   capture: bool)
+                   -> Result<Option<String>, String> {
+        let (output, shown) = self.spawn(argv, cwd, extra, stdin, capture)?;
         if !output.status.success() {
             return Err(match output.status.code() {
                 Some(code) => format!("`{shown}` exited with code {code}"),
@@ -284,29 +368,26 @@ impl State {
         Ok(Some(stdout))
     }
 
-    /// A path a plan may create: inside the prefix, or inside `b.src` when
-    /// absolute, and not through a symbolic link that leads elsewhere.
-    /// Relative paths are inside the prefix.
+    /// A path a plan may create: inside the prefix, `b.src` or `b.cache`
+    /// (where sources are downloaded and unpacked, and a build may keep a
+    /// separate build directory) when absolute, and not through a symbolic
+    /// link that leads elsewhere. Relative paths are inside the prefix; `..`
+    /// is resolved by the path's text.
     fn creatable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
-        let path = Path::new(path);
-        if path.components().any(|c| c == Component::ParentDir) {
-            return Err(format!("{what}: {} may not contain `..`", path.display()));
-        }
         let prefix = self.prefix()?;
         let src = self.src.borrow().clone();
-        let full = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            prefix.join(path)
-        };
-        let Some(root) = [&prefix, &src].into_iter()
-                                        .find(|root| full.starts_with(root))
+        let full = lexical(&prefix.join(path)).ok_or_else(|| {
+                                                  format!("{what}: {path} climbs above the root")
+                                              })?;
+        let Some(root) = [&prefix, &src, &self.cache].into_iter()
+                                                     .find(|root| full.starts_with(root))
         else {
-            return Err(format!("{what}: {} is outside the prefix ({}) and the \
-                                source directory ({})",
+            return Err(format!("{what}: {} is outside the prefix ({}), the \
+                                source directory ({}) and the cache ({})",
                                full.display(),
                                prefix.display(),
-                               src.display()));
+                               src.display(),
+                               self.cache.display()));
         };
         if root.exists() {
             let mut existing = full.as_path();
@@ -334,11 +415,10 @@ impl State {
     /// cache, the plan's directory or a declared dependency. Relative paths
     /// are from the directory programs run in.
     fn readable(&self, path: &str, what: &str) -> Result<PathBuf, String> {
-        let path = Path::new(path);
-        if path.components().any(|c| c == Component::ParentDir) {
-            return Err(format!("{what}: {} may not contain `..`", path.display()));
-        }
-        let full = self.default_cwd().join(path);
+        let full = lexical(&self.default_cwd().join(path)).ok_or_else(|| {
+                                                              format!("{what}: {path} climbs \
+                                                                       above the root")
+                                                          })?;
         let mut roots = vec![self.src.borrow().clone(),
                              self.cache.clone(),
                              self.context.clone()];
@@ -440,6 +520,8 @@ impl State {
 struct Started {
     state:     Rc<State>,
     b:         Table,
+    /// The plan's metadata for the target, with its scaffolding's added.
+    json:      Json,
     deps:      Resolved,
     runtime:   Inherited,
     buildtime: Inherited,
@@ -519,6 +601,7 @@ impl Plan {
     pub fn build(&self, options: &Options, packages: &dyn Resolve) -> Result<Built, Error> {
         let Started { state,
                       b,
+                      json,
                       deps,
                       mut runtime,
                       mut buildtime, } = self.start(options, packages)?;
@@ -553,6 +636,7 @@ impl Plan {
             builtin::fix_libtool(&state, &layout.src).map_err(Error::Build)?;
         }
         package::check_hooks(&options.plan_dir).map_err(Error::Build)?;
+        package::check_service(&options.plan_dir, &json["svc"]).map_err(Error::Build)?;
         self.run_phase(&state, &b, "prepare")?;
         self.run_phase(&state, &b, "build")?;
         if options.check {
@@ -576,7 +660,6 @@ impl Plan {
             };
             to.export(&export.name, &export.value, export.push, &layout.ident);
         }
-        let json = self.metadata().to_json(Some(target));
         let artifact = Package { state: &state,
                                  options,
                                  json: &json,
@@ -603,23 +686,44 @@ impl Plan {
         if (os == "windows") != cfg!(windows) {
             return Err(Error::Build(format!("cannot build `{target}` packages on this host")));
         }
-        let json = self.metadata().to_json(Some(target));
+        let mut json = self.metadata().to_json(Some(target));
         if json["type"] == "composite" {
             return Err(Error::Build("composite plans are not supported".to_string()));
         }
         let name = json["name"].as_str().unwrap_or_default().to_string();
-        let origin = json["origin"].as_str().unwrap_or_default();
-        package::check_key(&options.keys, origin).map_err(Error::Build)?;
+        let origin = json["origin"].as_str().unwrap_or_default().to_string();
+        package::check_key(&options.keys, &origin).map_err(Error::Build)?;
 
-        let deps = Resolved::resolve(&strings(&json["deps"]),
-                                     &strings(&json["build_deps"]),
-                                     json["scaffolding"].as_str(),
-                                     &options.root.join("pkgs"),
-                                     packages).map_err(Error::Build)?;
-        let scaffolding = match json["scaffolding"].as_str() {
-            Some(_) => Some(load_scaffolding(&self.lua, &deps.build_deps[0].path)?),
+        // `scaffolding` is a package ident or `{:package <ident> :settings <data>}`.
+        let (scaffolding_ident, scaffolding_settings) = match &json["scaffolding"] {
+            Json::String(ident) => (Some(ident.clone()), Json::Null),
+            Json::Object(fields) => {
+                (fields.get("package")
+                       .and_then(Json::as_str)
+                       .map(String::from),
+                 fields.get("settings").cloned().unwrap_or(Json::Null))
+            }
+            _ => (None, Json::Null),
+        };
+        let scaffolding = match &scaffolding_ident {
+            Some(ident) => {
+                let path = packages.resolve(ident).map_err(Error::Build)?;
+                Some(load_scaffolding(&self.lua, &path)?)
+            }
             None => None,
         };
+        if let Some(module) = &scaffolding {
+            add_scaffolding_metadata(&self.lua,
+                                     module,
+                                     &mut json,
+                                     &scaffolding_settings,
+                                     &[("src", &options.context), ("plan", &options.plan_dir)])?;
+        }
+        let deps = Resolved::resolve(&strings(&json["deps"]),
+                                     &strings(&json["build_deps"]),
+                                     scaffolding_ident.as_deref(),
+                                     &options.root.join("pkgs"),
+                                     packages).map_err(Error::Build)?;
         let mut chains = BTreeMap::new();
         for phase in PHASES {
             let own = match self.value(target, phase).map_err(|e| lua_error(&e))? {
@@ -659,12 +763,21 @@ impl Plan {
                                     chains,
                                     active: RefCell::new(Vec::new()),
                                     b: Cell::new(0),
-                                    exports: RefCell::new(Vec::new()) });
-        let b =
-            context(&self.lua, &state, options, origin, scaffolding).map_err(|e| lua_error(&e))?;
+                                    exports: RefCell::new(Vec::new()),
+                                    builder_path: options.env
+                                                         .iter()
+                                                         .find(|(name, _)| name == "PATH")
+                                                         .map(|(_, value)| value.clone()) });
+        let b = context(&self.lua,
+                        &state,
+                        options,
+                        &origin,
+                        scaffolding,
+                        &scaffolding_settings).map_err(|e| lua_error(&e))?;
         state.b.set(b.to_pointer() as usize);
         Ok(Started { state,
                      b,
+                     json,
                      deps,
                      runtime,
                      buildtime })
@@ -785,13 +898,124 @@ fn load_scaffolding(lua: &Lua, package: &Path) -> Result<Table, Error> {
     Ok(module)
 }
 
+/// Calls the scaffolding module's `metadata` function, if it has one, with
+/// the plan's metadata, the plan's settings for it and read-only views of
+/// `dirs` (the build's source context and the plan's directory), and adds
+/// what it returns to `json`.
+fn add_scaffolding_metadata(lua: &Lua,
+                            module: &Table,
+                            json: &mut Json,
+                            settings: &Json,
+                            dirs: &[(&str, &Path)])
+                            -> Result<(), Error> {
+    let failed = |e: &mlua::Error| {
+        Error::Build(format!("the scaffolding's metadata failed: {}",
+                             message(e, Stage::Build)))
+    };
+    let Some(metadata) = module.raw_get::<Option<Function>>("metadata")
+                               .map_err(|e| failed(&e))?
+    else {
+        return Ok(());
+    };
+    let plan = json_to_lua(lua, json).map_err(|e| failed(&e))?;
+    let settings = json_to_lua(lua, settings).map_err(|e| failed(&e))?;
+    let views = lua.create_table().map_err(|e| failed(&e))?;
+    for (name, dir) in dirs {
+        views.raw_set(*name, dir_view(lua, dir).map_err(|e| failed(&e))?)
+             .map_err(|e| failed(&e))?;
+    }
+    sandbox::limit(lua,
+                   sandbox::PLAN_MEMORY,
+                   sandbox::PLAN_INSTRUCTIONS,
+                   "the scaffolding").map_err(|e| failed(&e))?;
+    let added = metadata.call::<Value>((plan, settings, views))
+                        .map_err(|e| failed(&e))?;
+    let added = schema::parse_contribution(&added)?;
+    schema::merge_contribution(json, added)
+}
+
+/// A read-only view of `dir` for a scaffolding's `metadata`: `read`, `exists`
+/// and `json` take a path inside it. `read` gives a file's bytes and `json`
+/// its parsed JSON, nil when there is no such file.
+fn dir_view(lua: &Lua, dir: &Path) -> mlua::Result<Table> {
+    let inside = {
+        let dir = dir.to_path_buf();
+        move |path: String| -> mlua::Result<PathBuf> {
+            let relative = Path::new(&path);
+            if relative.is_absolute()
+               || relative.components()
+                          .any(|part| part == Component::ParentDir)
+            {
+                return Err(mlua::Error::runtime(format!("{path} is not a path \
+                                                         inside the directory")));
+            }
+            Ok(dir.join(relative))
+        }
+    };
+    let view = lua.create_table()?;
+    let at = inside.clone();
+    view.raw_set("exists",
+                 lua.create_function(move |_, path: String| Ok(at(path)?.exists()))?)?;
+    let at = inside.clone();
+    view.raw_set("read",
+                 lua.create_function(move |lua, path: String| {
+                        match fs::read(at(path)?) {
+                            Ok(bytes) => Ok(Value::String(lua.create_string(bytes)?)),
+                            Err(_) => Ok(Value::Nil),
+                        }
+                    })?)?;
+    view.raw_set("json",
+                 lua.create_function(move |lua, path: String| {
+                        let file = inside(path.clone())?;
+                        let Ok(text) = fs::read_to_string(&file) else {
+                            return Ok(Value::Nil);
+                        };
+                        let json: Json = serde_json::from_str(&text).map_err(|e| {
+                                             mlua::Error::runtime(format!("{path} is not JSON: \
+                                                                           {e}"))
+                                         })?;
+                        json_to_lua(lua, &json)
+                    })?)?;
+    Ok(view)
+}
+
+/// JSON as Lua values: objects and arrays become fresh tables, null is nil.
+fn json_to_lua(lua: &Lua, json: &Json) -> mlua::Result<Value> {
+    Ok(match json {
+        Json::Null => Value::Nil,
+        Json::Bool(b) => Value::Boolean(*b),
+        Json::Number(n) => {
+            match n.as_i64() {
+                Some(i) => Value::Integer(i),
+                None => Value::Number(n.as_f64().unwrap_or_default()),
+            }
+        }
+        Json::String(text) => Value::String(lua.create_string(text)?),
+        Json::Array(items) => {
+            let table = lua.create_table()?;
+            for (i, item) in items.iter().enumerate() {
+                table.raw_set(i + 1, json_to_lua(lua, item)?)?;
+            }
+            Value::Table(table)
+        }
+        Json::Object(fields) => {
+            let table = lua.create_table()?;
+            for (key, item) in fields {
+                table.raw_set(key.as_str(), json_to_lua(lua, item)?)?;
+            }
+            Value::Table(table)
+        }
+    })
+}
+
 /// Builds `b`. `version`, `prefix` and `src` are set once the version is
 /// known.
 fn context(lua: &Lua,
            state: &Rc<State>,
            options: &Options,
            origin: &str,
-           scaffolding: Option<Table>)
+           scaffolding: Option<Table>,
+           scaffolding_settings: &Json)
            -> mlua::Result<Table> {
     let b = lua.create_table()?;
     let target = options.target.as_str();
@@ -806,6 +1030,20 @@ fn context(lua: &Lua,
               text(&options.plan_dir).map_err(mlua::Error::runtime)?)?;
     b.raw_set("jobs", options.jobs)?;
     b.raw_set("scaffolding", scaffolding)?;
+    // The plan's settings for its scaffolding, and its source, for
+    // scaffoldings that work on the source themselves.
+    b.raw_set("scaffolding_settings",
+              json_to_lua(lua, scaffolding_settings)?)?;
+    if let Some(source) = &state.settings.source {
+        let table = lua.create_table()?;
+        table.raw_set("url", source.url.as_str())?;
+        table.raw_set("sha256", source.sha256.as_str())?;
+        table.raw_set("filename", source.filename.as_str())?;
+        if let Some(dirname) = &source.dirname {
+            table.raw_set("dirname", dirname.as_str())?;
+        }
+        b.raw_set("source", table)?;
+    }
     add_processes(lua, &b, state)?;
     add_files(lua, &b, state)?;
     add_file_reads(lua, &b, state)?;
@@ -816,17 +1054,23 @@ fn context(lua: &Lua,
     Ok(b)
 }
 
-/// `b:run`, `b:capture`, `b:getenv`, `b:env` and `b:env_append`.
+/// `b:run`, `b:capture`, `b:getenv`, `b:env`, `b:unsetenv` and `b:env_append`.
 fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
     let s = Rc::clone(state);
     b.raw_set("run",
               lua.create_function(move |_, (this, argv, opts): (Value, Value, Value)| {
                      s.check_this(&this, "b:run")?;
                      let argv = texts(&argv, "b:run: argv")?;
-                     let (cwd, env) = run_options(&opts, "b:run")?;
-                     s.run(&argv, cwd.as_deref(), &env, false)
-                      .map_err(mlua::Error::runtime)?;
-                     Ok(())
+                     let opts = run_options(&opts, "b:run", true)?;
+                     let stdin = opts.stdin.as_deref();
+                     if opts.check {
+                         s.run_fed(&argv, opts.cwd.as_deref(), &opts.env, stdin, false)
+                          .map_err(mlua::Error::runtime)?;
+                         Ok(0)
+                     } else {
+                         s.run_status(&argv, opts.cwd.as_deref(), &opts.env, stdin)
+                          .map_err(mlua::Error::runtime)
+                     }
                  })?)?;
 
     let s = Rc::clone(state);
@@ -834,8 +1078,9 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
               lua.create_function(move |_, (this, argv, opts): (Value, Value, Value)| {
                      s.check_this(&this, "b:capture")?;
                      let argv = texts(&argv, "b:capture: argv")?;
-                     let (cwd, env) = run_options(&opts, "b:capture")?;
-                     s.run(&argv, cwd.as_deref(), &env, true)
+                     let opts = run_options(&opts, "b:capture", false)?;
+                     let stdin = opts.stdin.as_deref();
+                     s.run_fed(&argv, opts.cwd.as_deref(), &opts.env, stdin, true)
                       .map(Option::unwrap_or_default)
                       .map_err(mlua::Error::runtime)
                  })?)?;
@@ -856,6 +1101,15 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      s.check_this(&this, "b:getenv")?;
                      let name = env_name(&name, "b:getenv")?;
                      Ok(s.env.borrow().get(&name).map(str::to_string))
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("unsetenv",
+              lua.create_function(move |_, (this, name): (Value, Value)| {
+                     s.check_this(&this, "b:unsetenv")?;
+                     let name = env_name(&name, "b:unsetenv")?;
+                     s.env.borrow_mut().remove(&name);
+                     Ok(())
                  })?)?;
 
     let s = Rc::clone(state);
@@ -941,7 +1195,7 @@ fn add_files(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      s.check_this(&this, "b:write")?;
                      let path = s.creatable(&text_of(&path, "b:write: the path")?, "b:write")
                                  .map_err(mlua::Error::runtime)?;
-                     let contents = text_of(&contents, "b:write: the text")?;
+                     let contents = bytes_of(&contents, "b:write: the text")?;
                      let written = path.parent()
                                        .map_or(Ok(()), fs::create_dir_all)
                                        .and_then(|()| fs::write(&path, contents));
@@ -967,15 +1221,17 @@ fn add_files(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
 fn add_file_reads(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
     let s = Rc::clone(state);
     b.raw_set("read",
-              lua.create_function(move |_, (this, path): (Value, Value)| {
+              lua.create_function(move |lua, (this, path): (Value, Value)| {
                      s.check_this(&this, "b:read")?;
                      let path = s.readable(&text_of(&path, "b:read: the path")?, "b:read")
                                  .map_err(mlua::Error::runtime)?;
-                     fs::read_to_string(&path).map_err(|e| {
-                                                  mlua::Error::runtime(format!("b:read: cannot \
-                                                                                read {}: {e}",
-                                                                               path.display()))
-                                              })
+                     // A file's bytes as they are: a Lua string holds any.
+                     let bytes = fs::read(&path).map_err(|e| {
+                                                    mlua::Error::runtime(format!("b:read: cannot \
+                                                                                  read {}: {e}",
+                                                                                 path.display()))
+                                                })?;
+                     lua.create_string(bytes)
                  })?)?;
 
     let s = Rc::clone(state);
@@ -1064,7 +1320,12 @@ fn add_file_changes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()>
                      s.check_this(&this, "b:chmod")?;
                      let path = s.creatable(&text_of(&path, "b:chmod: the path")?, "b:chmod")
                                  .map_err(mlua::Error::runtime)?;
-                     let mode = octal_mode(&text_of(&mode, "b:chmod: the mode")?, "b:chmod")?;
+                     let spec = text_of(&mode, "b:chmod: the mode")?;
+                     let mode = if spec.bytes().all(|b| b.is_ascii_digit()) {
+                         octal_mode(&spec, "b:chmod")?
+                     } else {
+                         symbolic_mode(&spec, &path).map_err(mlua::Error::runtime)?
+                     };
                      set_mode(&path, Some(mode)).map_err(mlua::Error::runtime)
                  })?)?;
 
@@ -1269,6 +1530,34 @@ fn set_mode(path: &Path, mode: Option<u32>) -> Result<(), String> {
 #[cfg(not(unix))]
 fn set_mode(_: &Path, _: Option<u32>) -> Result<(), String> { Ok(()) }
 
+/// `path` with `..` resolved by its text, as the shell resolves `cd ..`;
+/// none when `..` climbs above the root. A trailing `/.` or `/` stays, so
+/// the path still names only a directory.
+fn lexical(path: &Path) -> Option<PathBuf> {
+    if !path.components().any(|part| part == Component::ParentDir) {
+        return Some(path.to_path_buf());
+    }
+    let mut out = PathBuf::new();
+    for part in path.components() {
+        match part {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !out.pop() || out.as_os_str().is_empty() {
+                    return None;
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    let text = path.as_os_str().as_encoded_bytes();
+    if text.ends_with(b"/.") {
+        out.push(".");
+    } else if text.ends_with(b"/") {
+        out.push("");
+    }
+    Some(out)
+}
+
 /// Every file and directory under `dir` whose name matches `pattern`, at any
 /// depth. Symbolic links are listed, not followed.
 fn find(dir: &Path, pattern: &str, found: &mut Vec<String>) -> Result<(), String> {
@@ -1366,6 +1655,72 @@ fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
                 link.display()))
 }
 
+/// A symbolic mode like `chmod` takes (`+x`, `u+w,go-w`, `a=r`), applied to
+/// `path`'s mode now. With no who, `+` and `-` act on everyone. `X` is
+/// execute for a directory or a file someone may execute already.
+fn symbolic_mode(spec: &str, path: &Path) -> Result<u32, String> {
+    let meta =
+        fs::metadata(path).map_err(|e| format!("b:chmod: cannot read {}: {e}", path.display()))?;
+    let mut mode = mode_of(&meta);
+    let executable = meta.is_dir() || mode & 0o111 != 0;
+    let refuse =
+        || format!("b:chmod: the mode is `{spec}`, not octal or symbolic like \"+x\" or \"u+w\"");
+    for clause in spec.split(',') {
+        let op_at = clause.find(['+', '-', '=']).ok_or_else(refuse)?;
+        let (who, rest) = clause.split_at(op_at);
+        let mut who_bits = 0;
+        for c in who.chars() {
+            who_bits |= match c {
+                'u' => 0o4700,
+                'g' => 0o2070,
+                'o' => 0o1007,
+                'a' => 0o7777,
+                _ => return Err(refuse()),
+            };
+        }
+        if who_bits == 0 {
+            who_bits = 0o7777;
+        }
+        let mut chars = rest.chars();
+        let op = chars.next().ok_or_else(refuse)?;
+        let mut perm = 0;
+        for c in chars {
+            perm |= match c {
+                'r' => 0o444,
+                'w' => 0o222,
+                'x' => 0o111,
+                'X' if executable => 0o111,
+                'X' => 0,
+                's' => 0o6000,
+                't' => 0o1000,
+                _ => return Err(refuse()),
+            };
+        }
+        let bits = perm & who_bits;
+        mode = match op {
+            '+' => mode | bits,
+            '-' => mode & !bits,
+            _ => (mode & !who_bits) | bits,
+        };
+    }
+    Ok(mode & 0o7777)
+}
+
+#[cfg(unix)]
+fn mode_of(meta: &fs::Metadata) -> u32 {
+    use std::os::unix::fs::PermissionsExt;
+    meta.permissions().mode()
+}
+
+#[cfg(not(unix))]
+fn mode_of(meta: &fs::Metadata) -> u32 {
+    if meta.permissions().readonly() {
+        0o444
+    } else {
+        0o644
+    }
+}
+
 /// Octal permissions like `"755"`.
 fn octal_mode(mode: &str, what: &str) -> mlua::Result<u32> {
     match u32::from_str_radix(mode, 8) {
@@ -1388,13 +1743,32 @@ fn install_mode(opts: &Value) -> mlua::Result<Option<u32>> {
     octal_mode(&mode, "b:install").map(Some)
 }
 
-/// Reads `b:run` and `b:capture` options: `cwd`, and `env`, a table of
-/// names to values.
-/// A working directory and extra environment variables.
-type RunOptions = (Option<PathBuf>, Vec<(String, String)>);
+/// `b:run` and `b:capture` options.
+struct RunOptions {
+    /// The working directory, relative to the default one.
+    cwd:   Option<PathBuf>,
+    /// Environment variables set for this program only.
+    env:   Vec<(String, String)>,
+    /// Whether a nonzero exit stops the build: true unless the plan says false.
+    check: bool,
+    /// Bytes the program reads as its input.
+    stdin: Option<Vec<u8>>,
+}
 
-fn run_options(opts: &Value, what: &str) -> mlua::Result<RunOptions> {
-    let opts = options(opts, what, &["cwd", "env"])?;
+/// Reads `b:run` and `b:capture` options: `cwd`, `env`, a table of names to
+/// values, `stdin`, and for `b:run` only `check`.
+fn run_options(opts: &Value, what: &str, may_tolerate: bool) -> mlua::Result<RunOptions> {
+    let allowed: &[&str] = if may_tolerate {
+        &["cwd", "env", "stdin", "check"]
+    } else {
+        &["cwd", "env", "stdin"]
+    };
+    let opts = options(opts, what, allowed)?;
+    let check = match opts.get("check") {
+        None => true,
+        Some(Value::Boolean(check)) => *check,
+        Some(_) => return Err(mlua::Error::runtime(format!("{what}: `check` is true or false"))),
+    };
     let cwd = opts.get("cwd")
                   .map(|cwd| text_of(cwd, &format!("{what}: `cwd`")).map(PathBuf::from))
                   .transpose()?;
@@ -1405,7 +1779,13 @@ fn run_options(opts: &Value, what: &str) -> mlua::Result<RunOptions> {
             env.push((name, value));
         }
     }
-    Ok((cwd, env))
+    let stdin = opts.get("stdin")
+                    .map(|stdin| bytes_of(stdin, &format!("{what}: `stdin`")))
+                    .transpose()?;
+    Ok(RunOptions { cwd,
+                    env,
+                    check,
+                    stdin })
 }
 
 /// A table of string keys, read raw. `allowed` lists the keys it may have;
@@ -1446,6 +1826,19 @@ fn env_name(value: &Value, what: &str) -> mlua::Result<String> {
 }
 
 /// A string, or an integer as its digits.
+/// A string's bytes, whatever their encoding, or an integer's digits.
+fn bytes_of(value: &Value, what: &str) -> mlua::Result<Vec<u8>> {
+    match value {
+        Value::String(bytes) => Ok(bytes.as_bytes().to_vec()),
+        Value::Integer(i) => Ok(i.to_string().into_bytes()),
+        other => {
+            Err(mlua::Error::runtime(format!("{what} is a {}, not a \
+                                              string",
+                                             other.type_name())))
+        }
+    }
+}
+
 fn text_of(value: &Value, what: &str) -> mlua::Result<String> {
     match value {
         Value::String(text) => {
@@ -1559,11 +1952,14 @@ fn settings(json: &Json, name: &str) -> Result<Settings, Error> {
     };
     if let Some(Source { dirname: Some(dirname),
                          .. }) = &source
-       && (dirname.contains(['/', '\\']) || dirname == "..")
+       && (dirname.starts_with(['/', '\\'])
+           || dirname.contains(':')
+           || dirname.split(['/', '\\'])
+                     .any(|part| part == ".." || part.is_empty()))
     {
         return Err(Error::Build(format!("{name}: `source.dirname` \
-                                         `{dirname}` must be one directory \
-                                         name")));
+                                         `{dirname}` must be a relative \
+                                         path inside the cache")));
     }
     let mut other_dirs = strings(&json["include_dirs"]);
     other_dirs.extend(strings(&json["pconfig_dirs"]));

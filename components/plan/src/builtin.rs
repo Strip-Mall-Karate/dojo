@@ -144,7 +144,9 @@ fn unpack(state: &State) -> Result<(), String> {
 /// Strips binaries under `bin_dirs` and `lib_dirs`: executables of
 /// everything, shared objects and position-independent executables of what
 /// linking does not need, and static archives of debug information. Files
-/// the owner cannot write are left alone, as the shell builder did.
+/// the owner cannot write are left alone, as the shell builder did. The
+/// builder's own strip does it, from the PATH it was started with: the
+/// package's strip (binutils') cannot rewrite itself while it runs.
 fn strip(state: &State) -> Result<(), String> {
     let prefix = state.prefix()?;
     let mut files = Vec::new();
@@ -160,6 +162,8 @@ fn strip(state: &State) -> Result<(), String> {
     if !files.is_empty() {
         state.log("Stripping unneeded symbols from binaries and libraries");
     }
+    let builder_path: Vec<(String, String)> =
+        state.builder_path.iter().map(|path| ("PATH".to_string(), path.clone())).collect();
     for file in files {
         let flag = match kind(&file)? {
             Some(Binary::Executable) => "--strip-all",
@@ -171,7 +175,7 @@ fn strip(state: &State) -> Result<(), String> {
                     flag.into(),
                     file.to_string_lossy().into_owned()],
                   None,
-                  &[],
+                  &builder_path,
                   false)?;
     }
     Ok(())
