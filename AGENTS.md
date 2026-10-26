@@ -26,8 +26,8 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
 - **The old project's name appears nowhere in the tree**, not in code, comments, docs, fixtures or
   commit subjects. `NOTICE` shows how to credit its authors without naming it.
 - Inherited files keep their `Copyright (c) 20xx Chef Software Inc.` headers unchanged. New files
-  start with the MIT header in `components/launcher/src/init.rs`. `README.md` says which license
-  covers what; keep it true.
+  start with the Apache 2.0 header in `components/launcher/src/init.rs`, with Strip Mall Karate
+  Company's copyright line. Everything is under the Apache License 2.0 (`LICENSE`, `NOTICE`).
 - A mechanical rename can mint a name a stranger can register (a GitHub owner, a Docker Hub
   namespace, a package feed). Any renamed hostname or namespace is checked before it ships.
 

@@ -23,8 +23,8 @@ longer story.
   configuration and keys scope to it.
 - **Focus:** PID 1 (grow the Launcher) and a full-machine installer. A container target is
   secondary.
-- **License:** new work is MIT (`LICENSE`, Strip Mall Karate Company); inherited files stay under
-  Apache 2.0 (`LICENSE-APACHE`). `NOTICE` and `README.md` say which covers what.
+- **License:** Apache 2.0 for everything, inherited files and new work alike (`LICENSE`,
+  `NOTICE`); new files carry Strip Mall Karate Company's copyright line.
 - **First machines:** a VM on the owner's Apple silicon laptop first (hardware virtualization,
   arm64 guest, never emulation), the physical machine smk-2 (x86_64 UEFI, same hardware profile as
   smk-1) deferred.

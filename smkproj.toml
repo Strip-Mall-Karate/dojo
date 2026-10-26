@@ -27,7 +27,6 @@ Workspace = "smk"
 [Format]
 Exclude = []
 [License]
-# New work only; inherited files stay under Apache 2.0 (LICENSE-APACHE, NOTICE).
-Kind = "MIT"
+Kind = "Apache-2.0"
 Holder = "Strip Mall Karate Company"
 Year = 2026

@@ -91,3 +91,4 @@ check; `boot` takes them as `--ring`, `--link`, `--peer` and `--members`, and
 Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 Copyright (c) 2016 Chef Software Inc. and/or applicable contributors
+Copyright (c) 2026 Strip Mall Karate Company
