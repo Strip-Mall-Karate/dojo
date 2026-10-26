@@ -36,7 +36,7 @@
 # TESTING CHANGES
 # Documentation on testing local changes to this file and its friends in
 # ../libexec lives here:
-# https://github.com/Strip-Mall-Karate/dojo/blob/master/BUILDING.md#testing-changes
+# https://github.com/StripMallKarateCompany/dojo/blob/master/BUILDING.md#testing-changes
 
 # # Internals
 

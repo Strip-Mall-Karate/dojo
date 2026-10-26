@@ -26,8 +26,8 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
 - **The old project's name appears nowhere in the tree**, not in code, comments, docs, fixtures or
   commit subjects. `NOTICE` shows how to credit its authors without naming it.
 - Inherited files keep their `Copyright (c) 20xx Chef Software Inc.` headers unchanged. New files
-  start with the MIT header in `components/launcher/src/init.rs`. `README.md` says which license
-  covers what; keep it true.
+  start with the Apache 2.0 header in `components/launcher/src/init.rs`, with Strip Mall Karate
+  Company's copyright line. Everything is under the Apache License 2.0 (`LICENSE`, `NOTICE`).
 - A mechanical rename can mint a name a stranger can register (a GitHub owner, a Docker Hub
   namespace, a package feed). Any renamed hostname or namespace is checked before it ships.
 
@@ -69,7 +69,7 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
 
 ## Landing
 
-The repository is `Strip-Mall-Karate/dojo` on GitHub. Finished work opens a pull request against
-`main` (`gh pr create -R Strip-Mall-Karate/dojo`) whose body states what changed and the evidence.
+The repository is `StripMallKarateCompany/dojo` on GitHub. Finished work opens a pull request against
+`main` (`gh pr create -R StripMallKarateCompany/dojo`) whose body states what changed and the evidence.
 Merging needs the owner's explicit go-ahead for each pull request; there is no CI, so the PR body
 carries the checks that ran.

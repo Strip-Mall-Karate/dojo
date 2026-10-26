@@ -14,7 +14,7 @@ sudo -E apt-get install -y --no-install-recommends git
 Then, clone the codebase and enter the directory:
 
 ```
-git clone https://github.com/Strip-Mall-Karate/dojo.git
+git clone https://github.com/StripMallKarateCompany/dojo.git
 cd dojo
 ```
 
@@ -95,7 +95,7 @@ These binary overrides can be great for rapid iteration, but they hide errors in
 
 ## DOJ_STUDIO_BINARY
 
-This one is a bit special. Technically [doj-studio.sh](https://github.com/Strip-Mall-Karate/dojo/blob/master/components/studio/bin/doj-studio.sh) is a shell script file and not binary. This also means that there is no need to build anything; set `DOJ_STUDIO_BINARY` to the path to a version of `doj-studio.sh` within a `dojo` checkout and it will be used. This override will also affect which versions of the files in [studio/libexec](https://github.com/Strip-Mall-Karate/dojo/tree/master/components/studio/libexec) are used. So if you want to test out changes to [doj-studio-profile.sh](https://github.com/Strip-Mall-Karate/dojo/blob/master/components/studio/libexec/doj-studio-profile.sh) or [doj-studio-type-default.sh](https://github.com/Strip-Mall-Karate/dojo/blob/master/components/studio/libexec/doj-studio-type-default.sh), make those changes in a checkout of the `dojo` repo located at `/path/to/dojo/repo` and set `DOJ_STUDIO_BINARY` to `/path/to/dojo/repo/components/studio/bin/doj-studio.sh`. For example:
+This one is a bit special. Technically [doj-studio.sh](https://github.com/StripMallKarateCompany/dojo/blob/master/components/studio/bin/doj-studio.sh) is a shell script file and not binary. This also means that there is no need to build anything; set `DOJ_STUDIO_BINARY` to the path to a version of `doj-studio.sh` within a `dojo` checkout and it will be used. This override will also affect which versions of the files in [studio/libexec](https://github.com/StripMallKarateCompany/dojo/tree/master/components/studio/libexec) are used. So if you want to test out changes to [doj-studio-profile.sh](https://github.com/StripMallKarateCompany/dojo/blob/master/components/studio/libexec/doj-studio-profile.sh) or [doj-studio-type-default.sh](https://github.com/StripMallKarateCompany/dojo/blob/master/components/studio/libexec/doj-studio-type-default.sh), make those changes in a checkout of the `dojo` repo located at `/path/to/dojo/repo` and set `DOJ_STUDIO_BINARY` to `/path/to/dojo/repo/components/studio/bin/doj-studio.sh`. For example:
 ```bash
 $ env DOJ_STUDIO_BINARY=/path/to/dojo/repo/components/studio/bin/doj-studio.sh doj studio enter
 ```
@@ -114,7 +114,7 @@ team suggests that you use our consistent development environment that we call
 the "devshell" as the easiest way to get started.
 
 1. [Install Docker for Mac](https://www.docker.com/products/docker)
-1. Checkout the source by running `git clone git@github.com:Strip-Mall-Karate/dojo.git; cd dojo`
+1. Checkout the source by running `git clone git@github.com:StripMallKarateCompany/dojo.git; cd dojo`
 1. Run `make` to compile all Rust software components (this will take a while)
 1. (Optional) Run `make test` if you want to run the tests. This will take a while.
 
@@ -158,7 +158,7 @@ using another environment.
 First clone the codebase and enter the directory:
 
 ```
-git clone https://github.com/Strip-Mall-Karate/dojo.git
+git clone https://github.com/StripMallKarateCompany/dojo.git
 cd dojo
 ```
 
@@ -195,7 +195,7 @@ libsodium and czmq aren't available.
 First clone the codebase and enter the directory:
 
 ```
-git clone https://github.com/Strip-Mall-Karate/dojo.git
+git clone https://github.com/StripMallKarateCompany/dojo.git
 cd dojo
 ```
 
@@ -225,7 +225,7 @@ sudo su - jdoe
 First clone the codebase and enter the directory:
 
 ```
-git clone https://github.com/Strip-Mall-Karate/dojo.git
+git clone https://github.com/StripMallKarateCompany/dojo.git
 cd dojo
 ```
 
@@ -261,7 +261,7 @@ sudo su - jdoe
 First clone the codebase and enter the directory:
 
 ```
-git clone https://github.com/Strip-Mall-Karate/dojo.git
+git clone https://github.com/StripMallKarateCompany/dojo.git
 cd dojo
 ```
 
@@ -304,7 +304,7 @@ Feel free to use this file as a jumping-off point for customizing your own Dojo 
 ```
 vagrant ssh
 sudo su -
-git clone https://github.com/Strip-Mall-Karate/dojo.git
+git clone https://github.com/StripMallKarateCompany/dojo.git
 cd dojo/components/builder-api
 cargo test
 ```
@@ -320,7 +320,7 @@ making `git` better in your PowerShell console (`install-module posh-git`).
 
 ```
 # Clone the Dojo source
-git clone https://github.com/Strip-Mall-Karate/dojo.git
+git clone https://github.com/StripMallKarateCompany/dojo.git
 
 cd dojo
 ./build.ps1 components/doj -configure
