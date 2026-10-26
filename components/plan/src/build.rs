@@ -12,11 +12,13 @@
 //!
 //! A scaffolding is a package shipping `lib/scaffolding.fnl`, a module of
 //! phase functions. Its `metadata` function, if it has one, gets the plan's
-//! metadata and the plan's settings for it (`:scaffolding {:package <ident>
-//! :settings <data>}`) before dependencies resolve, and may return
-//! dependencies, directories, `svc`, exports and binds to add: lists gain
-//! its entries, tables its keys, and whatever the plan sets itself stays
-//! the plan's. Phases read the settings as `b.scaffolding_settings` and the
+//! metadata, the plan's settings for it (`:scaffolding {:package <ident>
+//! :settings <data>}`) and read-only views of the build's source context
+//! and the plan's directory, before dependencies resolve. It may return
+//! dependencies, directories, `svc`, exports, binds and the descriptive keys
+//! to add: lists gain its entries, tables its keys, and whatever the plan sets
+//! itself stays the plan's. A `default.toml` the build installs follows the
+//! plan's in the package. Phases read the settings as `b.scaffolding_settings` and the
 //! plan's source as `b.source`.
 
 use std::{cell::{Cell,
@@ -698,7 +700,11 @@ impl Plan {
             None => None,
         };
         if let Some(module) = &scaffolding {
-            add_scaffolding_metadata(&self.lua, module, &mut json, &scaffolding_settings)?;
+            add_scaffolding_metadata(&self.lua,
+                                     module,
+                                     &mut json,
+                                     &scaffolding_settings,
+                                     &[("src", &options.context), ("plan", &options.plan_dir)])?;
         }
         let deps = Resolved::resolve(&strings(&json["deps"]),
                                      &strings(&json["build_deps"]),
@@ -876,12 +882,14 @@ fn load_scaffolding(lua: &Lua, package: &Path) -> Result<Table, Error> {
 }
 
 /// Calls the scaffolding module's `metadata` function, if it has one, with
-/// the plan's metadata and the plan's settings for it, and adds what it
-/// returns to `json`.
+/// the plan's metadata, the plan's settings for it and read-only views of
+/// `dirs` (the build's source context and the plan's directory), and adds
+/// what it returns to `json`.
 fn add_scaffolding_metadata(lua: &Lua,
                             module: &Table,
                             json: &mut Json,
-                            settings: &Json)
+                            settings: &Json,
+                            dirs: &[(&str, &Path)])
                             -> Result<(), Error> {
     let failed = |e: &mlua::Error| {
         Error::Build(format!("the scaffolding's metadata failed: {}",
@@ -894,14 +902,64 @@ fn add_scaffolding_metadata(lua: &Lua,
     };
     let plan = json_to_lua(lua, json).map_err(|e| failed(&e))?;
     let settings = json_to_lua(lua, settings).map_err(|e| failed(&e))?;
+    let views = lua.create_table().map_err(|e| failed(&e))?;
+    for (name, dir) in dirs {
+        views.raw_set(*name, dir_view(lua, dir).map_err(|e| failed(&e))?)
+             .map_err(|e| failed(&e))?;
+    }
     sandbox::limit(lua,
                    sandbox::PLAN_MEMORY,
                    sandbox::PLAN_INSTRUCTIONS,
                    "the scaffolding").map_err(|e| failed(&e))?;
-    let added = metadata.call::<Value>((plan, settings))
+    let added = metadata.call::<Value>((plan, settings, views))
                         .map_err(|e| failed(&e))?;
     let added = schema::parse_contribution(&added)?;
     schema::merge_contribution(json, added)
+}
+
+/// A read-only view of `dir` for a scaffolding's `metadata`: `read`, `exists`
+/// and `json` take a path inside it. `read` gives a file's bytes and `json`
+/// its parsed JSON, nil when there is no such file.
+fn dir_view(lua: &Lua, dir: &Path) -> mlua::Result<Table> {
+    let inside = {
+        let dir = dir.to_path_buf();
+        move |path: String| -> mlua::Result<PathBuf> {
+            let relative = Path::new(&path);
+            if relative.is_absolute()
+               || relative.components()
+                          .any(|part| part == Component::ParentDir)
+            {
+                return Err(mlua::Error::runtime(format!("{path} is not a path \
+                                                         inside the directory")));
+            }
+            Ok(dir.join(relative))
+        }
+    };
+    let view = lua.create_table()?;
+    let at = inside.clone();
+    view.raw_set("exists",
+                 lua.create_function(move |_, path: String| Ok(at(path)?.exists()))?)?;
+    let at = inside.clone();
+    view.raw_set("read",
+                 lua.create_function(move |lua, path: String| {
+                        match fs::read(at(path)?) {
+                            Ok(bytes) => Ok(Value::String(lua.create_string(bytes)?)),
+                            Err(_) => Ok(Value::Nil),
+                        }
+                    })?)?;
+    view.raw_set("json",
+                 lua.create_function(move |lua, path: String| {
+                        let file = inside(path.clone())?;
+                        let Ok(text) = fs::read_to_string(&file) else {
+                            return Ok(Value::Nil);
+                        };
+                        let json: Json = serde_json::from_str(&text).map_err(|e| {
+                                             mlua::Error::runtime(format!("{path} is not JSON: \
+                                                                           {e}"))
+                                         })?;
+                        json_to_lua(lua, &json)
+                    })?)?;
+    Ok(view)
 }
 
 /// JSON as Lua values: objects and arrays become fresh tables, null is nil.

@@ -358,7 +358,11 @@ fn parse_field(kind: Option<Kind>, value: &Value, what: &str) -> Result<Field, E
 
 /// The keys a scaffolding's `metadata` function may give the plans that use
 /// it.
-pub const CONTRIBUTED: &[&str] = &["deps",
+pub const CONTRIBUTED: &[&str] = &["maintainer",
+                                   "license",
+                                   "description",
+                                   "upstream_url",
+                                   "deps",
                                    "build_deps",
                                    "bin_dirs",
                                    "lib_dirs",

@@ -189,19 +189,26 @@ fn a_scaffolding_adds_metadata_and_reads_the_plans_settings() {
     sandbox.package("test/runtime");
     let scaffolding = sandbox.package("test/scaffolding");
     fs::create_dir_all(scaffolding.join("lib")).unwrap();
-    // `metadata` sees the plan's metadata and its settings; phases see the
-    // settings on `b`.
+    // `metadata` sees the plan's metadata, its settings and its directories;
+    // phases see the settings on `b`, and defaults the build installs follow
+    // the plan's.
     fs::write(scaffolding.join("lib/scaffolding.fnl"),
-              r#"{:metadata (fn [plan settings]
-                              {:deps ["test/runtime"]
-                               :bin_dirs ["bin" (.. plan.name "/bin")]
-                               :exports {:port "app.port" :host "ignored.host"}
-                               :exposes [(. settings.ports 1)]})
+              r#"{:metadata (fn [plan settings dirs]
+                              (let [app (dirs.src.json "package.json")]
+                                {:deps ["test/runtime"]
+                                 :bin_dirs ["bin" (.. plan.name "/bin")]
+                                 :exports {:port "app.port" :host "ignored.host"}
+                                 :exposes [(. settings.ports 1)]
+                                 :description app.description
+                                 :license [(if (dirs.plan.exists "plan.fnl") "MIT" "none")]}))
                   :build (fn [b]
                            (b:write "greeting" b.scaffolding_settings.greeting)
-                           (b:write "source" (tostring b.source)))}"#).unwrap();
+                           (b:write "source" (tostring b.source))
+                           (b:write "default.toml" "[extra]\nkey = 1\n"))}"#).unwrap();
     fs::write(sandbox.context().join("default.toml"),
               "[app]\nport = 8000\nhost = \"0.0.0.0\"\n").unwrap();
+    fs::write(sandbox.context().join("package.json"),
+              r#"{"description": "from package.json"}"#).unwrap();
     let source = plan("scaffolded",
                       r#":scaffolding {:package "test/scaffolding"
                                       :settings {:greeting "hi" :ports ["port"]}}
@@ -225,13 +232,21 @@ fn a_scaffolding_adds_metadata_and_reads_the_plans_settings() {
     assert_eq!(path.matches("/bin").count(),
                2,
                "`bin` once, from both: {path}");
+    let manifest = read(&built.prefix.join("MANIFEST"));
+    assert!(manifest.contains("from package.json") && manifest.contains("MIT"),
+            "description and license from the scaffolding: {manifest}");
+    assert_eq!(read(&built.prefix.join("default.toml")),
+               "[app]\nport = 8000\nhost = \"0.0.0.0\"\n\n[extra]\nkey = 1\n",
+               "the plan's defaults, then the build's");
+    assert_eq!(read(&built.prefix.join("EXPOSES")).trim(), "8000");
 
     for (metadata, expected) in [("{:name \"other\"}", "a scaffolding may set"),
                                  ("{:deps \"test/runtime\"}", "is a string, not a table"),
-                                 ("{:exposes [\"nothing\"]}", "`exposes` names `nothing`")]
+                                 ("{:exposes [\"nothing\"]}", "`exposes` names `nothing`"),
+                                 ("(do (dirs.src.read \"../escape\") {})", "is not a path inside")]
     {
         fs::write(scaffolding.join("lib/scaffolding.fnl"),
-                  format!("{{:metadata (fn [plan settings] {metadata})}}")).unwrap();
+                  format!("{{:metadata (fn [plan settings dirs] {metadata})}}")).unwrap();
         assert_refused(sandbox.build(&source), expected);
     }
     let bad = plan("scaffolded",
