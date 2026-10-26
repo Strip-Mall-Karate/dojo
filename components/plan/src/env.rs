@@ -61,6 +61,13 @@ impl Env {
         self.set(name, joined);
     }
 
+    /// Takes `name` out of the environment.
+    pub fn remove(&mut self, name: &str) {
+        if let Some(i) = self.position(name) {
+            self.vars.remove(i);
+        }
+    }
+
     /// Puts `value` in front of `name`'s list, each entry once.
     pub fn prepend(&mut self, name: &str, value: &str, separator: &str) {
         let joined = push_to_path(value, self.get(name).unwrap_or(""), separator);

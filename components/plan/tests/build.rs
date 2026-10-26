@@ -935,3 +935,18 @@ fn run_with_check_false_returns_the_code_and_goes_on() {
                        r#" :build (fn [b] (b:capture ["true"] {:check false}))"#);
     assert_refused(sandbox.build(&capture), "b:capture");
 }
+
+#[test]
+fn unsetenv_takes_a_variable_out_of_the_build() {
+    let sandbox = Sandbox::new("unsetenv");
+    let source = plan("unset",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:env "LD_RUN_PATH" "/somewhere")
+                                   (b:unsetenv "LD_RUN_PATH")
+                                   (b:write "lua" (tostring (b:getenv "LD_RUN_PATH")))
+                                   (b:write "child" (b:capture ["sh" "-c" "echo ${LD_RUN_PATH-unset}"])))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("lua")), "nil");
+    assert_eq!(read(&built.prefix.join("child")), "unset");
+}

@@ -839,7 +839,7 @@ fn context(lua: &Lua,
     Ok(b)
 }
 
-/// `b:run`, `b:capture`, `b:getenv`, `b:env` and `b:env_append`.
+/// `b:run`, `b:capture`, `b:getenv`, `b:env`, `b:unsetenv` and `b:env_append`.
 fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
     let s = Rc::clone(state);
     b.raw_set("run",
@@ -884,6 +884,15 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      s.check_this(&this, "b:getenv")?;
                      let name = env_name(&name, "b:getenv")?;
                      Ok(s.env.borrow().get(&name).map(str::to_string))
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("unsetenv",
+              lua.create_function(move |_, (this, name): (Value, Value)| {
+                     s.check_this(&this, "b:unsetenv")?;
+                     let name = env_name(&name, "b:unsetenv")?;
+                     s.env.borrow_mut().remove(&name);
+                     Ok(())
                  })?)?;
 
     let s = Rc::clone(state);
