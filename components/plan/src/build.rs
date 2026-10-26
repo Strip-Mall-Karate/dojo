@@ -210,6 +210,9 @@ struct Export {
 }
 
 impl State {
+    /// The directory the source unpacks into, the build's working directory.
+    pub fn src_dir(&self) -> PathBuf { self.src.borrow().clone() }
+
     pub fn windows(&self) -> bool { self.os == "windows" }
 
     fn separator(&self) -> &'static str { if self.windows() { ";" } else { ":" } }
@@ -483,10 +486,10 @@ impl State {
             let args = &line.trim_start()[program.len()..];
             let mut fixed = format!("#!{new}{args}").into_bytes();
             fixed.extend_from_slice(&rest[end..]);
-            fs::write(&path, fixed).map_err(|e| {
-                                       format!("b:fix_interpreter: cannot write {}: {e}",
-                                               path.display())
-                                   })?;
+            write_replacing(&path, &fixed).map_err(|e| {
+                                               format!("b:fix_interpreter: cannot write {}: {e}",
+                                                       path.display())
+                                           })?;
             self.log(&format!("Interpreter of {} is {new}", path.display()));
         }
         Ok(())
@@ -1198,7 +1201,7 @@ fn add_files(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      let contents = bytes_of(&contents, "b:write: the text")?;
                      let written = path.parent()
                                        .map_or(Ok(()), fs::create_dir_all)
-                                       .and_then(|()| fs::write(&path, contents));
+                                       .and_then(|()| write_replacing(&path, &contents));
                      written.map_err(|e| {
                                 mlua::Error::runtime(format!("b:write: cannot write {}: {e}",
                                                              path.display()))
@@ -2062,6 +2065,25 @@ fn release_at(seconds: u64) -> String {
             time / 3_600,
             time % 3_600 / 60,
             time % 60)
+}
+
+/// Writes `contents` to `path`. A file there that cannot be written, as a
+/// source archive's read-only files cannot, is replaced by a new one with the
+/// same permissions, as `sed -i` does: the plan owns the tree it writes in.
+fn write_replacing(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    match fs::write(path, contents) {
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+            let Ok(meta) = fs::symlink_metadata(path) else {
+                return Err(error);
+            };
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            let temporary = path.with_file_name(format!(".{name}.doj-write"));
+            fs::write(&temporary, contents)?;
+            fs::set_permissions(&temporary, meta.permissions())?;
+            fs::rename(&temporary, path)
+        }
+        result => result,
+    }
 }
 
 #[cfg(test)]
