@@ -1056,7 +1056,12 @@ fn add_file_changes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()>
                      s.check_this(&this, "b:chmod")?;
                      let path = s.creatable(&text_of(&path, "b:chmod: the path")?, "b:chmod")
                                  .map_err(mlua::Error::runtime)?;
-                     let mode = octal_mode(&text_of(&mode, "b:chmod: the mode")?, "b:chmod")?;
+                     let spec = text_of(&mode, "b:chmod: the mode")?;
+                     let mode = if spec.bytes().all(|b| b.is_ascii_digit()) {
+                         octal_mode(&spec, "b:chmod")?
+                     } else {
+                         symbolic_mode(&spec, &path).map_err(mlua::Error::runtime)?
+                     };
                      set_mode(&path, Some(mode)).map_err(mlua::Error::runtime)
                  })?)?;
 
@@ -1356,6 +1361,72 @@ fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
 fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
     Err(format!("b:symlink: cannot link {} to {target} on Windows",
                 link.display()))
+}
+
+/// A symbolic mode like `chmod` takes (`+x`, `u+w,go-w`, `a=r`), applied to
+/// `path`'s mode now. With no who, `+` and `-` act on everyone. `X` is
+/// execute for a directory or a file someone may execute already.
+fn symbolic_mode(spec: &str, path: &Path) -> Result<u32, String> {
+    let meta =
+        fs::metadata(path).map_err(|e| format!("b:chmod: cannot read {}: {e}", path.display()))?;
+    let mut mode = mode_of(&meta);
+    let executable = meta.is_dir() || mode & 0o111 != 0;
+    let refuse =
+        || format!("b:chmod: the mode is `{spec}`, not octal or symbolic like \"+x\" or \"u+w\"");
+    for clause in spec.split(',') {
+        let op_at = clause.find(['+', '-', '=']).ok_or_else(refuse)?;
+        let (who, rest) = clause.split_at(op_at);
+        let mut who_bits = 0;
+        for c in who.chars() {
+            who_bits |= match c {
+                'u' => 0o4700,
+                'g' => 0o2070,
+                'o' => 0o1007,
+                'a' => 0o7777,
+                _ => return Err(refuse()),
+            };
+        }
+        if who_bits == 0 {
+            who_bits = 0o7777;
+        }
+        let mut chars = rest.chars();
+        let op = chars.next().ok_or_else(refuse)?;
+        let mut perm = 0;
+        for c in chars {
+            perm |= match c {
+                'r' => 0o444,
+                'w' => 0o222,
+                'x' => 0o111,
+                'X' if executable => 0o111,
+                'X' => 0,
+                's' => 0o6000,
+                't' => 0o1000,
+                _ => return Err(refuse()),
+            };
+        }
+        let bits = perm & who_bits;
+        mode = match op {
+            '+' => mode | bits,
+            '-' => mode & !bits,
+            _ => (mode & !who_bits) | bits,
+        };
+    }
+    Ok(mode & 0o7777)
+}
+
+#[cfg(unix)]
+fn mode_of(meta: &fs::Metadata) -> u32 {
+    use std::os::unix::fs::PermissionsExt;
+    meta.permissions().mode()
+}
+
+#[cfg(not(unix))]
+fn mode_of(meta: &fs::Metadata) -> u32 {
+    if meta.permissions().readonly() {
+        0o444
+    } else {
+        0o644
+    }
 }
 
 /// Octal permissions like `"755"`.

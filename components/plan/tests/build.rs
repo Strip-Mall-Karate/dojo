@@ -881,3 +881,35 @@ fn a_service_with_a_run_hook_names_its_user_without_run() {
     assert_eq!(read(&built.prefix.join("SVC_USER")), "web\n");
     assert_eq!(read(&built.prefix.join("SVC_GROUP")), "web\n");
 }
+
+#[test]
+fn chmod_takes_symbolic_modes() {
+    let sandbox = Sandbox::new("chmod-symbolic");
+    let source = plan("chmod",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:write "a" "") (b:chmod "a" "644") (b:chmod "a" "+x")
+                                   (b:write "b" "") (b:chmod "b" "640") (b:chmod "b" "o+r")
+                                   (b:write "c" "") (b:chmod "c" "777") (b:chmod "c" "go-w,u=rw")
+                                   (b:write "d" "") (b:chmod "d" "600") (b:chmod "d" "a+X")
+                                   (b:mkdir "e") (b:chmod "e" "700") (b:chmod "e" "a+X"))"#);
+    let built = sandbox.build(&source).expect("builds");
+    let mode = |name: &str| {
+        fs::metadata(built.prefix.join(name)).unwrap()
+                                             .permissions()
+                                             .mode()
+        & 0o7777
+    };
+    assert_eq!(mode("a"), 0o755);
+    assert_eq!(mode("b"), 0o644);
+    assert_eq!(mode("c"), 0o655);
+    assert_eq!(mode("d"),
+               0o600,
+               "X adds execute only where someone has it or for a directory");
+    assert_eq!(mode("e"), 0o711);
+
+    let bad = plan("chmod",
+                   "",
+                   r#" :build (fn [b] (b:write "a" "") (b:chmod "a" "+q"))"#);
+    assert_refused(sandbox.build(&bad), "not octal or symbolic");
+}
