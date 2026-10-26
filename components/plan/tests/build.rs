@@ -286,6 +286,22 @@ fn packaging_uses_the_builders_tools_not_a_dependencys() {
 }
 
 #[test]
+fn b_write_replaces_a_read_only_file_in_the_source() {
+    // Archives ship read-only files (libtool's build-aux/ltmain.sh); the bash
+    // plans rewrote them with sed -i, which replaces the file.
+    let sandbox = Sandbox::new("write-read-only");
+    let source = plan("readonly",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:write (b:join b.src "locked") "before")
+                                   (b:chmod (b:join b.src "locked") "444")
+                                   (b:write (b:join b.src "locked") "after")
+                                   (b:write "seen" (b:read (b:join b.src "locked"))))"#);
+    let built = sandbox.build(&source).expect("writes over a read-only file");
+    assert_eq!(read(&built.prefix.join("seen")), "after");
+}
+
+#[test]
 fn stripping_uses_the_builders_strip_not_the_packages() {
     // The package's own bin is on the build's PATH, and binutils installs a
     // strip there that cannot rewrite itself while it runs; the strip phase
@@ -491,6 +507,33 @@ fn glob_and_install_copy_matching_files_with_a_mode() {
                       r#" :install (fn [b] (b:install "dist/a.dll" "../bin"))"#);
     assert_refused(sandbox.build(&escape),
                    "must be a relative path inside the prefix");
+}
+
+#[test]
+fn an_unpacked_source_is_writable_by_its_build() {
+    // libtool 2.6.2 ships build-aux read-only; the build creates files there.
+    let sandbox = Sandbox::new("read-only-source");
+    let upstream = sandbox.dir.join("upstream");
+    fs::create_dir_all(upstream.join("locked-1.0/aux")).unwrap();
+    fs::write(upstream.join("locked-1.0/aux/ltmain.sh"), "#!/bin/sh\n").unwrap();
+    fs::set_permissions(upstream.join("locked-1.0/aux/ltmain.sh"),
+                        fs::Permissions::from_mode(0o444)).unwrap();
+    fs::set_permissions(upstream.join("locked-1.0/aux"), fs::Permissions::from_mode(0o555)).unwrap();
+    let status = Command::new("tar").args(["czf", "locked-1.0.tar.gz", "locked-1.0"])
+                                    .current_dir(&upstream)
+                                    .status()
+                                    .expect("run tar");
+    fs::set_permissions(upstream.join("locked-1.0/aux"), fs::Permissions::from_mode(0o755)).unwrap();
+    assert!(status.success());
+    let tarball = upstream.join("locked-1.0.tar.gz");
+    let sha = hex(&Sha256::digest(fs::read(&tarball).unwrap()));
+    let source = plan("locked",
+                      &format!(r#":version "1.0" :source {{:url "file://{}" :sha256 "{sha}"}}"#,
+                               tarball.display()),
+                      r#" :build (fn [b] (b:write (b:join b.src "aux/new") "made"))"#);
+    sandbox.build(&source).expect("writes into a directory the archive made read-only");
+    let src = sandbox.dir.join("doj/cache/src/locked-1.0");
+    assert_eq!(read(&src.join("aux/new")), "made");
 }
 
 #[test]

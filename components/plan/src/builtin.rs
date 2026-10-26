@@ -136,8 +136,42 @@ fn unpack(state: &State) -> Result<(), String> {
                            tar.join(", ")));
     };
     state.log(&format!("Unpacking {}", source.filename));
-    state.run(&argv, None, &[], false).map(drop)
+    state.run(&argv, None, &[], false)?;
+    owner_writable(&state.src_dir())
 }
+
+/// Gives the owner write permission on everything under `dir`, which the
+/// archive may have shipped read-only: the build owns its source tree, and the
+/// shell builder, running as root, never saw the difference. Symbolic links
+/// are not followed. A missing `dir` (an archive that unpacks elsewhere) is
+/// left alone.
+#[cfg(unix)]
+fn owner_writable(dir: &Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let Ok(meta) = fs::symlink_metadata(dir) else {
+        return Ok(());
+    };
+    if meta.file_type().is_symlink() {
+        return Ok(());
+    }
+    let mode = meta.permissions().mode();
+    if mode & 0o200 == 0 {
+        fs::set_permissions(dir, fs::Permissions::from_mode(mode | 0o200))
+            .map_err(|e| format!("cannot make {} writable: {e}", dir.display()))?;
+    }
+    if meta.is_dir() {
+        let entries =
+            fs::read_dir(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
+            owner_writable(&entry.path())?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn owner_writable(_dir: &Path) -> Result<(), String> { Ok(()) }
 
 /// Strips binaries under `bin_dirs` and `lib_dirs`: executables of
 /// everything, shared objects and position-independent executables of what
