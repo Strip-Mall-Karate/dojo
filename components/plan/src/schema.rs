@@ -36,8 +36,8 @@ enum Kind {
     Version,
     Targets,
     Texts,
-    Ident,
     Idents,
+    Scaffolding,
     Paths,
     Source,
     Type,
@@ -59,7 +59,7 @@ const KEYS: &[(&str, Kind)] = &[("name", Kind::Name),
                                 ("source", Kind::Source),
                                 ("deps", Kind::Idents),
                                 ("build_deps", Kind::Idents),
-                                ("scaffolding", Kind::Ident),
+                                ("scaffolding", Kind::Scaffolding),
                                 ("type", Kind::Type),
                                 ("bin_dirs", Kind::Paths),
                                 ("lib_dirs", Kind::Paths),
@@ -300,7 +300,6 @@ fn parse_field(kind: Option<Kind>, value: &Value, what: &str) -> Result<Field, E
             json!(targets)
         }
         Kind::Texts => json!(strings_of(value, &what)?),
-        Kind::Ident => json!(ident_of(value, &what)?),
         Kind::Idents => {
             let idents = strings_of(value, &what)?;
             for ident in &idents {
@@ -324,6 +323,7 @@ fn parse_field(kind: Option<Kind>, value: &Value, what: &str) -> Result<Field, E
             }
             Json::Object(fields)
         }
+        Kind::Scaffolding => scaffolding_of(value, &what)?,
         Kind::Type => {
             let kind = string_of(value, &what)?;
             if kind != "standalone" && kind != "composite" {
@@ -354,6 +354,169 @@ fn parse_field(kind: Option<Kind>, value: &Value, what: &str) -> Result<Field, E
         Kind::On => unreachable!("`on` is parsed by parse_on"),
     };
     Ok(Field::Json(json))
+}
+
+/// The keys a scaffolding's `metadata` function may give the plans that use
+/// it.
+pub const CONTRIBUTED: &[&str] = &["deps",
+                                   "build_deps",
+                                   "bin_dirs",
+                                   "lib_dirs",
+                                   "include_dirs",
+                                   "pconfig_dirs",
+                                   "interpreters",
+                                   "svc",
+                                   "exports",
+                                   "exposes",
+                                   "binds",
+                                   "binds_optional"];
+
+/// Checks what a scaffolding's `metadata` function returned, key by key as
+/// a plan's own.
+///
+/// # Errors
+///
+/// [`Error::Invalid`] names the first key that is not one of [`CONTRIBUTED`]
+/// or does not fit the schema.
+pub fn parse_contribution(value: &Value) -> Result<Map<String, Json>, Error> {
+    let what = "the scaffolding's metadata";
+    let mut out = Map::new();
+    for (key, value) in entries(&table_of(value, what)?, what)? {
+        match kind_of(&key) {
+            Some((name, Some(kind))) if CONTRIBUTED.contains(&name) => {
+                if let Field::Json(json) =
+                    parse_field(Some(kind), &value, &format!("scaffolding metadata.{name}"))?
+                {
+                    out.insert(name.into(), json);
+                }
+            }
+            _ => {
+                return Err(Error::Invalid(format!("{what} sets `{key}`; a \
+                                                   scaffolding may set {}",
+                                                  CONTRIBUTED.join(", "))));
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Adds a scaffolding's metadata to a plan's, as JSON. A list gains the
+/// scaffolding's entries it does not hold, after its own; a table gains the
+/// keys it does not set; any other value the plan sets is the plan's.
+///
+/// # Errors
+///
+/// [`Error::Invalid`] when `exposes` then names a key `exports` does not.
+pub fn merge_contribution(plan: &mut Json, added: Map<String, Json>) -> Result<(), Error> {
+    let Json::Object(plan) = plan else {
+        return Ok(());
+    };
+    for (key, value) in added {
+        match (plan.get_mut(&key), value) {
+            (Some(Json::Array(own)), Json::Array(more)) => {
+                for item in more {
+                    if !own.contains(&item) {
+                        own.push(item);
+                    }
+                }
+            }
+            (Some(Json::Object(own)), Json::Object(more)) => {
+                for (name, item) in more {
+                    own.entry(name).or_insert(item);
+                }
+            }
+            (Some(_), _) => {}
+            (None, value) => {
+                plan.insert(key, value);
+            }
+        }
+    }
+    let exports: BTreeSet<&str> = plan.get("exports")
+                                      .and_then(Json::as_object)
+                                      .map(|exports| exports.keys().map(String::as_str).collect())
+                                      .unwrap_or_default();
+    for exposed in plan.get("exposes")
+                       .and_then(Json::as_array)
+                       .into_iter()
+                       .flatten()
+                       .filter_map(Json::as_str)
+    {
+        if !exports.contains(exposed) {
+            return Err(Error::Invalid(format!("`exposes` names `{exposed}`, \
+                                               which is not in `exports` once \
+                                               the scaffolding's metadata is \
+                                               added")));
+        }
+    }
+    Ok(())
+}
+
+/// Plain data: strings, numbers, booleans, lists and tables with string
+/// keys, as JSON.
+fn data_of(value: &Value, what: &str) -> Result<Json, Error> {
+    match value {
+        Value::String(_) => Ok(json!(string_of(value, what)?)),
+        Value::Integer(i) => Ok(json!(i)),
+        Value::Number(n) => {
+            serde_json::Number::from_f64(*n).map(Json::Number)
+                                            .ok_or_else(|| {
+                                                Error::Invalid(format!("{what} is not a finite \
+                                                                        number"))
+                                            })
+        }
+        Value::Boolean(b) => Ok(json!(b)),
+        Value::Table(_) => {
+            let table = table_of(value, what)?;
+            let length = table.raw_len();
+            if length == 0 {
+                let mut out = Map::new();
+                for (key, value) in entries(&table, what)? {
+                    let item = data_of(&value, &format!("{what}.{key}"))?;
+                    out.insert(key, item);
+                }
+                return Ok(Json::Object(out));
+            }
+            if table.pairs::<Value, Value>().count() != length {
+                return Err(Error::Invalid(format!("{what} mixes a list with named keys")));
+            }
+            (1..=length).map(|i| {
+                            let item = table.raw_get::<Value>(i)
+                                            .map_err(|e| Error::Invalid(format!("{what}: {e}")))?;
+                            data_of(&item, &format!("{what}[{i}]"))
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                        .map(Json::Array)
+        }
+        other => {
+            Err(wrong_type(what,
+                           "a string, number, boolean or table",
+                           other))
+        }
+    }
+}
+
+/// A package ident, or `{:package <ident> :settings <data>}`: the settings
+/// go to the scaffolding's module.
+fn scaffolding_of(value: &Value, what: &str) -> Result<Json, Error> {
+    match value {
+        Value::String(_) => Ok(json!(ident_of(value, what)?)),
+        Value::Table(_) => {
+            let mut out = Map::new();
+            for (key, value) in entries(&table_of(value, what)?, what)? {
+                let item = match key.as_str() {
+                    "package" => json!(ident_of(&value, &format!("{what}.package"))?),
+                    "settings" => data_of(&value, &format!("{what}.settings"))?,
+                    _ => return Err(unknown_key(&key, what)),
+                };
+                out.insert(key, item);
+            }
+            if !out.contains_key("package") {
+                return Err(Error::Invalid(format!("{what} does not set `package`")));
+            }
+            Ok(Json::Object(out))
+        }
+        other => Err(wrong_type(what, "a package ident or a table", other)),
+    }
 }
 
 /// A table with fixed string keys, some required.
