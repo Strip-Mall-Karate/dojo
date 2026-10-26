@@ -913,3 +913,25 @@ fn chmod_takes_symbolic_modes() {
                    r#" :build (fn [b] (b:write "a" "") (b:chmod "a" "+q"))"#);
     assert_refused(sandbox.build(&bad), "not octal or symbolic");
 }
+
+#[test]
+fn run_with_check_false_returns_the_code_and_goes_on() {
+    let sandbox = Sandbox::new("run-check");
+    let source = plan("tolerant",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:write "code" (tostring (b:run ["sh" "-c" "exit 3"] {:check false})))
+                                   (b:write "ok" (tostring (b:run ["true"]))))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("code")), "3");
+    assert_eq!(read(&built.prefix.join("ok")), "0");
+
+    let strict = plan("tolerant",
+                      "",
+                      r#" :build (fn [b] (b:run ["sh" "-c" "exit 3"]))"#);
+    assert_refused(sandbox.build(&strict), "exited with code 3");
+    let capture = plan("tolerant",
+                       "",
+                       r#" :build (fn [b] (b:capture ["true"] {:check false}))"#);
+    assert_refused(sandbox.build(&capture), "b:capture");
+}

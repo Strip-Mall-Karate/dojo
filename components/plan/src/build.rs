@@ -214,14 +214,15 @@ impl State {
         }
     }
 
-    /// Runs `argv` with the build environment plus `extra`. Returns stdout
-    /// without its trailing newline when `capture` is set.
-    pub fn run(&self,
-               argv: &[String],
-               cwd: Option<&Path>,
-               extra: &[(String, String)],
-               capture: bool)
-               -> Result<Option<String>, String> {
+    /// Starts `argv` with the build environment plus `extra` and waits for
+    /// it, collecting stdout when `capture` is set; how it ended is the
+    /// caller's to judge.
+    fn spawn(&self,
+             argv: &[String],
+             cwd: Option<&Path>,
+             extra: &[(String, String)],
+             capture: bool)
+             -> Result<(std::process::Output, String), String> {
         let shown = show_argv(argv);
         let Some((program, rest)) = argv.split_first() else {
             return Err("the argv is empty".to_string());
@@ -252,6 +253,36 @@ impl State {
         };
         let output =
             output.map_err(|e| format!("`{shown}` could not start in {}: {e}", cwd.display()))?;
+        Ok((output, shown))
+    }
+
+    /// Runs `argv` and returns its exit code, whatever it is. A program that
+    /// cannot start, or that a signal ends, is still an error.
+    pub fn run_status(&self,
+                      argv: &[String],
+                      cwd: Option<&Path>,
+                      extra: &[(String, String)])
+                      -> Result<i32, String> {
+        let (output, shown) = self.spawn(argv, cwd, extra, false)?;
+        match output.status.code() {
+            Some(0) => Ok(0),
+            Some(code) => {
+                self.log(&format!("`{shown}` exited with code {code}; going on"));
+                Ok(code)
+            }
+            None => Err(format!("`{shown}` was killed by a signal")),
+        }
+    }
+
+    /// Runs `argv` with the build environment plus `extra`. Returns stdout
+    /// without its trailing newline when `capture` is set.
+    pub fn run(&self,
+               argv: &[String],
+               cwd: Option<&Path>,
+               extra: &[(String, String)],
+               capture: bool)
+               -> Result<Option<String>, String> {
+        let (output, shown) = self.spawn(argv, cwd, extra, capture)?;
         if !output.status.success() {
             return Err(match output.status.code() {
                 Some(code) => format!("`{shown}` exited with code {code}"),
@@ -815,10 +846,15 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
               lua.create_function(move |_, (this, argv, opts): (Value, Value, Value)| {
                      s.check_this(&this, "b:run")?;
                      let argv = texts(&argv, "b:run: argv")?;
-                     let (cwd, env) = run_options(&opts, "b:run")?;
-                     s.run(&argv, cwd.as_deref(), &env, false)
-                      .map_err(mlua::Error::runtime)?;
-                     Ok(())
+                     let (cwd, env, check) = run_options(&opts, "b:run", true)?;
+                     if check {
+                         s.run(&argv, cwd.as_deref(), &env, false)
+                          .map_err(mlua::Error::runtime)?;
+                         Ok(0)
+                     } else {
+                         s.run_status(&argv, cwd.as_deref(), &env)
+                          .map_err(mlua::Error::runtime)
+                     }
                  })?)?;
 
     let s = Rc::clone(state);
@@ -826,7 +862,7 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
               lua.create_function(move |_, (this, argv, opts): (Value, Value, Value)| {
                      s.check_this(&this, "b:capture")?;
                      let argv = texts(&argv, "b:capture: argv")?;
-                     let (cwd, env) = run_options(&opts, "b:capture")?;
+                     let (cwd, env, _) = run_options(&opts, "b:capture", false)?;
                      s.run(&argv, cwd.as_deref(), &env, true)
                       .map(Option::unwrap_or_default)
                       .map_err(mlua::Error::runtime)
@@ -1451,13 +1487,24 @@ fn install_mode(opts: &Value) -> mlua::Result<Option<u32>> {
     octal_mode(&mode, "b:install").map(Some)
 }
 
-/// Reads `b:run` and `b:capture` options: `cwd`, and `env`, a table of
-/// names to values.
-/// A working directory and extra environment variables.
-type RunOptions = (Option<PathBuf>, Vec<(String, String)>);
+/// Reads `b:run` and `b:capture` options: `cwd`, `env`, a table of names to
+/// values, and for `b:run` only `check`.
+/// A working directory, extra environment variables, and whether a nonzero
+/// exit stops the build (`check`, true unless the plan says false).
+type RunOptions = (Option<PathBuf>, Vec<(String, String)>, bool);
 
-fn run_options(opts: &Value, what: &str) -> mlua::Result<RunOptions> {
-    let opts = options(opts, what, &["cwd", "env"])?;
+fn run_options(opts: &Value, what: &str, may_tolerate: bool) -> mlua::Result<RunOptions> {
+    let allowed: &[&str] = if may_tolerate {
+        &["cwd", "env", "check"]
+    } else {
+        &["cwd", "env"]
+    };
+    let opts = options(opts, what, allowed)?;
+    let check = match opts.get("check") {
+        None => true,
+        Some(Value::Boolean(check)) => *check,
+        Some(_) => return Err(mlua::Error::runtime(format!("{what}: `check` is true or false"))),
+    };
     let cwd = opts.get("cwd")
                   .map(|cwd| text_of(cwd, &format!("{what}: `cwd`")).map(PathBuf::from))
                   .transpose()?;
@@ -1468,7 +1515,7 @@ fn run_options(opts: &Value, what: &str) -> mlua::Result<RunOptions> {
             env.push((name, value));
         }
     }
-    Ok((cwd, env))
+    Ok((cwd, env, check))
 }
 
 /// A table of string keys, read raw. `allowed` lists the keys it may have;
