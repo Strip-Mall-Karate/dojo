@@ -806,7 +806,7 @@ fn context(lua: &Lua,
     Ok(b)
 }
 
-/// `b:run`, `b:capture`, `b:env` and `b:env_append`.
+/// `b:run`, `b:capture`, `b:getenv`, `b:env` and `b:env_append`.
 fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
     let s = Rc::clone(state);
     b.raw_set("run",
@@ -838,6 +838,14 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      let value = text_of(&value, "b:env: the value")?;
                      s.env.borrow_mut().set(&name, value);
                      Ok(())
+                 })?)?;
+
+    let s = Rc::clone(state);
+    b.raw_set("getenv",
+              lua.create_function(move |_, (this, name): (Value, Value)| {
+                     s.check_this(&this, "b:getenv")?;
+                     let name = env_name(&name, "b:getenv")?;
+                     Ok(s.env.borrow().get(&name).map(str::to_string))
                  })?)?;
 
     let s = Rc::clone(state);

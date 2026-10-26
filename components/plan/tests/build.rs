@@ -850,3 +850,18 @@ fn a_plan_passes_its_own_environment_on() {
     assert_eq!(read(&built.prefix.join("seen")),
                format!("{prefix}/lib:/dep/lib -O2"));
 }
+
+#[test]
+fn getenv_reads_the_build_environment() {
+    let sandbox = Sandbox::new("getenv");
+    let source = plan("getenv",
+                      "",
+                      r#" :build (fn [b]
+                                   (b:env "FLAGS" "-O2")
+                                   (b:env "FLAGS" (.. (b:getenv "FLAGS") " -g"))
+                                   (b:write "flags" (b:getenv "FLAGS"))
+                                   (b:write "unset" (tostring (b:getenv "NOT_SET_ANYWHERE"))))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("flags")), "-O2 -g");
+    assert_eq!(read(&built.prefix.join("unset")), "nil");
+}
