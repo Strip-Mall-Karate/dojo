@@ -91,8 +91,9 @@ message SvcLoad {
   optional bool force = 9 [default = false];
   // Service group name for the service.
   optional string group = 10 [default = "default"];
-  // Encrypted password for a Windows service.
-  optional string svc_encrypted_password = 11;
+  // 11 was svc_encrypted_password, a Windows service password.
+  reserved 11;
+  reserved "svc_encrypted_password";
   // Topology which the service will run in.
   optional sup.types.Topology topology = 12;
   // Update strategy for the service.

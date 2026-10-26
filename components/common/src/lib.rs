@@ -31,8 +31,6 @@ extern crate serde;
 extern crate serde_derive;
 #[cfg_attr(test, macro_use)]
 extern crate serde_json;
-#[cfg(windows)]
-extern crate winapi;
 
 pub use self::error::{Error,
                       Result};

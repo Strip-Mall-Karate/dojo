@@ -15,12 +15,6 @@
 //! Runs a service lifecycle hook on a separate thread, and wraps the
 //! whole execution in a future.
 //!
-//! Ideally, we'd want to use something like
-//! [tokio_process](https://github.com/alexcrichton/tokio-process),
-//! but we're not able to use that based on how our Windows hooks get
-//! executed. If that were to be re-cast in terms of Rust's
-//! `std::process::Command`, we could consider it. In the meantime,
-//! this seems to do the trick.
 
 use super::{hook_timer,
             spawned_future::SpawnedFuture,
@@ -37,20 +31,14 @@ pub struct HookRunner<H: Hook + Sync> {
     hook:          Arc<H>,
     service_group: ServiceGroup,
     pkg:           Pkg,
-    passwd:        Option<String>,
 }
 
 impl<H> HookRunner<H> where H: Hook + Sync
 {
-    pub fn new(hook: Arc<H>,
-               service_group: ServiceGroup,
-               pkg: Pkg,
-               passwd: Option<String>)
-               -> HookRunner<H> {
+    pub fn new(hook: Arc<H>, service_group: ServiceGroup, pkg: Pkg) -> HookRunner<H> {
         HookRunner { hook,
                      service_group,
-                     pkg,
-                     passwd }
+                     pkg }
     }
 }
 impl<H: Hook + Sync + 'static> IntoFuture for HookRunner<H> {
@@ -71,9 +59,8 @@ impl<H: Hook + Sync + 'static> IntoFuture for HookRunner<H> {
             thread::Builder::new().name(format!("{}-{}", H::file_name(), self.service_group))
                                   .spawn(move || {
                                       let _timer = hook_timer(H::file_name());
-                                      let exit_value = self.hook.run(&self.service_group,
-                                                                     &self.pkg,
-                                                                     self.passwd.as_ref());
+                                      let exit_value =
+                                          self.hook.run(&self.service_group, &self.pkg);
                                       tx.send(exit_value)
                                         .expect("Couldn't send oneshot signal from HookRunner: \
                                                  receiver went away");

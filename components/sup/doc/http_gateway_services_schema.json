@@ -517,13 +517,6 @@
         "description": "The package identifier for this service spec",
         "type": "string"
       },
-      "svc_encrypted_password": {
-        "description": "The encrypted password for this service",
-        "type": [
-          "null",
-          "string"
-        ]
-      },
       "sys": {
         "$ref": "#/definitions/sys_extended"
       },

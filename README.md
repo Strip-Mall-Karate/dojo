@@ -27,7 +27,7 @@ another.
 | `components/studio` | The clean-room build environment |
 | `components/pkg-export-docker`, `pkg-export-tar` | Exporters |
 | `support/vm` | The Dojo VM for Apple silicon Macs |
-| `vendor/ipc-channel` | Servo's ipc-channel with Windows support |
+| `vendor/ipc-channel` | Servo's ipc-channel, vendored as a snapshot |
 
 ## Building
 

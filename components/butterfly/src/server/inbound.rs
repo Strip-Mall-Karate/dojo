@@ -142,11 +142,9 @@ impl Inbound {
                     }
                 }
                 Err(e) => {
-                    // TODO: We can't use magic numbers here because the Supervisor runs on more
-                    // than one platform. I'm sure these were added as specific OS errors for Linux
-                    // but we need to also handle Windows & Mac.
+                    // EAGAIN is 11 on Linux and 35 on macOS.
                     match e.raw_os_error() {
-                        Some(35) | Some(11) | Some(10035) | Some(10060) => {
+                        Some(35) | Some(11) => {
                             // This is the normal non-blocking result, or a timeout
                         }
                         Some(_) => {

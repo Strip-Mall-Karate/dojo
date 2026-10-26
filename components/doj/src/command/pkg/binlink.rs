@@ -12,13 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(windows)]
-use std::fs::File;
-#[cfg(windows)]
-use std::io::{BufRead,
-              BufReader};
-use std::{env,
-          fs,
+use std::{fs,
           path::{Path,
                  PathBuf}};
 
@@ -31,9 +25,6 @@ use crate::{common::ui::{Status,
 
 use crate::error::{Error,
                    Result};
-
-#[cfg(windows)]
-const BAT_COMMENT_MARKER: &str = "REM";
 
 pub fn start(ui: &mut UI,
              ident: &PackageIdent,
@@ -48,7 +39,7 @@ pub fn start(ui: &mut UI,
                      &ident,
                      dst_path.display()))?;
     let pkg_install = PackageInstall::load(&ident, Some(fs_root_path))?;
-    let mut src = match hfs::find_command_in_pkg(binary, &pkg_install, fs_root_path)? {
+    let src = match hfs::find_command_in_pkg(binary, &pkg_install, fs_root_path)? {
         Some(c) => c,
         None => {
             return Err(Error::CommandNotFoundInPkg((pkg_install.ident()
@@ -56,9 +47,6 @@ pub fn start(ui: &mut UI,
                                                     binary.to_string())));
         }
     };
-    if cfg!(target_os = "windows") {
-        src = fs_root_path.join(src.strip_prefix("/")?);
-    }
     if !dst_path.is_dir() {
         ui.status(Status::Creating,
                   format!("parent directory {}", dst_path.display()))?;
@@ -90,12 +78,6 @@ pub fn start(ui: &mut UI,
         }
     }
 
-    if cfg!(target_os = "windows") && !is_dest_on_path(&dst_path) {
-        ui.warn(format!("Binlink destination '{}' is not on the PATH. Consider setting it \
-                         manually or running 'doj setup' to add it to the machine PATH.",
-                        dst_path.display(),))?;
-    }
-
     Ok(())
 }
 
@@ -113,29 +95,6 @@ pub fn binlink_all_in_pkg(ui: &mut UI,
             if bin_file.file_type()?.is_dir() {
                 continue;
             }
-            if cfg!(target_os = "windows") {
-                match bin_file.path().extension() {
-                    Some(executable_extensions) => {
-                        match env::var_os("PATHEXT") {
-                            Some(val) => {
-                                let any_matches = env::split_paths(&val.to_string_lossy()
-                                                                       .to_uppercase()).any(|e| {
-                                                      e.to_string_lossy()
-                                                      == format!(
-                                            ".{}",
-                                            executable_extensions.to_string_lossy().to_uppercase()
-                                        )
-                                                  });
-                                if !any_matches {
-                                    continue;
-                                }
-                            }
-                            None => continue,
-                        }
-                    }
-                    None => continue,
-                }
-            }
             let bin_name = match bin_file.file_name().to_str() {
                 Some(bn) => bn.to_owned(),
                 None => {
@@ -149,20 +108,11 @@ pub fn binlink_all_in_pkg(ui: &mut UI,
     Ok(())
 }
 
-fn is_dest_on_path<T: AsRef<Path>>(dest_dir: T) -> bool {
-    if let Some(val) = env::var_os("PATH") {
-        env::split_paths(&val).any(|p| p == dest_dir.as_ref())
-    } else {
-        false
-    }
-}
-
 struct Binlink {
     dest: PathBuf,
     src:  PathBuf,
 }
 
-#[cfg(not(target_os = "windows"))]
 impl Binlink {
     pub fn new<T: AsRef<Path>>(src: T, dest_dir: T) -> Result<Self> {
         let bin_name = match src.as_ref().file_name() {
@@ -187,51 +137,8 @@ impl Binlink {
     }
 }
 
-#[cfg(target_os = "windows")]
-impl Binlink {
-    pub fn new<T: AsRef<Path>>(src: T, dest_dir: T) -> Result<Self> {
-        let bin_name = match src.as_ref().file_stem() {
-            Some(name) => name,
-            None => return Err(Error::CannotParseBinlinkSource(src.as_ref().to_path_buf())),
-        };
-        let mut path = dest_dir.as_ref().join(bin_name);
-        path.set_extension("bat");
-
-        Ok(Binlink { dest: path,
-                     src:  src.as_ref().to_path_buf(), })
-    }
-
-    pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self> {
-        use toml::Value::Table;
-
-        let file = File::open(&path)?;
-        for line in BufReader::new(file).lines() {
-            let ln = line?;
-            if ln.to_uppercase().starts_with(BAT_COMMENT_MARKER) {
-                let (_, rest) = ln.split_at(BAT_COMMENT_MARKER.len());
-                if let Ok(Table(toml_exp)) = rest.parse() {
-                    if let Some(src) = toml_exp.get("source") {
-                        if let Some(val) = src.as_str() {
-                            return Ok(Binlink { dest: path.as_ref().to_path_buf(),
-                                                src:  PathBuf::from(val), });
-                        }
-                    }
-                }
-            }
-        }
-        Err(Error::CannotParseBinlinkSource(path.as_ref().to_path_buf()))
-    }
-
-    pub fn link(&self) -> Result<()> {
-        let template = format!("@echo off\nREM source='{0}'\n\"{0}\" %*",
-                               self.src.display());
-        fs::write(&self.dest, template)?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
-#[cfg(any(target_os = "linux", target_os = "windows"))]
+#[cfg(target_os = "linux")]
 mod test {
     use std::{collections::HashMap,
               env,
@@ -265,11 +172,7 @@ mod test {
         let ident = fake_bin_pkg_install("acme/cooltools", tools, rootfs.path());
         let dst_path = Path::new("/opt/bin");
 
-        let mut rootfs_src_dir = hcore::fs::pkg_install_path(&ident, None::<&Path>).join("bin");
-        if cfg!(target_os = "windows") {
-            rootfs_src_dir = rootfs.path()
-                                   .join(rootfs_src_dir.strip_prefix("/").unwrap());
-        }
+        let rootfs_src_dir = hcore::fs::pkg_install_path(&ident, None::<&Path>).join("bin");
         let rootfs_bin_dir = rootfs.path().join("opt/bin");
         let force = true;
 
@@ -277,12 +180,8 @@ mod test {
 
         #[cfg(target_os = "linux")]
         let magicate_link = "magicate.exe";
-        #[cfg(target_os = "windows")]
-        let magicate_link = "magicate.bat";
         #[cfg(target_os = "linux")]
         let hypnoanalyze_link = "hypnoanalyze.exe";
-        #[cfg(target_os = "windows")]
-        let hypnoanalyze_link = "hypnoanalyze.bat";
 
         start(&mut ui,
               &ident,
@@ -314,26 +213,16 @@ mod test {
         let ident = fake_bin_pkg_install("acme/securetools", tools, rootfs.path());
         let dst_path = Path::new("/opt/bin");
 
-        let mut rootfs_src_dir = hcore::fs::pkg_install_path(&ident, None::<&Path>);
-        if cfg!(target_os = "windows") {
-            rootfs_src_dir = rootfs.path()
-                                   .join(rootfs_src_dir.strip_prefix("/").unwrap());
-        }
+        let rootfs_src_dir = hcore::fs::pkg_install_path(&ident, None::<&Path>);
         let rootfs_bin_dir = rootfs.path().join("opt/bin");
         let force = true;
 
         #[cfg(target_os = "linux")]
         let magicate_link = "magicate.exe";
-        #[cfg(target_os = "windows")]
-        let magicate_link = "magicate.bat";
         #[cfg(target_os = "linux")]
         let hypnoanalyze_link = "hypnoanalyze.exe";
-        #[cfg(target_os = "windows")]
-        let hypnoanalyze_link = "hypnoanalyze.bat";
         #[cfg(target_os = "linux")]
         let securitize_link = "securitize.exe";
-        #[cfg(target_os = "windows")]
-        let securitize_link = "securitize.bat";
 
         let (mut ui, _stdout, _stderr) = ui();
         binlink_all_in_pkg(&mut ui, &ident, &dst_path, rootfs.path(), force).unwrap();
@@ -350,31 +239,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(target_os = "windows")]
-    fn binlink_all_in_pkg_symlinks_only_executables() {
-        let rootfs = TempDir::new().unwrap();
-        let mut tools = HashMap::new();
-        tools.insert("bin", vec!["magicate.exe", "hypnoanalyze.dll"]);
-        let ident = fake_bin_pkg_install("acme/securetools", tools, rootfs.path());
-        let dst_path = Path::new("/opt/bin");
-
-        let rootfs_src_dir =
-            rootfs.path()
-                  .join(hcore::fs::pkg_install_path(&ident, None::<&Path>).strip_prefix("/")
-                                                                          .unwrap());
-        let rootfs_bin_dir = rootfs.path().join("opt/bin");
-        let force = true;
-
-        let (mut ui, _stdout, _stderr) = ui();
-        binlink_all_in_pkg(&mut ui, &ident, &dst_path, rootfs.path(), force).unwrap();
-
-        assert_eq!(rootfs_src_dir.join("bin/magicate.exe"),
-                   Binlink::from_file(rootfs_bin_dir.join("magicate.bat")).unwrap()
-                                                                          .src);
-        assert!(Binlink::from_file(rootfs_bin_dir.join("hypnoanalyze.bat")).is_err());
-    }
-
-    #[test]
     fn binlink_all_in_pkg_skips_invalid_sub_dirs() {
         let rootfs = TempDir::new().unwrap();
         let mut tools = HashMap::new();
@@ -383,11 +247,7 @@ mod test {
         let ident = fake_bin_pkg_install("acme/securetools", tools, rootfs.path());
         let dst_path = Path::new("/opt/bin");
 
-        let mut rootfs_src_dir = hcore::fs::pkg_install_path(&ident, None::<&Path>);
-        if cfg!(target_os = "windows") {
-            rootfs_src_dir = rootfs.path()
-                                   .join(rootfs_src_dir.strip_prefix("/").unwrap());
-        }
+        let rootfs_src_dir = hcore::fs::pkg_install_path(&ident, None::<&Path>);
         let rootfs_bin_dir = rootfs.path().join("opt/bin");
         let force = true;
 
@@ -400,12 +260,8 @@ mod test {
 
         #[cfg(target_os = "linux")]
         let magicate_link = "magicate.exe";
-        #[cfg(target_os = "windows")]
-        let magicate_link = "magicate.bat";
         #[cfg(target_os = "linux")]
         let bonus_round_link = "bonus-round.exe";
-        #[cfg(target_os = "windows")]
-        let bonus_round_link = "bonus-round.bat";
 
         let (mut ui, _stdout, _stderr) = ui();
         binlink_all_in_pkg(&mut ui, &ident, &dst_path, rootfs.path(), force).unwrap();

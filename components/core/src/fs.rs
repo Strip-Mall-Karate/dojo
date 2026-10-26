@@ -47,28 +47,20 @@ pub const LAUNCHER_ROOT_PATH: &str = "doj/launcher";
 /// The root path containing all locally installed packages
 /// Because this value is used in template rendering, we
 /// use native directory separator
-#[cfg(not(target_os = "windows"))]
 pub const PKG_PATH: &str = "doj/pkgs";
-#[cfg(target_os = "windows")]
-pub const PKG_PATH: &str = "doj\\pkgs";
 /// The environment variable pointing to the filesystem root. This exists for internal
 /// Dojo team usage and is not intended to be used by Dojo consumers.
 /// Using this variable could lead to broken Supervisor services and it should
 /// be used with extreme caution.
 pub const FS_ROOT_ENVVAR: &str = "FS_ROOT";
-pub const SYSTEMDRIVE_ENVVAR: &str = "SYSTEMDRIVE";
 /// The file where user-defined configuration for each service is found.
 pub const USER_CONFIG_FILE: &str = "user.toml";
 /// Permissions that service-owned service directories should
 /// have. The user and group will be `SVC_USER` / `SVC_GROUP`.
-#[cfg(not(windows))]
 const SVC_DIR_PERMISSIONS: u32 = 0o770;
 
 lazy_static::lazy_static! {
     /// The default filesystem root path.
-    ///
-    /// WARNING: On Windows this variable mutates on first call if an environment variable with
-    ///          the key of `FS_ROOT_ENVVAR` is set.
     pub static ref FS_ROOT_PATH: PathBuf = fs_root_path();
 
     /// The root path containing all runtime service directories and files
@@ -207,18 +199,6 @@ pub fn pkg_install_path<T>(ident: &PackageIdent, fs_root: Option<T>) -> PathBuf
     pkg_path.push(ident.version.as_ref().unwrap());
     pkg_path.push(ident.release.as_ref().unwrap());
     pkg_path
-}
-
-/// Given a linux style absolute path (prepended with '/') and a fs_root,
-/// this will "re-root" the path just under the fs_root. Otherwise returns
-/// the given path unchanged. Non-Windows platforms will always return the
-/// unchanged path.
-pub(crate) fn fs_rooted_path(path: &PathBuf, fs_root: &Path) -> PathBuf {
-    if path.starts_with("/") && cfg!(windows) {
-        fs_root.join(path.strip_prefix("/").unwrap())
-    } else {
-        path.to_path_buf()
-    }
 }
 
 /// Return the path to the root of the launcher runtime directory
@@ -429,7 +409,6 @@ impl<'a> SvcDir<'a> {
         }
     }
 
-    #[cfg(not(windows))]
     fn set_permissions<T: AsRef<Path>>(&self, path: T) -> Result<()> {
         use crate::util::posix_perm;
 
@@ -438,13 +417,6 @@ impl<'a> SvcDir<'a> {
         }
         posix_perm::set_permissions(path.as_ref(), SVC_DIR_PERMISSIONS).map_err(From::from)
     }
-
-    #[cfg(windows)]
-    fn set_permissions<T: AsRef<Path>>(&self, path: T) -> Result<()> {
-        use crate::util::win_perm;
-
-        win_perm::harden_path(path.as_ref()).map_err(From::from)
-    }
 }
 
 /// Returns the absolute path for a given command, if it exists, by searching the `PATH`
@@ -452,9 +424,6 @@ impl<'a> SvcDir<'a> {
 ///
 /// If the command represents an absolute path, then the `PATH` searching will not be performed. If
 /// no absolute path can be found for the command, then `None` is returned.
-///
-/// On Windows, the PATHEXT environment variable contains common extensions for commands,
-/// for example allowing "docker.exe" to be found when searching for "docker".
 ///
 /// # Examples
 ///
@@ -506,8 +475,6 @@ pub fn find_command<T>(command: T) -> Option<PathBuf>
                 let candidate = PathBuf::from(&path).join(command.as_ref());
                 if candidate.is_file() {
                     return Some(candidate);
-                } else if let Some(result) = find_command_with_pathext(&candidate) {
-                    return Some(result);
                 }
             }
             None
@@ -539,8 +506,6 @@ pub fn find_command_in_pkg<T, U>(command: T,
         let candidate = fs_root_path.as_ref().join(stripped).join(command.as_ref());
         if candidate.is_file() {
             return Ok(Some(path.join(command.as_ref())));
-        } else if let Some(result) = find_command_with_pathext(&candidate) {
-            return Ok(Some(result));
         }
     }
     Ok(None)
@@ -587,26 +552,6 @@ pub fn resolve_cmd_in_pkg(program: &str, ident_str: &str) -> PathBuf {
     abs_path
 }
 
-// Windows relies on path extensions to resolve commands like `docker` to `docker.exe`
-// Path extensions are found in the PATHEXT environment variable.
-// We should only search with PATHEXT if the file does not already have an extension.
-fn find_command_with_pathext(candidate: &PathBuf) -> Option<PathBuf> {
-    if candidate.extension().is_none() {
-        if let Some(pathexts) = henv::var_os("PATHEXT") {
-            for pathext in env::split_paths(&pathexts) {
-                let mut source_candidate = candidate.to_path_buf();
-                let extension = pathext.to_str().unwrap().trim_matches('.');
-                source_candidate.set_extension(extension);
-                let current_candidate = source_candidate.to_path_buf();
-                if current_candidate.is_file() {
-                    return Some(current_candidate);
-                }
-            }
-        };
-    }
-    None
-}
-
 /// Returns whether or not the current process is running with a root
 /// effective user id or not.
 ///
@@ -621,14 +566,14 @@ pub fn am_i_root() -> bool { *EUID == 0u32 }
 
 /// Returns a `PathBuf` which represents the filesystem root for Dojo.
 ///
-/// **Note** with the current exception of behavior on Windows (see below), an absolute default
-/// path of `"/"` should always be returned. This function is used to populate a one-time static
-/// value which cannot be altered for the execution length of a program. Packages in Dojo may
-/// contain binaries and libraries having dependent libraries which are located in absolute paths
-/// meaning that changing the value from this function will render existing packages un-runnable in
-/// the Supervisor. Furthermore as a rule in this codebase, external environment variables should
-/// *not* influence the behavior of inner libraries--any environment variables should be detected
-/// in a program at CLI parsing time and explicitly passed to inner module functions.
+/// An absolute default path of `"/"` should always be returned. This function is used to populate a
+/// one-time static value which cannot be altered for the execution length of a program. Packages in
+/// Dojo may contain binaries and libraries having dependent libraries which are located in absolute
+/// paths meaning that changing the value from this function will render existing packages
+/// un-runnable in the Supervisor. Furthermore as a rule in this codebase, external environment
+/// variables should *not* influence the behavior of inner libraries--any environment variables
+/// should be detected in a program at CLI parsing time and explicitly passed to inner module
+/// functions.
 ///
 /// There is one exception to this rule which is supported for testing only--primarily exercising
 /// the Supervisor behavior. It allows setting a testing-only environment variable to influence the
@@ -649,19 +594,7 @@ fn fs_root_path() -> PathBuf {
         return PathBuf::from(path);
     }
 
-    // JW TODO: When Windows container studios are available the platform reflection should
-    // be removed.
-    if cfg!(target_os = "windows") {
-        match (henv::var(FS_ROOT_ENVVAR), henv::var(SYSTEMDRIVE_ENVVAR)) {
-            (Ok(path), _) => PathBuf::from(path),
-            (Err(_), Ok(system_drive)) => PathBuf::from(format!("{}{}", system_drive, "\\")),
-            (Err(_), Err(_)) => {
-                unreachable!("Windows should always have a SYSTEMDRIVE environment variable.")
-            }
-        }
-    } else {
-        PathBuf::from("/")
-    }
+    PathBuf::from("/")
 }
 
 /// parent returns the parent directory of the given path, accounting
@@ -817,19 +750,6 @@ mod test_find_command {
               fs,
               path::PathBuf};
 
-    #[allow(dead_code)]
-    fn setup_pathext() {
-        let path_bufs = vec![PathBuf::from(".COM"), PathBuf::from(".EXE")];
-        let new_path = env::join_paths(path_bufs).unwrap();
-        env::set_var("PATHEXT", &new_path);
-    }
-
-    fn setup_empty_pathext() {
-        if env::var("PATHEXT").is_ok() {
-            env::remove_var("PATHEXT")
-        }
-    }
-
     fn setup_path() {
         let orig_path = env::var_os("PATH").unwrap();
         let mut os_paths: Vec<PathBuf> = env::split_paths(&orig_path).collect();
@@ -841,15 +761,11 @@ mod test_find_command {
         env::set_var("PATH", &new_path);
     }
 
-    mod without_pathext_set {
+    mod with_path_set {
         pub use super::find_command;
-        use super::{setup_empty_pathext,
-                    setup_path};
+        use super::setup_path;
 
-        fn setup_environment() {
-            setup_path();
-            setup_empty_pathext();
-        }
+        fn setup_environment() { setup_path(); }
 
         mod argument_without_extension {
             use super::{find_command,
@@ -866,13 +782,6 @@ mod test_find_command {
             fn command_does_not_exist() {
                 setup_environment();
                 let result = find_command("missing");
-                assert_eq!(result.is_some(), false);
-            }
-
-            #[test]
-            fn command_exists_with_extension() {
-                setup_environment();
-                let result = find_command("win95_dominator");
                 assert_eq!(result.is_some(), false);
             }
         }
@@ -914,88 +823,6 @@ mod test_find_command {
         }
     }
 
-    #[cfg(target_os = "windows")]
-    mod with_pathext_set {
-        pub use super::find_command;
-        use super::{setup_path,
-                    setup_pathext};
-
-        fn setup_environment() {
-            setup_path();
-            setup_pathext();
-        }
-
-        mod argument_without_extension {
-            use super::{find_command,
-                        setup_environment};
-
-            #[test]
-            fn command_exists() {
-                setup_environment();
-                let result = find_command("bin_with_no_extension");
-                assert_eq!(result.is_some(), true);
-            }
-
-            #[test]
-            fn command_does_not_exist() {
-                setup_environment();
-                let result = find_command("missing");
-                assert_eq!(result.is_some(), false);
-            }
-
-            #[test]
-            #[allow(non_snake_case)]
-            fn command_exists_with_extension_in_PATHEXT() {
-                setup_environment();
-                let result = find_command("bin_with_extension");
-                assert_eq!(result.is_some(), true);
-            }
-
-            #[test]
-            #[allow(non_snake_case)]
-            fn command_exists_with_extension_not_in_PATHEXT() {
-                setup_environment();
-                let result = find_command("win95_dominator");
-                assert_eq!(result.is_some(), false);
-            }
-        }
-
-        mod argument_with_extension {
-            use super::{find_command,
-                        setup_environment};
-            use std::fs::canonicalize;
-
-            #[test]
-            fn command_exists() {
-                setup_environment();
-                let result = find_command("bin_with_extension.exe");
-                assert_eq!(result.is_some(), true);
-            }
-
-            #[test]
-            fn command_does_not_exist() {
-                setup_environment();
-                let result = find_command("missing.com");
-                assert_eq!(result.is_some(), false);
-            }
-
-            #[test]
-            fn command_different_extension_does_exist() {
-                setup_environment();
-                let result = find_command("bin_with_extension.com");
-                assert_eq!(result.is_some(), false);
-            }
-
-            #[test]
-            fn first_command_on_path_found() {
-                setup_environment();
-                let target_path = canonicalize("./tests/fixtures/plan.sh").unwrap();
-                let result = find_command("plan.sh");
-                let found_path = result.unwrap();
-                assert_eq!(found_path, target_path);
-            }
-        }
-    }
 }
 
 #[cfg(test)]

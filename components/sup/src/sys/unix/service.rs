@@ -39,10 +39,6 @@ pub fn kill(pid: Pid) -> ShutdownMethod {
 ///////////////////////////////////////////////////////////////////////
 // Private Code
 
-// TODO (CM): We may not want this struct in the end... keeping it for
-// now to keep some parity with the Windows implementation. Once we
-// pull over all the "service" functionality from the Launcher, we can
-// re-evaluate.
 struct Process {
     pid: pid_t,
 }

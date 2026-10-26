@@ -37,8 +37,6 @@ use serde_json;
 /// The `Dockerfile` template.
 #[cfg(unix)]
 const DOCKERFILE: &str = include_str!("../defaults/Dockerfile.hbs");
-#[cfg(windows)]
-const DOCKERFILE: &str = include_str!("../defaults/Dockerfile_win.hbs");
 /// The build report template.
 const BUILD_REPORT: &str = include_str!("../defaults/last_docker_export.env.hbs");
 
@@ -320,14 +318,6 @@ impl DockerBuildRoot {
         Ok(root)
     }
 
-    #[cfg(windows)]
-    pub fn from_build_root(build_root: BuildRoot, ui: &mut UI) -> Result<Self> {
-        let root = DockerBuildRoot(build_root);
-        root.create_dockerfile(ui)?;
-
-        Ok(root)
-    }
-
     /// Destroys the temporary build root.
     ///
     /// Note that the build root will automatically destroy itself when it falls out of scope, so
@@ -350,24 +340,6 @@ impl DockerBuildRoot {
                   naming: &Naming,
                   memory: Option<&str>)
                   -> Result<DockerImage> {
-        self.build_docker_image(ui, naming, memory)
-    }
-
-    #[cfg(windows)]
-    pub fn export(&self,
-                  ui: &mut UI,
-                  naming: &Naming,
-                  memory: Option<&str>)
-                  -> Result<DockerImage> {
-        let mut cmd = docker_cmd();
-        cmd.arg("version").arg("--format='{{.Server.Os}}'");
-        debug!("Running command: {:?}", cmd);
-        let result = cmd.output().expect("Docker command failed to spawn");
-        let os = String::from_utf8_lossy(&result.stdout);
-        if !os.contains("windows") {
-            return Err(Error::DockerNotInWindowsMode(os.to_string()))?;
-        }
-
         self.build_docker_image(ui, naming, memory)
     }
 

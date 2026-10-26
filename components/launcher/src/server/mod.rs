@@ -112,7 +112,6 @@ pub struct Server {
 impl Drop for Server {
     fn drop(&mut self) {
         fs::remove_file(&self.pid_file_path).ok();
-        #[cfg(not(windows))]
         self.remove_pipe();
     }
 }
@@ -150,7 +149,6 @@ impl Server {
         Ok((ipc_channel, supervisor, pipe))
     }
 
-    #[cfg(not(windows))]
     fn remove_pipe(&self) {
         if fs::remove_file(&self.pipe).is_err() {
             error!("Could not remove old pipe to supervisor {}", self.pipe);
@@ -169,7 +167,6 @@ impl Server {
         self.supervisor = supervisor;
         // We're connecting to a new supervisor instance, so we need to remove
         // the socket files for the old pipe so the new one can bind them.
-        #[cfg(not(windows))]
         self.remove_pipe();
         self.pipe = pipe;
         Ok(())
@@ -301,10 +298,8 @@ impl Server {
         // re-parented to the Launcher, when it is running as PID 1,
         // when their parents end before they do.
         //
-        // There is some natural overlap between the two on Unix
-        // platforms that would be nice to collapse, but it needs to
-        // be done in a way that the basic functionality of process
-        // tracking still works on Windows.
+        // There is some natural overlap between the two that would be
+        // nice to collapse.
         self.reap_services();
         match signals::check_for_signal() {
             Some(SignalEvent::Shutdown) => {
@@ -324,8 +319,8 @@ impl Server {
                 // We only return Some if we ended up reaping our
                 // Supervisor; otherwise, we don't need to do anything
                 // special. If the supervisor exits but reap_zombie_orphans()
-                // doesn't catch the signal (such as on Windows), we will still
-                // handle that properly in handle_message().
+                // doesn't catch the signal, we will still handle that
+                // properly in handle_message().
                 if let Some(result) = self.reap_zombie_orphans() {
                     return result;
                 }
@@ -437,12 +432,6 @@ impl Server {
             None
         }
     }
-
-    /// Windows doesn't have the same orphan-reaping behavior as Linux;
-    /// returning `None` means that there's nothing special that needs
-    /// to be done.
-    #[cfg(windows)]
-    fn reap_zombie_orphans(&mut self) -> Option<Result<TickState>> { None }
 }
 
 #[derive(Debug, Default)]
@@ -541,9 +530,6 @@ fn wait_without_supervisor(delay: Duration) -> Option<Ending> {
 
 #[cfg(unix)]
 fn reap_orphans() { while unsafe { libc::waitpid(-1, std::ptr::null_mut(), libc::WNOHANG) } > 0 {} }
-
-#[cfg(windows)]
-fn reap_orphans() {}
 
 pub fn send<T>(tx: &Sender, msg: &T) -> Result<()>
     where T: protocol::LauncherMessage

@@ -31,11 +31,7 @@ use crate::{error::{Error,
                     Result},
             package::PackageIdent};
 
-#[cfg(not(windows))]
 const ENV_PATH_SEPARATOR: char = ':';
-
-#[cfg(windows)]
-const ENV_PATH_SEPARATOR: char = ';';
 
 pub fn parse_key_value(s: &str) -> Result<HashMap<String, String>> {
     Ok(HashMap::from_iter(s.lines()

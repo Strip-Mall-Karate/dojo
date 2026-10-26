@@ -21,8 +21,6 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
-#[cfg(windows)]
-use crate::hcore::crypto::dpapi::encrypt;
 use crate::{common::{cli::{cache_key_path_from_matches,
                            DEFAULT_BINLINK_DIR,
                            FS_ROOT},
@@ -478,9 +476,8 @@ fn sub_pkg_build(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     };
     let docker = m.is_present("DOCKER");
     let reuse = m.is_present("REUSE");
-    let windows = m.is_present("WINDOWS");
 
-    command::pkg::build::start(ui, plan_context, root, src, keys, reuse, windows, docker)
+    command::pkg::build::start(ui, plan_context, root, src, keys, reuse, docker)
 }
 
 fn sub_pkg_config(m: &ArgMatches<'_>) -> Result<()> {
@@ -655,22 +652,13 @@ fn sub_plan_init(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let with_docs = m.is_present("WITH_DOCS");
     let with_callbacks = m.is_present("WITH_CALLBACKS");
     let with_all = m.is_present("WITH_ALL");
-    let windows = m.is_present("WINDOWS");
-    let scaffolding_ident = if windows {
-        match m.value_of("SCAFFOLDING") {
-            Some(scaffold) => Some(PackageIdent::from_str(scaffold)?),
-            None => None,
-        }
-    } else {
-        scaffolding::scaffold_check(ui, m.value_of("SCAFFOLDING"))?
-    };
+    let scaffolding_ident = scaffolding::scaffold_check(ui, m.value_of("SCAFFOLDING"))?;
 
     command::plan::init::start(ui,
                                origin,
                                with_docs,
                                with_callbacks,
                                with_all,
-                               windows,
                                scaffolding_ident,
                                name)
 }
@@ -1687,18 +1675,6 @@ fn get_health_check_interval_from_input(m: &ArgMatches<'_>)
      .map(|s| s.into())
 }
 
-#[cfg(target_os = "windows")]
-fn get_password_from_input(m: &ArgMatches) -> Result<Option<String>> {
-    if let Some(password) = m.value_of("PASSWORD") {
-        Ok(Some(encrypt(password.to_string())?))
-    } else {
-        Ok(None)
-    }
-}
-
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-fn get_password_from_input(_m: &ArgMatches<'_>) -> Result<Option<String>> { Ok(None) }
-
 fn get_topology_from_input(m: &ArgMatches<'_>) -> Option<Topology> {
     m.value_of("TOPOLOGY")
      .and_then(|f| Topology::from_str(f).ok())
@@ -1777,7 +1753,6 @@ fn update_svc_load_from_input(m: &ArgMatches<'_>, msg: &mut protocol::ctl::SvcLo
         msg.force = Some(true);
     }
     msg.group = get_group_from_input(m);
-    msg.svc_encrypted_password = get_password_from_input(m)?;
     msg.health_check_interval = get_health_check_interval_from_input(m);
     msg.binding_mode = get_binding_mode_from_input(m).map(|v| v as i32);
     msg.topology = get_topology_from_input(m).map(|v| v as i32);

@@ -145,7 +145,6 @@ fn unpack(state: &State) -> Result<(), String> {
 /// shell builder, running as root, never saw the difference. Symbolic links
 /// are not followed. A missing `dir` (an archive that unpacks elsewhere) is
 /// left alone.
-#[cfg(unix)]
 fn owner_writable(dir: &Path) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     let Ok(meta) = fs::symlink_metadata(dir) else {
@@ -169,9 +168,6 @@ fn owner_writable(dir: &Path) -> Result<(), String> {
     }
     Ok(())
 }
-
-#[cfg(not(unix))]
-fn owner_writable(_dir: &Path) -> Result<(), String> { Ok(()) }
 
 /// Strips binaries under `bin_dirs` and `lib_dirs`: executables of
 /// everything, shared objects and position-independent executables of what

@@ -32,14 +32,9 @@ pub struct LauncherCli {
     tx: IpcSender<Vec<u8>>,
     rx: IpcReceiver<Vec<u8>>,
     // We persist the pipe identifier so we can delete the file on drop.
-    // This is not necessary on Windows because named pipes are removed
-    // upon releasing the last handle to the pipe. The ipc-channel crate
-    // wraps the pipe in a WinHandle whose drop impl calls CloseHandle.
-    #[cfg(not(windows))]
     pipe: String,
 }
 
-#[cfg(not(windows))]
 impl Drop for LauncherCli {
     fn drop(&mut self) {
         if std::fs::remove_file(&self.pipe).is_err() {
@@ -62,7 +57,6 @@ impl LauncherCli {
         Self::read::<protocol::NetOk>(&raw)?;
         Ok(LauncherCli { tx,
                          rx,
-                         #[cfg(not(windows))]
                          pipe: pipe_to_sup })
     }
 
@@ -141,12 +135,9 @@ impl LauncherCli {
                             uid,
                             groupname,
                             gid, }: UserInfo,
-                 password: Option<&str>,
                  env: Env)
                  -> Result<Pid> {
-        // On Windows, we only expect user to be Some.
-        //
-        // On Linux, we expect uid and gid to be Some, while
+        // We expect uid and gid to be Some, while
         // user and groupname may be either Some or None. Only the IDs are
         // used; names are only for backward compatibility with older
         // Launchers.
@@ -155,7 +146,6 @@ impl LauncherCli {
                                     svc_group: groupname,
                                     svc_user_id: uid,
                                     svc_group_id: gid,
-                                    svc_password: password.map(str::to_string),
                                     env,
                                     id: id.to_string() };
 

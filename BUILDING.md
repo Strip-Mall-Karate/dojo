@@ -308,20 +308,3 @@ git clone https://github.com/StripMallKarateCompany/dojo.git
 cd dojo/components/builder-api
 cargo test
 ```
-
-## Windows
-
-These instructions are based on Windows 10 1607 (Anniversary update) or newer.
-Most of it will probably work downlevel.
-
-All commands are in PowerShell unless otherwise stated.  It is assumed that you
-have `git` installed and configured.  Posh-Git is a handy PowerShell module for
-making `git` better in your PowerShell console (`install-module posh-git`).
-
-```
-# Clone the Dojo source
-git clone https://github.com/StripMallKarateCompany/dojo.git
-
-cd dojo
-./build.ps1 components/doj -configure
-```

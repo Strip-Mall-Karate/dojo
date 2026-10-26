@@ -44,8 +44,6 @@ pub const LISTEN_HTTP_ADDRESS_ENVVAR: &str = "DOJ_LISTEN_HTTP";
 
 pub const PACKAGE_TARGET_ENVVAR: &str = "DOJ_PACKAGE_TARGET";
 
-const SYSTEMDRIVE_ENVVAR: &str = "SYSTEMDRIVE";
-
 lazy_static! {
     pub static ref LISTEN_CTL_DEFAULT_ADDR_STRING: String =
         { ListenCtlAddr::default().to_string() };
@@ -56,16 +54,7 @@ lazy_static! {
     pub static ref FS_ROOT: PathBuf = {
         use crate::hcore::fs::FS_ROOT_ENVVAR;
 
-        if cfg!(target_os = "windows") {
-            match (henv::var(FS_ROOT_ENVVAR), henv::var(SYSTEMDRIVE_ENVVAR)) {
-                (Ok(path), _) => PathBuf::from(path),
-                (Err(_), Ok(system_drive)) => PathBuf::from(format!("{}{}", system_drive, "\\")),
-                (Err(_), Err(_)) => unreachable!(
-                    "Windows should always have a SYSTEMDRIVE \
-                    environment variable."
-                ),
-            }
-        } else if let Ok(root) = henv::var(FS_ROOT_ENVVAR) {
+        if let Ok(root) = henv::var(FS_ROOT_ENVVAR) {
             PathBuf::from(root)
         } else {
             PathBuf::from("/")
@@ -75,9 +64,6 @@ lazy_static! {
 
 pub const BINLINK_DIR_ENVVAR: &str = "DOJ_BINLINK_DIR";
 
-/// Default Binlink Dir
-#[cfg(target_os = "windows")]
-pub const DEFAULT_BINLINK_DIR: &str = "/doj/bin";
 #[cfg(target_os = "linux")]
 pub const DEFAULT_BINLINK_DIR: &str = "/bin";
 #[cfg(target_os = "macos")]

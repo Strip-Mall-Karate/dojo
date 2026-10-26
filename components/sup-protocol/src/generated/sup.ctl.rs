@@ -136,9 +136,6 @@ pub struct SvcLoad {
     /// Service group name for the service.
     #[prost(string, optional, tag="10", default="default")]
     pub group: ::std::option::Option<std::string::String>,
-    /// Encrypted password for a Windows service.
-    #[prost(string, optional, tag="11")]
-    pub svc_encrypted_password: ::std::option::Option<std::string::String>,
     /// Topology which the service will run in.
     #[prost(enumeration="super::types::Topology", optional, tag="12")]
     pub topology: ::std::option::Option<i32>,

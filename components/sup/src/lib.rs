@@ -43,8 +43,6 @@
 extern crate caps;
 extern crate clap;
 extern crate cpu_time;
-#[cfg(windows)]
-extern crate ctrlc;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

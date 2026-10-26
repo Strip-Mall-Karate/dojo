@@ -73,10 +73,6 @@ proc_self = "0.1.0" # pinning this explicitly because newer versions switched to
 jemallocator = "*"
 jemalloc-ctl = "*"
 
-[target.'cfg(windows)'.dependencies]
-ctrlc = "*"
-winapi =  { version = "*", features = ["tlhelp32"] }
-
 [dev-dependencies]
 # Pending upgrade activities
 hyper = "0.10"

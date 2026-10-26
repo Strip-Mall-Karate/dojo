@@ -25,7 +25,3 @@ from this directory. To make a build for release, run the `build` command from w
 ### Testing
 
 Since the Supervisor requires the Launcher to start and it always attempts to start the latest version of the Supervisor packaged and installed on the host you may find it difficult to start your dev version of the Supervisor. You can force the Supervisor to start a specific version of the Supervisor by setting the `DOJ_SUP_BINARY` environment variable to the file path of the desired Supervisor binary to start.
-
-### Windows service identities
-
-The launcher may optionally start a Windows process under an alternate identity declared via `svc_user`. Windows requires a password for this identity. The password is encrypted when a service is loaded and decrypted when the launcher spawns the process, ["complexified" with a secret key](https://docs.microsoft.com/en-us/windows/desktop/api/dpapi/nf-dpapi-cryptprotectdata). Set that key in the `DOJ_CRYPTO_KEY` environment variable when building `doj` or the launcher.

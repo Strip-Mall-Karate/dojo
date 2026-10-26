@@ -16,8 +16,6 @@ extern crate dojo_core as core;
 use dojo_launcher_protocol as protocol;
 #[macro_use]
 extern crate log;
-#[cfg(windows)]
-extern crate winapi;
 
 pub mod error;
 pub mod init;

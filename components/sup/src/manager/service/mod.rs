@@ -98,7 +98,6 @@ use time::Timespec;
 
 static LOGKEY: &'static str = "SR";
 
-#[cfg(not(windows))]
 pub const GOSSIP_FILE_PERMISSIONS: u32 = 0o640;
 
 lazy_static! {
@@ -184,7 +183,6 @@ pub struct Service {
     manager_fs_cfg: Arc<FsCfg>,
     #[serde(rename = "process")]
     supervisor: Supervisor,
-    svc_encrypted_password: Option<String>,
     health_check_interval: HealthCheckInterval,
 
     #[serde(skip_serializing)]
@@ -242,7 +240,6 @@ impl Service {
                      update_strategy: spec.update_strategy,
                      config_from: spec.config_from,
                      scheduled_health_check: Some(Instant::now()),
-                     svc_encrypted_password: spec.svc_encrypted_password,
                      health_check_interval: spec.health_check_interval,
                      defaults_updated: false,
                      gateway_state })
@@ -288,10 +285,7 @@ impl Service {
 
     fn start(&mut self, launcher: &LauncherCli) {
         if let Some(err) = self.supervisor
-                               .start(&self.pkg,
-                                      &self.service_group,
-                                      launcher,
-                                      self.svc_encrypted_password.as_ref().map(String::as_str))
+                               .start(&self.pkg, &self.service_group, launcher)
                                .err()
         {
             outputln!(preamble self.service_group, "Service start failed: {}", err);
@@ -333,21 +327,15 @@ impl Service {
         let _timer = hook_timer("reload");
         self.needs_reload = false;
         if self.process_down() || self.hooks.reload.is_none() {
-            if let Some(err) =
-                self.supervisor
-                    .restart(&self.pkg,
-                             &self.service_group,
-                             launcher,
-                             self.svc_encrypted_password.as_ref().map(String::as_ref))
-                    .err()
+            if let Some(err) = self.supervisor
+                                   .restart(&self.pkg, &self.service_group, launcher)
+                                   .err()
             {
                 outputln!(preamble self.service_group, "Service restart failed: {}", err);
             }
         } else {
             let hook = self.hooks.reload.as_ref().unwrap();
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref());
+            hook.run(&self.service_group, &self.pkg);
         }
     }
 
@@ -451,9 +439,6 @@ impl Service {
         spec.binds = self.binds.clone();
         spec.binding_mode = self.binding_mode;
         spec.config_from = self.config_from.clone();
-        if let Some(ref password) = self.svc_encrypted_password {
-            spec.svc_encrypted_password = Some(password.clone())
-        }
         spec.health_check_interval = self.health_check_interval;
         spec
     }
@@ -696,9 +681,7 @@ impl Service {
         outputln!(preamble self.service_group, "Initializing");
         self.initialized = true;
         if let Some(ref hook) = self.hooks.init {
-            self.initialized = hook.run(&self.service_group,
-                                        &self.pkg,
-                                        self.svc_encrypted_password.as_ref())
+            self.initialized = hook.run(&self.service_group, &self.pkg)
         }
     }
 
@@ -708,9 +691,7 @@ impl Service {
 
         self.needs_reconfiguration = false;
         if let Some(ref hook) = self.hooks.reconfigure {
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref());
+            hook.run(&self.service_group, &self.pkg);
         }
     }
 
@@ -718,9 +699,7 @@ impl Service {
         let _timer = hook_timer("post-run");
 
         if let Some(ref hook) = self.hooks.post_run {
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref());
+            hook.run(&self.service_group, &self.pkg);
         }
     }
 
@@ -730,9 +709,7 @@ impl Service {
         self.hooks.post_stop.as_ref().map(|hook| {
                                          hook_runner::HookRunner::new(Arc::clone(&hook),
                                                                       self.service_group.clone(),
-                                                                      self.pkg.clone(),
-                                                                      self.svc_encrypted_password
-                                                                          .clone())
+                                                                      self.pkg.clone())
                                      })
     }
 
@@ -743,11 +720,10 @@ impl Service {
             return None;
         }
 
-        self.hooks.suitability.as_ref().and_then(|hook| {
-                                           hook.run(&self.service_group,
-                                                    &self.pkg,
-                                                    self.svc_encrypted_password.as_ref())
-                                       })
+        self.hooks
+            .suitability
+            .as_ref()
+            .and_then(|hook| hook.run(&self.service_group, &self.pkg))
     }
 
     fn cache_health_check(&self, check_result: HealthCheck) {
@@ -820,19 +796,11 @@ impl Service {
         Ok(())
     }
 
-    #[cfg(not(windows))]
     fn set_hook_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
         use dojo_common::templating::hooks::HOOK_PERMISSIONS;
         use dojo_core::util::posix_perm;
 
         posix_perm::set_permissions(path.as_ref(), HOOK_PERMISSIONS)
-    }
-
-    #[cfg(windows)]
-    fn set_hook_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
-        use dojo_core::util::win_perm;
-
-        win_perm::harden_path(path.as_ref())
     }
 
     fn execute_hooks(&mut self, launcher: &LauncherCli) {
@@ -878,9 +846,7 @@ impl Service {
 
         if self.initialized {
             if let Some(ref hook) = self.hooks.file_updated {
-                return hook.run(&self.service_group,
-                                &self.pkg,
-                                self.svc_encrypted_password.as_ref());
+                return hook.run(&self.service_group, &self.pkg);
             }
         }
 
@@ -927,9 +893,7 @@ impl Service {
         let _timer = hook_timer("health-check");
         debug!("Running Health Check hook for ({})", self.spec_ident);
         let check_result = if let Some(ref hook) = self.hooks.health_check {
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref())
+            hook.run(&self.service_group, &self.pkg)
         } else {
             match self.supervisor.status() {
                 (true, _) => HealthCheck::Ok,
@@ -1017,7 +981,6 @@ impl Service {
         self.set_gossip_permissions(&file)
     }
 
-    #[cfg(not(windows))]
     fn set_gossip_permissions<T: AsRef<Path>>(&self, path: T) -> bool {
         use dojo_core::{os::users,
                         util::posix_perm};
@@ -1034,19 +997,6 @@ impl Service {
         }
 
         if let Err(e) = posix_perm::set_permissions(path.as_ref(), GOSSIP_FILE_PERMISSIONS) {
-            outputln!(preamble self.service_group,
-                      "Failed to set permissions on cache file {}, {}",
-                      path.as_ref().display(), e);
-            return false;
-        }
-        true
-    }
-
-    #[cfg(windows)]
-    fn set_gossip_permissions<T: AsRef<Path>>(&self, path: T) -> bool {
-        use dojo_core::util::win_perm;
-
-        if let Err(e) = win_perm::harden_path(path.as_ref()) {
             outputln!(preamble self.service_group,
                       "Failed to set permissions on cache file {}, {}",
                       path.as_ref().display(), e);
@@ -1104,9 +1054,9 @@ impl<'a> Serialize for ServiceProxy<'a> {
         where S: Serializer
     {
         let num_fields: usize = if self.config_rendering == ConfigRendering::Full {
-            27
-        } else {
             26
+        } else {
+            25
         };
 
         let s = &self.service;
@@ -1139,7 +1089,6 @@ impl<'a> Serialize for ServiceProxy<'a> {
         strukt.serialize_field("spec_file", &s.spec_file)?;
         strukt.serialize_field("spec_ident", &s.spec_ident)?;
         strukt.serialize_field("spec_identifier", &s.spec_ident.to_string())?;
-        strukt.serialize_field("svc_encrypted_password", &s.svc_encrypted_password)?;
         strukt.serialize_field("health_check_interval", &s.health_check_interval)?;
         strukt.serialize_field("sys", &s.sys)?;
         strukt.serialize_field("topology", &s.topology)?;
@@ -1170,8 +1119,6 @@ mod tests {
 
         let ident = if cfg!(target_os = "linux") {
             PackageIdent::new("karate", "tree", Some("1.7.0"), Some("20180609045201"))
-        } else if cfg!(target_os = "windows") {
-            PackageIdent::new("karate", "7zip", Some("16.04"), Some("20170131110814"))
         } else {
             panic!("This is being run on a platform that's not currently supported");
         };

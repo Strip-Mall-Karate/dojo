@@ -19,7 +19,7 @@ extern crate libc;
 extern crate rand;
 extern crate serde;
 
-#[cfg(any(feature = "force-inprocess", target_os = "windows", target_os = "android", target_os = "ios"))]
+#[cfg(any(feature = "force-inprocess", target_os = "android", target_os = "ios"))]
 extern crate uuid;
 #[cfg(all(not(feature = "force-inprocess"), any(target_os = "linux",
                                                 target_os = "freebsd")))]
@@ -34,12 +34,6 @@ extern crate syscall;
 
 #[cfg(feature = "async")]
 extern crate futures;
-
-
-#[cfg(all(not(feature = "force-inprocess"), target_os = "windows"))]
-extern crate winapi;
-#[cfg(all(not(feature = "force-inprocess"), target_os = "windows"))]
-extern crate kernel32;
 
 pub mod ipc;
 pub mod platform;

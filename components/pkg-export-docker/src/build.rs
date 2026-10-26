@@ -47,8 +47,6 @@ use doj;
 use failure::SyncFailure;
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
-#[cfg(windows)]
-use std::os::windows::fs::symlink_dir as symlink;
 use std::{collections::HashMap,
           fs as stdfs,
           path::{Path,
@@ -148,19 +146,6 @@ impl<'a> BuildSpec<'a> {
         self.link_binaries(ui, rootfs, &base_pkgs)?;
         self.link_cacerts(ui, rootfs, &base_pkgs)?;
         self.link_user_pkgs(ui, rootfs, &user_pkgs)?;
-        self.remove_symlink_to_key_cache(ui, rootfs)?;
-        self.remove_symlink_to_artifact_cache(ui, rootfs)?;
-
-        Ok(())
-    }
-
-    #[cfg(windows)]
-    fn prepare_rootfs(&self, ui: &mut UI, rootfs: &Path) -> Result<()> {
-        ui.status(Status::Creating, "root filesystem")?;
-        self.create_symlink_to_artifact_cache(ui, rootfs)?;
-        self.create_symlink_to_key_cache(ui, rootfs)?;
-        self.install_base_pkgs(ui, rootfs)?;
-        self.install_user_pkgs(ui, rootfs)?;
         self.remove_symlink_to_key_cache(ui, rootfs)?;
         self.remove_symlink_to_artifact_cache(ui, rootfs)?;
 

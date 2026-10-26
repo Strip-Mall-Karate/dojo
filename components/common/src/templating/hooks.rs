@@ -17,9 +17,6 @@ use super::{package::Pkg,
 use crate::{error::{Error,
                     Result},
             outputln};
-#[cfg(windows)]
-use dojo_core::os::process::windows_child::{Child,
-                                            ExitStatus};
 use dojo_core::{crypto,
                 fs};
 use serde::{Serialize,
@@ -27,11 +24,6 @@ use serde::{Serialize,
 #[cfg(unix)]
 use std::os::unix::process::{CommandExt,
                              ExitStatusExt};
-#[cfg(not(windows))]
-use std::process::{Child,
-                   Command,
-                   ExitStatus,
-                   Stdio};
 use std::{ffi::OsStr,
           fmt,
           fs::File,
@@ -39,9 +31,12 @@ use std::{ffi::OsStr,
                BufReader},
           path::{Path,
                  PathBuf},
+          process::{Child,
+                    Command,
+                    ExitStatus,
+                    Stdio},
           result};
 
-#[cfg(not(windows))]
 pub const HOOK_PERMISSIONS: u32 = 0o755;
 static LOGKEY: &'static str = "HK";
 
@@ -153,25 +148,17 @@ pub trait Hook: fmt::Debug + Sized + Send {
         }
     }
 
-    #[cfg(not(windows))]
     fn set_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
         use dojo_core::util::posix_perm;
 
         posix_perm::set_permissions(path.as_ref(), HOOK_PERMISSIONS)
     }
 
-    #[cfg(windows)]
-    fn set_permissions<T: AsRef<Path>>(path: T) -> dojo_core::error::Result<()> {
-        use dojo_core::util::win_perm;
-
-        win_perm::harden_path(path.as_ref())
-    }
-
     /// Output a message that a hook process was terminated by a
     /// signal.
     ///
     /// This should only be called when `ExitStatus#code()` returns
-    /// `None`, and this only happens on non-Windows machines.
+    /// `None`.
     #[cfg(unix)]
     fn output_termination_message(service_group: &str, status: ExitStatus) {
         outputln!(preamble service_group, "{} was terminated by signal {:?}",
@@ -179,28 +166,9 @@ pub trait Hook: fmt::Debug + Sized + Send {
                   status.signal());
     }
 
-    /// This should only be called when `ExitStatus#code()` returns
-    /// `None`, and this can only happen on non-Windows machines.
-    ///
-    /// Thus, if this code is ever called on Windows, something has
-    /// fundamentally changed in the Rust standard library.
-    ///
-    /// See https://doc.rust-lang.org/1.30.1/std/process/struct.ExitStatus.html#method.code
-    #[cfg(windows)]
-    fn output_termination_message(_: &str, _: ExitStatus) {
-        panic!("ExitStatus::code should never return None on Windows; please report this to the \
-                Dojo core developers");
-    }
-
     /// Run a compiled hook.
-    fn run<T>(&self,
-              service_group: &str,
-              pkg: &Pkg,
-              svc_encrypted_password: Option<T>)
-              -> Self::ExitValue
-        where T: ToString
-    {
-        let mut child = match Self::exec(self.path(), &pkg, svc_encrypted_password) {
+    fn run(&self, service_group: &str, pkg: &Pkg) -> Self::ExitValue {
+        let mut child = match Self::exec(self.path(), &pkg) {
             Ok(child) => child,
             Err(err) => {
                 outputln!(preamble service_group,
@@ -220,24 +188,9 @@ pub trait Hook: fmt::Debug + Sized + Send {
         }
     }
 
-    #[cfg(windows)]
-    fn exec<T, S>(path: S, pkg: &Pkg, svc_encrypted_password: Option<T>) -> Result<Child>
-        where T: ToString,
-              S: AsRef<OsStr>
-    {
-        let ps_cmd = format!("iex $(gc {} | out-string)", path.as_ref().to_string_lossy());
-        let args = vec!["-NonInteractive", "-command", ps_cmd.as_str()];
-        Ok(Child::spawn("pwsh.exe",
-                        args,
-                        &pkg.env,
-                        &pkg.svc_user,
-                        svc_encrypted_password)?)
-    }
-
     #[cfg(unix)]
-    fn exec<T, S>(path: S, pkg: &Pkg, _: Option<T>) -> Result<Child>
-        where T: ToString,
-              S: AsRef<OsStr>
+    fn exec<S>(path: S, pkg: &Pkg) -> Result<Child>
+        where S: AsRef<OsStr>
     {
         use dojo_core::os::users;
         use std::io::Error as IoError;
@@ -522,7 +475,6 @@ mod tests {
 
     as_ref_path_impl!(InstallHook);
 
-    #[cfg(not(windows))]
     fn hook_fixtures_path() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests")
                                                  .join("fixtures")
@@ -745,7 +697,6 @@ echo "The message is Hello"
     ////////////////////////////////////////////////////////////////////////
 
     #[test]
-    #[cfg(not(windows))]
     fn hook_output() {
         use std::{fs as stdfs,
                   fs::DirBuilder,

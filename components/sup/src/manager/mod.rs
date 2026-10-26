@@ -129,9 +129,6 @@ use time::{self,
 use tokio::{executor,
             runtime::{Builder as RuntimeBuilder,
                       Runtime}};
-#[cfg(windows)]
-use winapi::{shared::minwindef::PDWORD,
-             um::processthreadsapi};
 
 const MEMBER_ID_FILE: &str = "MEMBER_ID";
 pub const PROC_LOCK_FILE: &str = "LOCK";
@@ -782,13 +779,8 @@ impl Manager {
             debug!("http-gateway started");
         }
 
-        // On Windows initializng the signal handler will create a ctrl+c handler for the
-        // process which will disable default windows ctrl+c behavior and allow us to
-        // handle via check_for_signal. However, if the supervsor is in a long running
-        // non-run hook, the below loop will not get to check_for_signal in a reasonable
-        // amount of time and the supervisor will not respond to ctrl+c. On Windows, we
-        // let the launcher catch ctrl+c and gracefully shut down services. ctrl+c should
-        // simply halt the supervisor
+        // With IGNORE_SIGNALS, the Supervisor installs no signal handlers and
+        // a signal takes its default action.
         if !self.feature_flags.contains(FeatureFlag::IGNORE_SIGNALS) {
             signals::init();
         }
@@ -1637,25 +1629,6 @@ fn write_process_lock<T>(lock_path: T) -> Result<()>
     }
 }
 
-#[cfg(windows)]
-fn get_fd_count() -> std::io::Result<usize> {
-    let mut count: u32 = 0;
-    let count_ptr = &mut count as PDWORD;
-
-    unsafe {
-        let handle = processthreadsapi::GetCurrentProcess();
-        match processthreadsapi::GetProcessHandleCount(handle, count_ptr) {
-            // these are ints here because GetProcessHandleCount returns a BOOL which is actually
-            // an i32
-            1 => Ok(count as usize),
-            _ => {
-                Err(std::io::Error::new(std::io::ErrorKind::Other,
-                                        "error getting file descriptor count"))
-            }
-        }
-    }
-}
-
 #[cfg(unix)]
 fn get_fd_count() -> std::io::Result<usize> { proc_self::FdIter::new().map(|f| f.count()) }
 
@@ -1678,10 +1651,6 @@ fn track_memory_stats() {
     MEMORY_STATS.with_label_values(&["retained"])
                 .set(jemalloc_ctl::stats::retained().unwrap().to_i64());
 }
-
-// This is a no-op on purpose because windows doesn't support jemalloc
-#[cfg(windows)]
-fn track_memory_stats() {}
 
 struct CtlAcceptor {
     rx:               ctl_gateway::server::MgrReceiver,

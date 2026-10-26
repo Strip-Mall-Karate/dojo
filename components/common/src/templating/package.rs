@@ -52,7 +52,7 @@ impl From<HashMap<String, String>> for Env {
 
 impl Env {
     /// Modifies PATH env with the full run path for this package. This path is composed of any
-    /// binary paths specified by this package, or its TDEPS, plus a path to a BusyBox(non-windows),
+    /// binary paths specified by this package, or its TDEPS, plus a path to a BusyBox,
     /// plus the existing value of the PATH variable.
     ///
     /// This means we work on any operating system, as long as you can invoke the Supervisor,
@@ -193,23 +193,6 @@ fn get_user_and_group(pkg_install: &PackageInstall) -> Result<(String, String)> 
     } else {
         let defaults = default_user_and_group()?;
         Ok(defaults)
-    }
-}
-
-/// check and see if a user/group is specified in package metadata.
-/// if not, we'll try and use doj/doj.
-/// If doj/doj doesn't exist, try to use (current username, current group).
-/// If that doesn't work, then give up.
-/// Windows will also check if doj exists if it was the given user name
-/// If it does not exist then fall back to the current username
-/// This is because historically windows plans defaulted to
-/// the doj pkg_svc_user even if not explicitly provided
-#[cfg(windows)]
-fn get_user_and_group(pkg_install: &PackageInstall) -> Result<(String, String)> {
-    match get_pkg_user_and_group(&pkg_install)? {
-        Some((ref user, ref _group)) if user == DEFAULT_USER => Ok(default_user_and_group()?),
-        Some((user, group)) => Ok((user, group)),
-        _ => Ok(default_user_and_group()?),
     }
 }
 

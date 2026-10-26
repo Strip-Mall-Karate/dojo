@@ -704,8 +704,7 @@ impl Paths {
     // Separate the root from the `simplified_abs_path` rest and store
     // them in a `ProcessPathArgs` instance.
     fn path_for_processing(simplified_abs_path: &PathBuf) -> ProcessPathArgs {
-        // Holds the `/` component of a path, or the path prefix and
-        // root on Windows (e.g. `C:\`).
+        // Holds the `/` component of a path.
         let mut path = PathBuf::new();
         // Holds all other components of a path.
         let mut path_rest = VecDeque::new();
