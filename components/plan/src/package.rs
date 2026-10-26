@@ -128,13 +128,6 @@ pub struct Package<'a> {
 impl Package<'_> {
     /// Writes the package and its artifact.
     pub fn write(mut self) -> Result<Artifact, String> {
-        // The PowerShell builder wrote a different set of metadata files and
-        // its own archive; that port comes with the Windows proof.
-        if self.state.windows() {
-            return Err(format!("the build installed in {}, but writing packages \
-                                for Windows targets is not ported yet",
-                               self.prefix.display()));
-        }
         self.copy_config()?;
         self.write_run()?;
         self.write_metadata()?;
@@ -704,7 +697,6 @@ fn remove_file(path: &Path) -> Result<(), String> {
     }
 }
 
-#[cfg(unix)]
 fn set_mode(path: &Path, mode: u32) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     fs::set_permissions(path, fs::Permissions::from_mode(mode)).map_err(|e| {
@@ -713,9 +705,6 @@ fn set_mode(path: &Path, mode: u32) -> Result<(), String> {
                                                                            path.display())
                                                                })
 }
-
-#[cfg(not(unix))]
-fn set_mode(_path: &Path, _mode: u32) -> Result<(), String> { Ok(()) }
 
 #[cfg(test)]
 mod tests {

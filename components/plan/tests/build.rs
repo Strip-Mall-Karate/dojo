@@ -13,10 +13,7 @@
 // limitations under the License.
 
 //! Builds small plans into a Dojo root under the test target directory,
-//! with fake installed packages. The plans run `sh`, so these tests run on
-//! Unix; Windows builds are checked on a real Windows machine.
-
-#![cfg(unix)]
+//! with fake installed packages.
 
 use std::{collections::BTreeMap,
           fs,
@@ -316,9 +313,10 @@ fn stripping_uses_the_builders_strip_not_the_packages() {
                                      (b:mkdir (.. b.prefix "/bin"))
                                      (b:write (.. b.prefix "/bin/strip") "#!/bin/sh\nexit 7\n")
                                      (b:chmod (.. b.prefix "/bin/strip") "755")
-                                     (b:run ["cp" "/bin/true" (.. b.prefix "/bin/true")]))"##);
-    let built = sandbox.build(&source).expect("strips with the builder's strip");
-    assert!(built.prefix.join("bin/true").exists());
+                                     (b:run ["cp" "/bin/sh" (.. b.prefix "/bin/sh")]))"##);
+    let built = sandbox.build(&source)
+                       .expect("strips with the builder's strip");
+    assert!(built.prefix.join("bin/sh").exists());
 }
 
 #[test]
@@ -638,6 +636,23 @@ fn a_target_the_plan_does_not_list_is_refused() {
     options.target = "aarch64-linux".to_string();
     assert_refused(sandbox.build_with(&plan("t", "", ""), &options),
                    "the plan does not build for `aarch64-linux`");
+}
+
+#[test]
+fn a_plan_builds_and_packages_for_macos() {
+    let sandbox = Sandbox::new("macos");
+    let mut options = sandbox.options();
+    options.target = "aarch64-darwin".to_string();
+    let source = r##"{:name "mac" :origin "test" :version "1.0.0"
+                     :targets ["aarch64-linux" "aarch64-darwin"]
+                     :bin_dirs ["bin"]
+                     :build (fn [b])
+                     :install (fn [b] (b:write "bin/mac" "#!/bin/sh\n"))}"##;
+    let built = sandbox.build_with(source, &options).expect("builds");
+    assert_eq!(read(&built.prefix.join("TARGET")), "aarch64-darwin\n");
+    assert_eq!(built.artifact.path,
+               sandbox.dir
+                      .join(format!("results/test-mac-1.0.0-{RELEASE}-aarch64-darwin.hart")));
 }
 
 /// The files directly in `dir`, sorted.

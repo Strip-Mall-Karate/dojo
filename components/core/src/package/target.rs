@@ -280,6 +280,19 @@ supported_package_targets! {
     /// [x86_64]: https://en.wikipedia.org/wiki/X86-64
     ("x86_64-darwin", X86_64_Darwin, X86_64_DARWIN, "x86_64", "macos");
 
+    /// Represents a [XNU kernel]-based system (more commonly referred to as [Darwin] or [macOS])
+    /// running on the [64-bit] version of the [Arm][arm] [instruction set architecture][isa],
+    /// commonly known as [AArch64]: a Mac with Apple silicon.
+    ///
+    /// [XNU kernel]: https://en.wikipedia.org/wiki/XNU
+    /// [Darwin]: https://en.wikipedia.org/wiki/Darwin_(operating_system)
+    /// [macOS]: https://en.wikipedia.org/wiki/MacOS
+    /// [64-bit]: https://en.wikipedia.org/wiki/64-bit_computing
+    /// [arm]: https://en.wikipedia.org/wiki/ARM_architecture_family
+    /// [isa]: https://en.wikipedia.org/wiki/Instruction_set_architecture
+    /// [AArch64]: https://en.wikipedia.org/wiki/AArch64
+    ("aarch64-darwin", AArch64_Darwin, AARCH64_DARWIN, "aarch64", "macos");
+
     /// Represents a [Linux kernel]-based system running on a [64-bit] version of the [x86][x]
     /// [instruction set architecture][isa], commonly known as [x86_64].
     ///
@@ -556,6 +569,8 @@ mod test {
     fn package_target_from_str() {
         assert_eq!(PackageTarget(Type::X86_64_Linux),
                    PackageTarget::from_str("x86_64-linux").unwrap());
+        assert_eq!(PackageTarget(Type::AArch64_Darwin),
+                   PackageTarget::from_str("aarch64-darwin").unwrap());
     }
 
     // The `Type::as_str()` implementation is already tested for every enum variant, so this

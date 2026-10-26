@@ -22,18 +22,15 @@ use std::{collections::BTreeMap,
 
 use crate::deps::Resolved;
 
-/// Environment variables in the order they were first set. Names ignore
-/// case on Windows, as Windows does.
+/// Environment variables in the order they were first set.
 #[derive(Clone, Debug)]
 pub struct Env {
-    vars:        Vec<(String, String)>,
-    ignore_case: bool,
+    vars: Vec<(String, String)>,
 }
 
 impl Env {
-    pub fn new(vars: impl IntoIterator<Item = (String, String)>, ignore_case: bool) -> Env {
-        let mut env = Env { vars: Vec::new(),
-                            ignore_case };
+    pub fn new(vars: impl IntoIterator<Item = (String, String)>) -> Env {
+        let mut env = Env { vars: Vec::new() };
         for (name, value) in vars {
             env.set(&name, value);
         }
@@ -41,13 +38,7 @@ impl Env {
     }
 
     fn position(&self, name: &str) -> Option<usize> {
-        self.vars.iter().position(|(n, _)| {
-                            if self.ignore_case {
-                                n.eq_ignore_ascii_case(name)
-                            } else {
-                                n == name
-                            }
-                        })
+        self.vars.iter().position(|(n, _)| n == name)
     }
 
     pub fn get(&self, name: &str) -> Option<&str> {
@@ -323,17 +314,5 @@ mod tests {
         assert_eq!(inherited.provenance["GEM_PATH"], "o/b/1/1 o/a/1/1");
         assert_eq!(inherited.vars["JAVA_HOME"], "/b");
         assert_eq!(inherited.provenance["JAVA_HOME"], "o/b/1/1");
-    }
-
-    #[test]
-    fn names_ignore_case_only_when_asked() {
-        let mut env = Env::new([("Path".to_string(), "a".to_string())], true);
-        env.append("PATH", "b", ";");
-        assert_eq!(env.vars(), [("Path".to_string(), "a;b".to_string())]);
-
-        let mut env = Env::new([("Path".to_string(), "a".to_string())], false);
-        env.append("PATH", "b", ":");
-        assert_eq!(env.get("PATH"), Some("b"));
-        assert_eq!(env.get("Path"), Some("a"));
     }
 }

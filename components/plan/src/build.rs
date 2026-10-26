@@ -75,10 +75,10 @@ use crate::{Error,
                      PHASES}};
 
 /// Where Dojo keeps packages and caches when `DOJ_ROOT_PATH` is unset.
-#[cfg(not(windows))]
 const DEFAULT_ROOT: &str = "/doj";
-#[cfg(windows)]
-const DEFAULT_ROOT: &str = "\\doj";
+
+/// What separates the entries of `PATH` and the other list variables.
+const SEPARATOR: &str = ":";
 
 /// The file a scaffolding package ships its module in.
 const SCAFFOLDING_FILE: &str = "lib/scaffolding.fnl";
@@ -172,27 +172,27 @@ pub struct Settings {
 
 /// The state behind `b`, shared by its functions and the builtin phases.
 pub struct State {
-    pub name:     String,
-    pub os:       &'static str,
-    pub settings: Settings,
-    pub cache:    PathBuf,
-    context:      PathBuf,
-    pub env:      RefCell<Env>,
-    prefix:       RefCell<Option<PathBuf>>,
-    src:          RefCell<PathBuf>,
-    deps:         Vec<Dep>,
+    pub name:         String,
+    pub os:           &'static str,
+    pub settings:     Settings,
+    pub cache:        PathBuf,
+    context:          PathBuf,
+    pub env:          RefCell<Env>,
+    prefix:           RefCell<Option<PathBuf>>,
+    src:              RefCell<PathBuf>,
+    deps:             Vec<Dep>,
     /// The phase running, or `version` while the version function runs.
-    phase:        Cell<&'static str>,
+    phase:            Cell<&'static str>,
     /// Per phase, the plan's function and the scaffolding's.
-    chains:       BTreeMap<&'static str, [Option<Function>; 2]>,
+    chains:           BTreeMap<&'static str, [Option<Function>; 2]>,
     /// The phases running and the level of the chain each is at, innermost
     /// last.
-    active:       RefCell<Vec<(&'static str, usize)>>,
+    active:           RefCell<Vec<(&'static str, usize)>>,
     /// The address of the `b` table, to tell `b:run` from `b.run`.
-    b:            Cell<usize>,
+    b:                Cell<usize>,
     /// What the plan passes on to the packages that depend on it, in the
     /// order it said so.
-    exports:      RefCell<Vec<Export>>,
+    exports:          RefCell<Vec<Export>>,
     /// `PATH` as the builder was started with it, for the tools that work on
     /// the package rather than build it.
     pub builder_path: Option<String>,
@@ -212,10 +212,6 @@ struct Export {
 impl State {
     /// The directory the source unpacks into, the build's working directory.
     pub fn src_dir(&self) -> PathBuf { self.src.borrow().clone() }
-
-    pub fn windows(&self) -> bool { self.os == "windows" }
-
-    fn separator(&self) -> &'static str { if self.windows() { ";" } else { ":" } }
 
     /// Prints a build line.
     pub fn log(&self, message: &str) {
@@ -574,11 +570,7 @@ impl Layout {
         if !bin_dirs.is_empty() {
             let mut env = state.env.borrow_mut();
             let path = env.get("PATH").unwrap_or_default().to_string();
-            build_env::set_path(&mut env,
-                                &path,
-                                &bin_dirs,
-                                &Resolved::default(),
-                                state.separator());
+            build_env::set_path(&mut env, &path, &bin_dirs, &Resolved::default(), SEPARATOR);
         }
         Ok(Layout { ident,
                     prefix,
@@ -634,7 +626,7 @@ impl Plan {
                              &prefix,
                              &lib_dirs,
                              &deps,
-                             state.separator());
+                             SEPARATOR);
         if state.settings.source.is_some() {
             builtin::fix_libtool(&state, &layout.src).map_err(Error::Build)?;
         }
@@ -686,9 +678,6 @@ impl Plan {
             return Err(Error::Build(format!("the plan does not build for `{target}`")));
         }
         let os = target_os(target);
-        if (os == "windows") != cfg!(windows) {
-            return Err(Error::Build(format!("cannot build `{target}` packages on this host")));
-        }
         let mut json = self.metadata().to_json(Some(target));
         if json["type"] == "composite" {
             return Err(Error::Build("composite plans are not supported".to_string()));
@@ -745,14 +734,10 @@ impl Plan {
 
         let runtime = Inherited::from_deps(deps.deps.iter().map(|dep| dep.path.as_path()));
         let buildtime = Inherited::from_deps(deps.build_deps.iter().map(|dep| dep.path.as_path()));
-        let mut env = Env::new(options.env.iter().cloned(), os == "windows");
+        let mut env = Env::new(options.env.iter().cloned());
         build_env::layer(&mut env, &runtime, &buildtime);
         let initial_path = env.get("PATH").unwrap_or_default().to_string();
-        build_env::set_path(&mut env,
-                            &initial_path,
-                            &[],
-                            &deps,
-                            if os == "windows" { ";" } else { ":" });
+        build_env::set_path(&mut env, &initial_path, &[], &deps, SEPARATOR);
         let state = Rc::new(State { settings: settings(&json, &name)?,
                                     name,
                                     os,
@@ -1121,7 +1106,7 @@ fn add_processes(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                      s.check_this(&this, "b:env_append")?;
                      let name = env_name(&name, "b:env_append")?;
                      let value = text_of(&value, "b:env_append: the value")?;
-                     s.env.borrow_mut().append(&name, &value, s.separator());
+                     s.env.borrow_mut().append(&name, &value, SEPARATOR);
                      Ok(())
                  })?)?;
     Ok(())
@@ -1414,10 +1399,9 @@ fn add_exports(lua: &Lua, b: &Table, state: &Rc<State>) -> mlua::Result<()> {
                          s.check_this(&this, &what)?;
                          let name = env_name(&name, &what)?;
                          let value = text_of(&value, &format!("{what}: the value"))?;
-                         let push =
-                             push.then(|| {
-                                     build_env::aggregate_separator(&name).unwrap_or(s.separator())
-                                 });
+                         let push = push.then(|| {
+                                        build_env::aggregate_separator(&name).unwrap_or(SEPARATOR)
+                                    });
                          if let Some(separator) = push {
                              s.env.borrow_mut().prepend(&name, &value, separator);
                          } else {
@@ -1512,7 +1496,6 @@ impl State {
     }
 }
 
-#[cfg(unix)]
 fn set_mode(path: &Path, mode: Option<u32>) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     match mode {
@@ -1528,10 +1511,6 @@ fn set_mode(path: &Path, mode: Option<u32>) -> Result<(), String> {
         None => Ok(()),
     }
 }
-
-/// Windows has no mode bits to set.
-#[cfg(not(unix))]
-fn set_mode(_: &Path, _: Option<u32>) -> Result<(), String> { Ok(()) }
 
 /// `path` with `..` resolved by its text, as the shell resolves `cd ..`;
 /// none when `..` climbs above the root. A trailing `/.` or `/` stays, so
@@ -1637,7 +1616,6 @@ fn remove_path(path: &Path) -> Result<(), String> {
     removed.map_err(|e| format!("b:remove: cannot remove {}: {e}", path.display()))
 }
 
-#[cfg(unix)]
 fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
     if let Some(parent) = link.parent() {
         fs::create_dir_all(parent).map_err(|e| {
@@ -1649,13 +1627,6 @@ fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
                                                          {e}",
                                                         link.display())
                                             })
-}
-
-/// Plans build for Linux only; Windows has no symbolic links a plan makes.
-#[cfg(not(unix))]
-fn make_symlink(target: &str, link: &Path) -> Result<(), String> {
-    Err(format!("b:symlink: cannot link {} to {target} on Windows",
-                link.display()))
 }
 
 /// A symbolic mode like `chmod` takes (`+x`, `u+w,go-w`, `a=r`), applied to
@@ -1709,19 +1680,9 @@ fn symbolic_mode(spec: &str, path: &Path) -> Result<u32, String> {
     Ok(mode & 0o7777)
 }
 
-#[cfg(unix)]
 fn mode_of(meta: &fs::Metadata) -> u32 {
     use std::os::unix::fs::PermissionsExt;
     meta.permissions().mode()
-}
-
-#[cfg(not(unix))]
-fn mode_of(meta: &fs::Metadata) -> u32 {
-    if meta.permissions().readonly() {
-        0o444
-    } else {
-        0o644
-    }
 }
 
 /// Octal permissions like `"755"`.
@@ -2016,12 +1977,10 @@ fn show_argv(argv: &[String]) -> String {
 
 fn lua_error(error: &mlua::Error) -> Error { Error::Build(message(error, Stage::Build)) }
 
-/// `linux`, `darwin` or `windows`.
+/// `linux` or `darwin`.
 #[must_use]
 pub fn target_os(target: &str) -> &'static str {
-    if target.ends_with("-windows") {
-        "windows"
-    } else if target.ends_with("-darwin") {
+    if target.ends_with("-darwin") {
         "darwin"
     } else {
         "linux"
@@ -2035,7 +1994,7 @@ pub fn host_target() -> Option<&'static str> {
         ("x86_64", "linux") => Some("x86_64-linux"),
         ("aarch64", "linux") => Some("aarch64-linux"),
         ("x86_64", "macos") => Some("x86_64-darwin"),
-        ("x86_64", "windows") => Some("x86_64-windows"),
+        ("aarch64", "macos") => Some("aarch64-darwin"),
         _ => None,
     }
 }
