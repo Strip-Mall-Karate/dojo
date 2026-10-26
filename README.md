@@ -23,6 +23,7 @@ another.
 | `components/butterfly` | The gossip protocol between Supervisors |
 | `components/core` | Packages, keys, identities and paths shared by everything |
 | `components/plan-build` | Builds a package from a plan |
+| `components/plan` | `doj-plan-build`, which loads plans written in Fennel and will replace `plan-build` (its own crate on Rust 1.99.1: `cargo test` there) |
 | `components/studio` | The clean-room build environment |
 | `components/pkg-export-docker`, `pkg-export-tar` | Exporters |
 | `support/vm` | The Dojo VM for Apple silicon Macs |
