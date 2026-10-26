@@ -279,6 +279,23 @@ fn packaging_uses_the_builders_tools_not_a_dependencys() {
 }
 
 #[test]
+fn stripping_uses_the_builders_strip_not_the_packages() {
+    // The package's own bin is on the build's PATH, and binutils installs a
+    // strip there that cannot rewrite itself while it runs; the strip phase
+    // uses the builder's.
+    let sandbox = Sandbox::new("strip-path");
+    let source = plan("stripped",
+                      r#":bin_dirs ["bin"]"#,
+                      r##" :install (fn [b]
+                                     (b:mkdir (.. b.prefix "/bin"))
+                                     (b:write (.. b.prefix "/bin/strip") "#!/bin/sh\nexit 7\n")
+                                     (b:chmod (.. b.prefix "/bin/strip") "755")
+                                     (b:run ["cp" "/bin/true" (.. b.prefix "/bin/true")]))"##);
+    let built = sandbox.build(&source).expect("strips with the builder's strip");
+    assert!(built.prefix.join("bin/true").exists());
+}
+
+#[test]
 fn a_version_function_runs_with_b_and_sets_the_prefix() {
     let sandbox = Sandbox::new("version");
     let source = plan("versioned",

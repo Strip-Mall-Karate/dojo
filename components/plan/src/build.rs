@@ -183,6 +183,9 @@ pub struct State {
     /// What the plan passes on to the packages that depend on it, in the
     /// order it said so.
     exports:      RefCell<Vec<Export>>,
+    /// `PATH` as the builder was started with it, for the tools that work on
+    /// the package rather than build it.
+    pub builder_path: Option<String>,
 }
 
 /// A variable a plan passes on: at run time (`RUNTIME_ENVIRONMENT`) or only
@@ -750,7 +753,11 @@ impl Plan {
                                     chains,
                                     active: RefCell::new(Vec::new()),
                                     b: Cell::new(0),
-                                    exports: RefCell::new(Vec::new()) });
+                                    exports: RefCell::new(Vec::new()),
+                                    builder_path: options.env
+                                                         .iter()
+                                                         .find(|(name, _)| name == "PATH")
+                                                         .map(|(_, value)| value.clone()) });
         let b = context(&self.lua,
                         &state,
                         options,
