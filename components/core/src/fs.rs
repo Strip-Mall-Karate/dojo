@@ -566,13 +566,14 @@ pub fn am_i_root() -> bool { *EUID == 0u32 }
 
 /// Returns a `PathBuf` which represents the filesystem root for Dojo.
 ///
-/// An absolute default path of `"/"` should always be returned. This function is used to populate a one-time static
-/// value which cannot be altered for the execution length of a program. Packages in Dojo may
-/// contain binaries and libraries having dependent libraries which are located in absolute paths
-/// meaning that changing the value from this function will render existing packages un-runnable in
-/// the Supervisor. Furthermore as a rule in this codebase, external environment variables should
-/// *not* influence the behavior of inner libraries--any environment variables should be detected
-/// in a program at CLI parsing time and explicitly passed to inner module functions.
+/// An absolute default path of `"/"` should always be returned. This function is used to populate a
+/// one-time static value which cannot be altered for the execution length of a program. Packages in
+/// Dojo may contain binaries and libraries having dependent libraries which are located in absolute
+/// paths meaning that changing the value from this function will render existing packages
+/// un-runnable in the Supervisor. Furthermore as a rule in this codebase, external environment
+/// variables should *not* influence the behavior of inner libraries--any environment variables
+/// should be detected in a program at CLI parsing time and explicitly passed to inner module
+/// functions.
 ///
 /// There is one exception to this rule which is supported for testing only--primarily exercising
 /// the Supervisor behavior. It allows setting a testing-only environment variable to influence the

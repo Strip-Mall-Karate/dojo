@@ -167,14 +167,8 @@ pub trait Hook: fmt::Debug + Sized + Send {
     }
 
     /// Run a compiled hook.
-    fn run<T>(&self,
-              service_group: &str,
-              pkg: &Pkg,
-              svc_encrypted_password: Option<T>)
-              -> Self::ExitValue
-        where T: ToString
-    {
-        let mut child = match Self::exec(self.path(), &pkg, svc_encrypted_password) {
+    fn run(&self, service_group: &str, pkg: &Pkg) -> Self::ExitValue {
+        let mut child = match Self::exec(self.path(), &pkg) {
             Ok(child) => child,
             Err(err) => {
                 outputln!(preamble service_group,
@@ -195,9 +189,8 @@ pub trait Hook: fmt::Debug + Sized + Send {
     }
 
     #[cfg(unix)]
-    fn exec<T, S>(path: S, pkg: &Pkg, _: Option<T>) -> Result<Child>
-        where T: ToString,
-              S: AsRef<OsStr>
+    fn exec<S>(path: S, pkg: &Pkg) -> Result<Child>
+        where S: AsRef<OsStr>
     {
         use dojo_core::os::users;
         use std::io::Error as IoError;

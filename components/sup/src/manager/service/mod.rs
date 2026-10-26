@@ -183,7 +183,6 @@ pub struct Service {
     manager_fs_cfg: Arc<FsCfg>,
     #[serde(rename = "process")]
     supervisor: Supervisor,
-    svc_encrypted_password: Option<String>,
     health_check_interval: HealthCheckInterval,
 
     #[serde(skip_serializing)]
@@ -241,7 +240,6 @@ impl Service {
                      update_strategy: spec.update_strategy,
                      config_from: spec.config_from,
                      scheduled_health_check: Some(Instant::now()),
-                     svc_encrypted_password: spec.svc_encrypted_password,
                      health_check_interval: spec.health_check_interval,
                      defaults_updated: false,
                      gateway_state })
@@ -287,10 +285,7 @@ impl Service {
 
     fn start(&mut self, launcher: &LauncherCli) {
         if let Some(err) = self.supervisor
-                               .start(&self.pkg,
-                                      &self.service_group,
-                                      launcher,
-                                      self.svc_encrypted_password.as_ref().map(String::as_str))
+                               .start(&self.pkg, &self.service_group, launcher)
                                .err()
         {
             outputln!(preamble self.service_group, "Service start failed: {}", err);
@@ -332,21 +327,15 @@ impl Service {
         let _timer = hook_timer("reload");
         self.needs_reload = false;
         if self.process_down() || self.hooks.reload.is_none() {
-            if let Some(err) =
-                self.supervisor
-                    .restart(&self.pkg,
-                             &self.service_group,
-                             launcher,
-                             self.svc_encrypted_password.as_ref().map(String::as_ref))
-                    .err()
+            if let Some(err) = self.supervisor
+                                   .restart(&self.pkg, &self.service_group, launcher)
+                                   .err()
             {
                 outputln!(preamble self.service_group, "Service restart failed: {}", err);
             }
         } else {
             let hook = self.hooks.reload.as_ref().unwrap();
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref());
+            hook.run(&self.service_group, &self.pkg);
         }
     }
 
@@ -450,9 +439,6 @@ impl Service {
         spec.binds = self.binds.clone();
         spec.binding_mode = self.binding_mode;
         spec.config_from = self.config_from.clone();
-        if let Some(ref password) = self.svc_encrypted_password {
-            spec.svc_encrypted_password = Some(password.clone())
-        }
         spec.health_check_interval = self.health_check_interval;
         spec
     }
@@ -695,9 +681,7 @@ impl Service {
         outputln!(preamble self.service_group, "Initializing");
         self.initialized = true;
         if let Some(ref hook) = self.hooks.init {
-            self.initialized = hook.run(&self.service_group,
-                                        &self.pkg,
-                                        self.svc_encrypted_password.as_ref())
+            self.initialized = hook.run(&self.service_group, &self.pkg)
         }
     }
 
@@ -707,9 +691,7 @@ impl Service {
 
         self.needs_reconfiguration = false;
         if let Some(ref hook) = self.hooks.reconfigure {
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref());
+            hook.run(&self.service_group, &self.pkg);
         }
     }
 
@@ -717,9 +699,7 @@ impl Service {
         let _timer = hook_timer("post-run");
 
         if let Some(ref hook) = self.hooks.post_run {
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref());
+            hook.run(&self.service_group, &self.pkg);
         }
     }
 
@@ -729,9 +709,7 @@ impl Service {
         self.hooks.post_stop.as_ref().map(|hook| {
                                          hook_runner::HookRunner::new(Arc::clone(&hook),
                                                                       self.service_group.clone(),
-                                                                      self.pkg.clone(),
-                                                                      self.svc_encrypted_password
-                                                                          .clone())
+                                                                      self.pkg.clone())
                                      })
     }
 
@@ -742,11 +720,10 @@ impl Service {
             return None;
         }
 
-        self.hooks.suitability.as_ref().and_then(|hook| {
-                                           hook.run(&self.service_group,
-                                                    &self.pkg,
-                                                    self.svc_encrypted_password.as_ref())
-                                       })
+        self.hooks
+            .suitability
+            .as_ref()
+            .and_then(|hook| hook.run(&self.service_group, &self.pkg))
     }
 
     fn cache_health_check(&self, check_result: HealthCheck) {
@@ -869,9 +846,7 @@ impl Service {
 
         if self.initialized {
             if let Some(ref hook) = self.hooks.file_updated {
-                return hook.run(&self.service_group,
-                                &self.pkg,
-                                self.svc_encrypted_password.as_ref());
+                return hook.run(&self.service_group, &self.pkg);
             }
         }
 
@@ -918,9 +893,7 @@ impl Service {
         let _timer = hook_timer("health-check");
         debug!("Running Health Check hook for ({})", self.spec_ident);
         let check_result = if let Some(ref hook) = self.hooks.health_check {
-            hook.run(&self.service_group,
-                     &self.pkg,
-                     self.svc_encrypted_password.as_ref())
+            hook.run(&self.service_group, &self.pkg)
         } else {
             match self.supervisor.status() {
                 (true, _) => HealthCheck::Ok,
@@ -1081,9 +1054,9 @@ impl<'a> Serialize for ServiceProxy<'a> {
         where S: Serializer
     {
         let num_fields: usize = if self.config_rendering == ConfigRendering::Full {
-            27
-        } else {
             26
+        } else {
+            25
         };
 
         let s = &self.service;
@@ -1116,7 +1089,6 @@ impl<'a> Serialize for ServiceProxy<'a> {
         strukt.serialize_field("spec_file", &s.spec_file)?;
         strukt.serialize_field("spec_ident", &s.spec_ident)?;
         strukt.serialize_field("spec_identifier", &s.spec_ident.to_string())?;
-        strukt.serialize_field("svc_encrypted_password", &s.svc_encrypted_password)?;
         strukt.serialize_field("health_check_interval", &s.health_check_interval)?;
         strukt.serialize_field("sys", &s.sys)?;
         strukt.serialize_field("topology", &s.topology)?;

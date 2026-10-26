@@ -135,7 +135,6 @@ impl LauncherCli {
                             uid,
                             groupname,
                             gid, }: UserInfo,
-                 password: Option<&str>,
                  env: Env)
                  -> Result<Pid> {
         // We expect uid and gid to be Some, while
@@ -147,7 +146,6 @@ impl LauncherCli {
                                     svc_group: groupname,
                                     svc_user_id: uid,
                                     svc_group_id: gid,
-                                    svc_password: password.map(str::to_string),
                                     env,
                                     id: id.to_string() };
 

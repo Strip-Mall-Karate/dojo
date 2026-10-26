@@ -142,7 +142,6 @@ pub struct Spawn {
     pub binary:       String,
     pub svc_user:     Option<String>,
     pub svc_group:    Option<String>,
-    pub svc_password: Option<String>,
     pub env:          HashMap<String, String>,
     pub svc_user_id:  Option<u32>,
     pub svc_group_id: Option<u32>,
@@ -158,7 +157,6 @@ impl LauncherMessage for Spawn {
                    binary:       proto.binary.ok_or(Error::ProtocolMismatch("binary"))?,
                    svc_user:     proto.svc_user,
                    svc_group:    proto.svc_group,
-                   svc_password: proto.svc_password,
                    env:          proto.env,
                    svc_user_id:  proto.svc_user_id,
                    svc_group_id: proto.svc_group_id, })
@@ -171,7 +169,6 @@ impl From<Spawn> for generated::Spawn {
                            binary:       Some(value.binary),
                            svc_user:     value.svc_user,
                            svc_group:    value.svc_group,
-                           svc_password: value.svc_password,
                            env:          value.env,
                            svc_user_id:  value.svc_user_id,
                            svc_group_id: value.svc_group_id, }

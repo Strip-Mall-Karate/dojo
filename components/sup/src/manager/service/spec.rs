@@ -144,9 +144,6 @@ impl IntoServiceSpec for dojo_sup_protocol::ctl::SvcLoad {
         if let Some(ref config_from) = self.config_from {
             spec.config_from = Some(PathBuf::from(config_from));
         }
-        if let Some(ref svc_encrypted_password) = self.svc_encrypted_password {
-            spec.svc_encrypted_password = Some(svc_encrypted_password.to_string());
-        }
         if let Some(ref interval) = self.health_check_interval {
             spec.health_check_interval = Duration::from_secs(interval.seconds).into()
         }
@@ -174,7 +171,6 @@ pub struct ServiceSpec {
             serialize_with = "serialize_using_to_string")]
     pub desired_state: DesiredState,
     pub health_check_interval: HealthCheckInterval,
-    pub svc_encrypted_password: Option<String>,
 }
 
 impl ServiceSpec {
@@ -286,8 +282,7 @@ impl Default for ServiceSpec {
                       binding_mode:            BindingMode::Strict,
                       config_from:             None,
                       desired_state:           DesiredState::default(),
-                      health_check_interval:   HealthCheckInterval::default(),
-                      svc_encrypted_password:  None, }
+                      health_check_interval:   HealthCheckInterval::default(), }
     }
 }
 
@@ -380,6 +375,21 @@ mod test {
     }
 
     #[test]
+    fn service_spec_with_a_windows_password_still_loads() {
+        // Specs written before the Windows service password was removed
+        // may still carry it.
+        let toml = r#"
+            ident = "origin/name/1.2.3/20170223130020"
+            group = "jobs"
+            svc_encrypted_password = "secret"
+            "#;
+        let spec = ServiceSpec::from_str(toml).unwrap();
+
+        assert_eq!(spec.group, String::from("jobs"));
+        assert!(!spec.to_toml_string().unwrap().contains("secret"));
+    }
+
+    #[test]
     fn service_spec_from_str_missing_ident() {
         let toml = r#""#;
 
@@ -450,8 +460,7 @@ mod test {
                           binding_mode:            BindingMode::Relaxed,
                           health_check_interval:   HealthCheckInterval::from_str("123").unwrap(),
                           config_from:             Some(PathBuf::from("/only/for/development")),
-                          desired_state:           DesiredState::Down,
-                          svc_encrypted_password:  None, };
+                          desired_state:           DesiredState::Down, };
         let toml = spec.to_toml_string().unwrap();
 
         assert!(toml.contains(r#"ident = "origin/name/1.2.3/20170223130020""#,));
@@ -623,8 +632,7 @@ mod test {
                           binding_mode:            BindingMode::Relaxed,
                           health_check_interval:   HealthCheckInterval::from_str("23").unwrap(),
                           config_from:             Some(PathBuf::from("/only/for/development")),
-                          desired_state:           DesiredState::Down,
-                          svc_encrypted_password:  None, };
+                          desired_state:           DesiredState::Down, };
         spec.to_file(&path).unwrap();
         let toml = string_from_file(path);
 

@@ -237,7 +237,6 @@
       "release": null,
       "version": null
     },
-    "svc_encrypted_password": null,
     "sys": {
       "ctl_gateway_ip": "0.0.0.0",
       "ctl_gateway_port": 9632,

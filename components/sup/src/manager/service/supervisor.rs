@@ -129,12 +129,7 @@ impl Supervisor {
         }
     }
 
-    pub fn start(&mut self,
-                 pkg: &Pkg,
-                 group: &ServiceGroup,
-                 launcher: &LauncherCli,
-                 svc_password: Option<&str>)
-                 -> Result<()> {
+    pub fn start(&mut self, pkg: &Pkg, group: &ServiceGroup, launcher: &LauncherCli) -> Result<()> {
         let user_info = self.user_info(&pkg)?;
         outputln!(preamble self.preamble,
                   "Starting service as user={}, group={}",
@@ -149,22 +144,13 @@ impl Supervisor {
         // pass the Launcher the bare minimum it needs to launch a
         // service.
         //
-        // For Linux, that amounts to the UID and GID to run the
-        // process as.
-        //
-        // For Windows, it's the name of the service user (no
-        // "non-root" behavior there, yet).
+        // That amounts to the UID and GID to run the process as.
         //
         // To support backwards compatibility, however, we must still
         // pass along values for the username and groupname; older
-        // Launcher versions on Linux (and current Windows versions)
-        // will use these, while newer versions will prefer the UID
-        // and GID, ignoring the names.
-        let pid = launcher.spawn(&group,
-                                 &pkg.svc_run,
-                                 user_info,
-                                 svc_password, // Windows optional
-                                 (*pkg.env).clone())?;
+        // Launcher versions will use these, while newer versions will
+        // prefer the UID and GID, ignoring the names.
+        let pid = launcher.spawn(&group, &pkg.svc_run, user_info, (*pkg.env).clone())?;
         self.pid = Some(pid);
         self.create_pidfile()?;
         self.change_state(ProcessState::Up);
@@ -208,8 +194,7 @@ impl Supervisor {
     pub fn restart(&mut self,
                    pkg: &Pkg,
                    group: &ServiceGroup,
-                   launcher: &LauncherCli,
-                   svc_password: Option<&str>)
+                   launcher: &LauncherCli)
                    -> Result<()> {
         match self.pid {
             Some(pid) => {
@@ -227,7 +212,7 @@ impl Supervisor {
                     }
                 }
             }
-            None => self.start(pkg, group, launcher, svc_password),
+            None => self.start(pkg, group, launcher),
         }
     }
 

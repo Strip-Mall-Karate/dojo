@@ -859,7 +859,6 @@ mod test {
         assert_eq!(revisions[0], key.name_with_rev());
     }
 
-
     fn symlink_file<P, Q>(src: P, dest: Q) -> ::std::io::Result<()>
         where P: AsRef<Path>,
               Q: AsRef<Path>

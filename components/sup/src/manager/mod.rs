@@ -1652,7 +1652,6 @@ fn track_memory_stats() {
                 .set(jemalloc_ctl::stats::retained().unwrap().to_i64());
 }
 
-
 struct CtlAcceptor {
     rx:               ctl_gateway::server::MgrReceiver,
     state:            Arc<ManagerState>,

@@ -1675,9 +1675,6 @@ fn get_health_check_interval_from_input(m: &ArgMatches<'_>)
      .map(|s| s.into())
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-fn get_password_from_input(_m: &ArgMatches<'_>) -> Result<Option<String>> { Ok(None) }
-
 fn get_topology_from_input(m: &ArgMatches<'_>) -> Option<Topology> {
     m.value_of("TOPOLOGY")
      .and_then(|f| Topology::from_str(f).ok())
@@ -1756,7 +1753,6 @@ fn update_svc_load_from_input(m: &ArgMatches<'_>, msg: &mut protocol::ctl::SvcLo
         msg.force = Some(true);
     }
     msg.group = get_group_from_input(m);
-    msg.svc_encrypted_password = get_password_from_input(m)?;
     msg.health_check_interval = get_health_check_interval_from_input(m);
     msg.binding_mode = get_binding_mode_from_input(m).map(|v| v as i32);
     msg.topology = get_topology_from_input(m).map(|v| v as i32);

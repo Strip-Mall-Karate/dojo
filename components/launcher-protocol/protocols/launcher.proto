@@ -15,7 +15,9 @@ message Spawn {
   optional string binary = 2;
   optional string svc_user = 3;
   optional string svc_group = 4;
-  optional string svc_password = 5;
+  // 5 was svc_password, a Windows service password.
+  reserved 5;
+  reserved "svc_password";
   map<string, string> env = 6;
   optional uint32 svc_user_id = 7;
   optional uint32 svc_group_id = 8;

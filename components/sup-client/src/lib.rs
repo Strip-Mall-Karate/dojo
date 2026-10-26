@@ -111,7 +111,8 @@ impl fmt::Display for SrvClientError {
                 format!("Unable to contact the Supervisor.\n\nIf the Supervisor you are \
                          contacting is local, this probably means it is not running. You can run \
                          a Supervisor in the foreground with:\n\ndoj sup run\n\nOr try restarting \
-                         the Supervisor through your operating system's init process.\n\nOriginal error is:\n\n{}",
+                         the Supervisor through your operating system's init process.\n\nOriginal \
+                         error is:\n\n{}",
                         err)
             }
             SrvClientError::NetErr(ref err) => format!("{}", err),
