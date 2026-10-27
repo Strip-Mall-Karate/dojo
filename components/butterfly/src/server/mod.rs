@@ -59,6 +59,7 @@ use prometheus::{HistogramTimer,
 use serde::{ser::SerializeStruct,
             Serialize,
             Serializer};
+use tokio::runtime::Handle;
 
 use self::incarnation_store::IncarnationStore;
 use crate::{error::{Error,
@@ -427,7 +428,9 @@ impl Server {
     /// * Returns `Error::CannotBind` if the socket cannot be bound
     /// * Returns `Error::SocketSetReadTimeout` if the socket read timeout cannot be set
     /// * Returns `Error::SocketSetWriteTimeout` if the socket write timeout cannot be set
-    pub fn start(&mut self, timing: timing::Timing) -> Result<()> {
+    ///
+    /// Gossip runs on `runtime`, the Supervisor's.
+    pub fn start(&mut self, timing: timing::Timing, runtime: &Handle) -> Result<()> {
         debug!("entering dojo_butterfly::server::Server::start");
         let (tx_outbound, rx_inbound) = channel();
         if let Some(ref path) = *self.data_path {
@@ -508,27 +511,18 @@ impl Server {
                                           panic!("You should never, ever get here, frank");
                                       });
 
-        // Gossip runs on a runtime of its own until the Supervisor shares one. Bind here, so a
-        // taken port fails start instead of the gossip thread.
+        // Bind here, so a taken port fails start instead of the gossip task.
         let listener = std::net::TcpListener::bind(self.gossip_addr).map_err(Error::CannotBind)?;
         listener.set_nonblocking(true).map_err(Error::CannotBind)?;
-        let runtime = tokio::runtime::Builder::new_current_thread().enable_all()
-                                                                   .build()
-                                                                   .map_err(Error::CannotBind)?;
+        let listener = {
+            let _runtime = runtime.enter();
+            tokio::net::TcpListener::from_std(listener).map_err(Error::CannotBind)?
+        };
         let server_d = self.clone();
-        let _ = thread::Builder::new().name(format!("gossip-{}", self.name()))
-                                      .spawn(move || {
-                                          runtime.block_on(async move {
-                                                     let listener =
-                                                         tokio::net::TcpListener::from_std(listener)
-                                                             .expect("A bound listener registers \
-                                                                      with the runtime");
-                                                     tokio::join!(pull::run(server_d.clone(),
-                                                                            listener),
-                                                                  push::run(server_d, timing));
-                                                 });
-                                          panic!("You should never, ever get here, davey");
-                                      });
+        runtime.spawn(async move {
+                   tokio::join!(pull::run(server_d.clone(), listener),
+                                push::run(server_d, timing));
+               });
 
         if self.dat_file.is_some() {
             let server_f = self.clone();
@@ -1499,11 +1493,15 @@ mod tests {
                   net::{IpAddr,
                         Ipv4Addr,
                         SocketAddr},
-                  sync::Mutex};
+                  sync::{LazyLock,
+                         Mutex}};
         use tempfile::TempDir;
+        use tokio::runtime::Runtime;
 
         static SWIM_PORT: Mutex<u16> = Mutex::new(6666);
         static GOSSIP_PORT: Mutex<u16> = Mutex::new(7777);
+        static RUNTIME: LazyLock<Runtime> =
+            LazyLock::new(|| Runtime::new().expect("Cannot build the gossip runtime"));
 
         #[derive(Debug)]
         struct ZeroSuitability;
@@ -1580,14 +1578,14 @@ mod tests {
         fn new_with_corrupt_rumor_file() {
             let tmpdir = TempDir::new().unwrap();
             let mut server = start_with_corrupt_rumor_file(&tmpdir);
-            server.start(Timing::default())
+            server.start(Timing::default(), RUNTIME.handle())
                   .expect("Server failed to start");
         }
 
         #[test]
         fn start_listener() {
             let mut server = start_server();
-            server.start(Timing::default())
+            server.start(Timing::default(), RUNTIME.handle())
                   .expect("Server failed to start");
         }
     }

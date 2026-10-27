@@ -33,7 +33,6 @@ use dojo_common::{output::{self,
                   PROGRAM_NAME};
 use dojo_core;
 use dojo_sup_protocol;
-use futures::prelude::*;
 use std::{fmt,
           fs::{self,
                File},
@@ -114,7 +113,7 @@ impl CtlRequest {
         }
         let mut wire: dojo_sup_protocol::codec::SrvMessage = msg.into();
         wire.reply_for(self.transaction.unwrap(), complete);
-        self.tx.as_ref().unwrap().start_send(wire).ok(); // ignore Err return
+        self.tx.as_ref().unwrap().send(wire).ok(); // ignore Err return
     }
 }
 

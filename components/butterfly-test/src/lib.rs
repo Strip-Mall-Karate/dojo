@@ -38,12 +38,18 @@ use std::{net::{IpAddr,
                 DerefMut,
                 Range},
           str::FromStr,
-          sync::Mutex,
+          sync::{LazyLock,
+                 Mutex},
           thread,
           time::{Duration,
                  Instant}};
+use tokio::runtime::Runtime;
 
 static SERVER_PORT: Mutex<u16> = Mutex::new(6666);
+
+/// The runtime every test server gossips on, as a Supervisor's servers would share its own.
+static RUNTIME: LazyLock<Runtime> =
+    LazyLock::new(|| Runtime::new().expect("Cannot build the gossip runtime"));
 
 #[derive(Debug)]
 struct NSuitability(u64);
@@ -74,7 +80,7 @@ pub fn start_server(name: &str, ring_key: Option<SymKey>, suitability: u64) -> S
                                  Some(String::from(name)),
                                  None,
                                  Box::new(NSuitability(suitability))).unwrap();
-    server.start(Timing::default())
+    server.start(Timing::default(), RUNTIME.handle())
           .expect("Cannot start server");
     server
 }

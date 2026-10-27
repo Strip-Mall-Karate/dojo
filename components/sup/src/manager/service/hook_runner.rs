@@ -12,19 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Runs a service lifecycle hook on a separate thread, and wraps the
-//! whole execution in a future.
+//! Runs a service lifecycle hook on the runtime's blocking threads, and wraps the whole
+//! execution in a future.
 
 use super::{hook_timer,
-            spawned_future::SpawnedFuture,
             Pkg};
-use crate::error::SupError;
+use crate::error::Result;
 use dojo_common::templating::hooks::Hook;
 use dojo_core::service::ServiceGroup;
-use futures::{sync::oneshot,
-              IntoFuture};
-use std::{sync::Arc,
-          thread};
+use std::sync::Arc;
 
 pub struct HookRunner<H: Hook + Sync> {
     hook:          Arc<H>,
@@ -32,42 +28,23 @@ pub struct HookRunner<H: Hook + Sync> {
     pkg:           Pkg,
 }
 
-impl<H> HookRunner<H> where H: Hook + Sync
+impl<H> HookRunner<H>
+    where H: Hook + Sync + 'static,
+          H::ExitValue: Send + 'static
 {
     pub fn new(hook: Arc<H>, service_group: ServiceGroup, pkg: Pkg) -> HookRunner<H> {
         HookRunner { hook,
                      service_group,
                      pkg }
     }
-}
-impl<H: Hook + Sync + 'static> IntoFuture for HookRunner<H> {
-    type Error = SupError;
-    type Future = SpawnedFuture<Self::Item>;
-    type Item = H::ExitValue;
 
-    fn into_future(self) -> Self::Future {
-        let (tx, rx) = oneshot::channel();
-
-        // TODO (CM): Consider using a short abbreviation for the hook
-        // name in the thread name (e.g. "HC" for "health_check", "I"
-        // for "init", etc.
-
-        // TODO (CM): May want to consider adding a configurable
-        // timeout to how long this hook is allowed to run.
-        let handle_result =
-            thread::Builder::new().name(format!("{}-{}", H::file_name(), self.service_group))
-                                  .spawn(move || {
-                                      let _timer = hook_timer(H::file_name());
-                                      let exit_value =
-                                          self.hook.run(&self.service_group, &self.pkg);
-                                      tx.send(exit_value)
-                                        .expect("Couldn't send oneshot signal from HookRunner: \
-                                                 receiver went away");
-                                  });
-
-        match handle_result {
-            Ok(_handle) => rx.into(),
-            Err(io_err) => io_err.into(),
-        }
+    // TODO (CM): May want to consider adding a configurable
+    // timeout to how long this hook is allowed to run.
+    pub async fn run(self) -> Result<H::ExitValue> {
+        let exit_value = tokio::task::spawn_blocking(move || {
+                             let _timer = hook_timer(H::file_name());
+                             self.hook.run(&self.service_group, &self.pkg)
+                         }).await?;
+        Ok(exit_value)
     }
 }

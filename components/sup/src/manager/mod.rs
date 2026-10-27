@@ -82,19 +82,16 @@ use dojo_launcher_client::{LauncherCli,
                            LAUNCHER_LOCK_CLEAN_ENV,
                            LAUNCHER_PID_ENV};
 use dojo_sup_protocol;
-use futures::{future,
-              prelude::*,
-              sync::{mpsc,
-                     oneshot}};
 use num_cpus;
 #[cfg(unix)]
 use proc_self;
 use prometheus::{HistogramVec,
                  IntGauge,
                  IntGaugeVec};
-use rustls::{internal::pemfile,
-             AllowAnyAuthenticatedClient,
-             NoClientAuth,
+use rustls::{pki_types::{pem::PemObject,
+                         CertificateDer,
+                         PrivateKeyDer},
+             server::WebPkiClientVerifier,
              RootCertStore,
              ServerConfig};
 use serde_json;
@@ -104,6 +101,7 @@ use std::{self,
           fs::{self,
                File,
                OpenOptions},
+          future::Future,
           io::{BufRead,
                BufReader,
                Read,
@@ -117,18 +115,18 @@ use std::{self,
           sync::{atomic::{AtomicBool,
                           Ordering},
                  Arc,
-                 Condvar,
                  Mutex,
                  RwLock},
-          thread,
-          time::Duration};
+          thread};
 use time::{self,
            Duration as TimeDuration,
            SteadyTime,
            Timespec};
-use tokio::{executor,
-            runtime::{Builder as RuntimeBuilder,
-                      Runtime}};
+use tokio::{runtime::{Builder as RuntimeBuilder,
+                      Runtime},
+            sync::{mpsc,
+                   oneshot}};
+use tokio_util::task::TaskTracker;
 
 const MEMBER_ID_FILE: &str = "MEMBER_ID";
 pub const PROC_LOCK_FILE: &str = "LOCK";
@@ -381,6 +379,11 @@ pub struct Manager {
     services_need_reconciliation: ReconciliationFlag,
 
     feature_flags: FeatureFlag,
+
+    /// The one runtime every asynchronous part of the Supervisor runs on.
+    runtime: Runtime,
+    /// Service operations and control commands still running, which shutdown waits for.
+    tasks:   TaskTracker,
 }
 
 impl Manager {
@@ -426,6 +429,13 @@ impl Manager {
         let current = PackageIdent::from_str(&format!("{}/{}", SUP_PKG_IDENT, VERSION)).unwrap();
         outputln!("{} ({})", SUP_PKG_IDENT, current);
         let cfg_static = cfg.clone();
+        let runtime =
+            RuntimeBuilder::new_multi_thread().thread_name("tokio")
+                                              .worker_threads(TokioThreadCount::configured_value()
+                                                                  .into())
+                                              .enable_all()
+                                              .build()
+                                              .expect("Couldn't build Tokio Runtime!");
         let self_updater = if cfg.auto_update {
             if current.fully_qualified() {
                 Some(SelfUpdater::new(current, cfg.update_url, cfg.update_channel))
@@ -483,7 +493,7 @@ impl Manager {
             let ec = EventCore { supervisor_id: sys.member_id.clone(), };
             // TODO: Determine what the actual connection parameters
             // should be, and process them at some point before here.
-            event::init_stream(EventConnectionInfo::default(), ec);
+            event::init_stream(EventConnectionInfo::default(), ec, runtime.handle());
         }
 
         Ok(Manager { state: Arc::new(ManagerState { cfg: cfg_static,
@@ -506,7 +516,9 @@ impl Manager {
                      http_disable: cfg.http_disable,
                      busy_services: Arc::new(Mutex::new(HashSet::new())),
                      services_need_reconciliation: ReconciliationFlag::new(false),
-                     feature_flags: cfg.feature_flags })
+                     feature_flags: cfg.feature_flags,
+                     runtime,
+                     tasks: TaskTracker::new() })
     }
 
     /// Load the initial Butterly Member which is used in initializing the Butterfly server. This
@@ -679,20 +691,12 @@ impl Manager {
         let mut next_cpu_measurement = SteadyTime::now();
         let mut cpu_start = ProcessTime::now();
 
-        let mut runtime =
-            RuntimeBuilder::new().name_prefix("tokio-")
-                                 .core_threads(TokioThreadCount::configured_value().into())
-                                 .build()
-                                 .expect("Couldn't build Tokio Runtime!");
-
-        let (ctl_tx, ctl_rx) = mpsc::unbounded();
+        let (ctl_tx, ctl_rx) = mpsc::unbounded_channel();
         let (ctl_shutdown_tx, ctl_shutdown_rx) = oneshot::channel();
-        let ctl_handler =
-            CtlAcceptor::new(self.state.clone(), ctl_rx, ctl_shutdown_rx).for_each(move |handler| {
-                executor::spawn(handler);
-                Ok(())
-            });
-        runtime.spawn(ctl_handler);
+        self.runtime.spawn(ctl_commands(self.state.clone(),
+                                        ctl_rx,
+                                        ctl_shutdown_rx,
+                                        self.tasks.clone()));
 
         if let Some(svc_load) = svc {
             commands::service_load(&self.state, &mut CtlRequest::default(), &svc_load)?;
@@ -700,18 +704,21 @@ impl Manager {
 
         // This serves to start up any services that need starting
         // (which will be all of them at this point!)
-        self.maybe_spawn_service_futures(&mut runtime);
+        self.maybe_spawn_service_futures();
 
         outputln!("Starting gossip-listener on {}",
                   self.butterfly.gossip_addr());
-        self.butterfly.start(Timing::default())?;
+        self.butterfly
+            .start(Timing::default(), self.runtime.handle())?;
         debug!("gossip-listener started");
         self.persist_state();
         let http_listen_addr = self.sys.http_listen();
         let ctl_listen_addr = self.sys.ctl_listen();
         let ctl_secret_key = ctl_gateway::readgen_secret_key(&self.fs_cfg.sup_root)?;
         outputln!("Starting ctl-gateway on {}", &ctl_listen_addr);
-        ctl_gateway::server::run(ctl_listen_addr, ctl_secret_key, ctl_tx);
+        let ctl_listener = self.listen(ctl_listen_addr)?;
+        self.runtime
+            .spawn(ctl_gateway::server::run(ctl_listener, ctl_secret_key, ctl_tx));
         debug!("ctl-gateway started");
 
         if self.http_disable {
@@ -731,50 +738,12 @@ impl Manager {
                 None => None,
             };
 
-            // Here we use a Condvar to wait on the HTTP gateway server to start up and inspect its
-            // return value. Specifically, we're looking for errors when it tries to bind to the
-            // listening TCP socket, so we can alert the user.
-            let pair =
-                Arc::new((Mutex::new(http_gateway::ServerStartup::NotStarted), Condvar::new()));
-
             outputln!("Starting http-gateway on {}", &http_listen_addr);
-            http_gateway::Server::run(http_listen_addr,
-                                      tls_server_config,
-                                      self.state.gateway_state.clone(),
-                                      self.feature_flags,
-                                      pair.clone());
-
-            let &(ref lock, ref cvar) = &*pair;
-            let mut started = lock.lock().expect("Control mutex is poisoned");
-
-            // This will block the current thread until the HTTP gateway thread either starts
-            // successfully or fails to bind. In practice, the wait here is so short as to not be
-            // noticeable.
-            loop {
-                match *started {
-                    http_gateway::ServerStartup::NotStarted => {
-                        started = match cvar.wait_timeout(started, Duration::from_millis(10000)) {
-                            Ok((mutex, timeout_result)) => {
-                                if timeout_result.timed_out() {
-                                    return Err(sup_error!(Error::BindTimeout(
-                                        http_listen_addr.to_string()
-                                    )));
-                                } else {
-                                    mutex
-                                }
-                            }
-                            Err(e) => {
-                                error!("Mutex for the HTTP gateway was poisoned. e = {:?}", e);
-                                return Err(sup_error!(Error::LockPoisoned));
-                            }
-                        };
-                    }
-                    http_gateway::ServerStartup::BindFailed => {
-                        return Err(sup_error!(Error::BadAddress(http_listen_addr.to_string())));
-                    }
-                    http_gateway::ServerStartup::Started => break,
-                }
-            }
+            let http_listener = self.listen(*http_listen_addr)?;
+            self.runtime.spawn(http_gateway::run(http_listener,
+                                                 tls_server_config,
+                                                 self.state.gateway_state.clone(),
+                                                 self.feature_flags));
 
             debug!("http-gateway started");
         }
@@ -856,14 +825,14 @@ impl Manager {
                 // event in the specs directory is registered, or
                 // another service finishes shutting down).
                 self.services_need_reconciliation.toggle_if_set();
-                self.maybe_spawn_service_futures(&mut runtime);
+                self.maybe_spawn_service_futures();
             }
 
             self.update_peers_from_watch_file()?;
             self.update_running_services_from_user_config_watcher();
 
             for f in self.stop_services_with_updates() {
-                runtime.spawn(f);
+                self.spawn(f);
             }
 
             self.restart_elections();
@@ -944,15 +913,14 @@ impl Manager {
                                    .expect("Services lock is poisoned!");
 
                 for (_ident, svc) in svcs.drain() {
-                    runtime.spawn(self.stop(svc));
+                    self.spawn(self.stop(svc));
                 }
             }
         }
 
-        // Allow all existing futures to run to completion.
-        runtime.shutdown_on_idle()
-               .wait()
-               .expect("Error waiting on Tokio runtime to shutdown");
+        // Allow every service operation and control command to run to completion.
+        self.tasks.close();
+        self.runtime.block_on(self.tasks.wait());
 
         release_process_lock(&self.fs_cfg);
         self.butterfly.persist_data();
@@ -1014,7 +982,7 @@ impl Manager {
     // our specfile reconciliation logic to catch the fact that
     // the service needs to be restarted. At that point, this function
     // can be renamed; right now, it says exactly what it's doing.
-    fn stop_services_with_updates(&mut self) -> Vec<impl Future<Item = (), Error = ()>> {
+    fn stop_services_with_updates(&mut self) -> Vec<impl Future<Output = ()> + Send + 'static> {
         self.take_services_with_updates()
             .into_iter()
             .map(|service| self.stop(service))
@@ -1155,7 +1123,7 @@ impl Manager {
     /// to have been removed from the internal list of active services
     /// already (see, e.g., take_services_with_updates and
     /// remove_service_from_state).
-    fn stop(&self, service: Service) -> impl Future<Item = (), Error = ()> {
+    fn stop(&self, service: Service) -> impl Future<Output = ()> + Send + 'static {
         Self::service_stop_future(service,
                                   Arc::clone(&self.user_config_watcher),
                                   Arc::clone(&self.updater),
@@ -1169,25 +1137,23 @@ impl Manager {
                            updater: Arc<Mutex<ServiceUpdater>>,
                            busy_services: Arc<Mutex<HashSet<PackageIdent>>>,
                            services_need_reconciliation: ReconciliationFlag)
-                           -> impl Future<Item = (), Error = ()> {
+                           -> impl Future<Output = ()> + Send + 'static {
         // JW TODO: Update service rumor to remove service from
         // cluster
         // TODO (CM): But only if we're not going down for a restart.
         let ident = service.spec_ident.clone();
-        let stop_it = service.stop().then(move |_| {
-                                        event::publish(&event::ServiceStopped {
-                ident: &service.pkg.ident,
-                //                spec_ident: &service.spec.ident,
-                service_group: &service.service_group,
-            });
-                                        user_config_watcher.write()
-                                                           .expect("Watcher lock poisoned")
-                                                           .remove(&service);
-                                        updater.lock()
-                                               .expect("Updater lock poisoned")
-                                               .remove(&service);
-                                        Ok(())
-                                    });
+        let stop_it = async move {
+            // A failed stop is already reported, and the service is gone either way.
+            let _ = service.stop().await;
+            event::publish(&event::ServiceStopped { ident:         &service.pkg.ident,
+                                                    service_group: &service.service_group, });
+            user_config_watcher.write()
+                               .expect("Watcher lock poisoned")
+                               .remove(&service);
+            updater.lock()
+                   .expect("Updater lock poisoned")
+                   .remove(&service);
+        };
         Self::wrap_async_service_operation(ident,
                                            busy_services,
                                            services_need_reconciliation,
@@ -1208,34 +1174,48 @@ impl Manager {
     /// As more service operations (e.g., hooks) become asynchronous,
     /// we'll need to wrap those operations in this logic to ensure
     /// consistent operation.
+    ///
+    /// The service is flagged busy here, before the future first runs,
+    /// so the next reconciliation can't find it neither running nor
+    /// busy and start it again.
     fn wrap_async_service_operation<F>(ident: PackageIdent,
                                        busy_services: Arc<Mutex<HashSet<PackageIdent>>>,
                                        services_need_reconciliation: ReconciliationFlag,
                                        fut: F)
-                                       -> impl Future<Item = (), Error = ()>
-        where F: IntoFuture<Item = (), Error = ()>
+                                       -> impl Future<Output = ()> + Send + 'static
+        where F: Future<Output = ()> + Send + 'static
     {
-        // TODO (CM): can't wait for the Pinning API :(
-        let busy_services_2 = Arc::clone(&busy_services);
-        let ident_2 = ident.clone();
-
-        future::lazy(move || {
-            trace!("Flagging '{:?}' as busy, pending an asynchronous operation",
+        trace!("Flagging '{:?}' as busy, pending an asynchronous operation",
+               ident);
+        busy_services.lock()
+                     .expect("busy_services lock is poisoned")
+                     .insert(ident.clone());
+        async move {
+            fut.await;
+            trace!("Removing 'busy' flag for '{:?}'; asynchronous operation over",
                    ident);
             busy_services.lock()
                          .expect("busy_services lock is poisoned")
-                         .insert(ident);
-            Ok(())
-        }).and_then(|_| fut)
-          .and_then(move |_| {
-              trace!("Removing 'busy' flag for '{:?}'; asynchronous operation over",
-                     ident_2);
-              busy_services_2.lock()
-                             .expect("busy_services lock is poisoned")
-                             .remove(&ident_2);
-              services_need_reconciliation.set();
-              Ok(())
-          })
+                         .remove(&ident);
+            services_need_reconciliation.set();
+        }
+    }
+
+    /// Run `f` on the runtime, and have shutdown wait for it.
+    fn spawn<F>(&self, f: F)
+        where F: Future<Output = ()> + Send + 'static
+    {
+        self.tasks.spawn_on(f, self.runtime.handle());
+    }
+
+    /// Bind a listener for one of the gateways, here so a taken port stops the Supervisor
+    /// starting.
+    fn listen(&self, addr: SocketAddr) -> Result<tokio::net::TcpListener> {
+        let bad_address = |_| sup_error!(Error::BadAddress(addr.to_string()));
+        let listener = std::net::TcpListener::bind(addr).map_err(bad_address)?;
+        listener.set_nonblocking(true).map_err(bad_address)?;
+        let _runtime = self.runtime.enter();
+        tokio::net::TcpListener::from_std(listener).map_err(bad_address)
     }
 
     /// Determine if our on-disk spec files indicate that we should
@@ -1246,10 +1226,10 @@ impl Manager {
     /// NOTE: Service start is currently synchronous, so any start
     /// operations will be performed directly as a consequence of
     /// calling this method.
-    fn maybe_spawn_service_futures(&mut self, runtime: &mut Runtime) {
+    fn maybe_spawn_service_futures(&mut self) {
         let ops = self.compute_service_operations();
         for f in self.operations_into_futures(ops) {
-            runtime.spawn(f);
+            self.spawn(f);
         }
     }
 
@@ -1269,7 +1249,9 @@ impl Manager {
     /// services is made asynchronous, however, it performs a mix of
     /// operations; starts are performed synchronously, while
     /// shutdowns and restarts are turned into futures.
-    fn operations_into_futures<O>(&mut self, ops: O) -> Vec<impl Future<Item = (), Error = ()>>
+    fn operations_into_futures<O>(&mut self,
+                                  ops: O)
+                                  -> Vec<impl Future<Output = ()> + Send + 'static>
         where O: IntoIterator<Item = ServiceOperation>
     {
         ops.into_iter()
@@ -1450,44 +1432,43 @@ impl Manager {
 }
 
 fn tls_config(config: &TLSConfig) -> Result<rustls::ServerConfig> {
-    let client_auth = match &config.ca_cert_path {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let builder =
+        ServerConfig::builder_with_provider(provider.clone()).with_safe_default_protocol_versions()?;
+    let builder = match &config.ca_cert_path {
         Some(path) => {
+            let invalid = |_| sup_error!(Error::InvalidCertFile(path.clone()));
+            let certs = CertificateDer::pem_file_iter(path).map_err(invalid)?
+                                                           .collect::<result::Result<Vec<_>, _>>()
+                                                           .map_err(invalid)?;
             let mut root_store = RootCertStore::empty();
-            let ca_file = &mut BufReader::new(File::open(path)?);
-            root_store.add_pem_file(ca_file)
-                      .and_then(|(added, _)| {
-                          if added < 1 {
-                              Err(())
-                          } else {
-                              Ok(AllowAnyAuthenticatedClient::new(root_store))
-                          }
-                      })
-                      .map_err(|_| sup_error!(Error::InvalidCertFile(path.clone())))?
+            let (added, _) = root_store.add_parsable_certificates(certs);
+            if added < 1 {
+                return Err(sup_error!(Error::InvalidCertFile(path.clone())));
+            }
+            let verifier = WebPkiClientVerifier::builder_with_provider(Arc::new(root_store),
+                                                                       provider).build()
+                                                                                .map_err(|_| {
+                                                                                    sup_error!(Error::InvalidCertFile(path.clone()))
+                                                                                })?;
+            builder.with_client_cert_verifier(verifier)
         }
-        None => NoClientAuth::new(),
+        None => builder.with_no_client_auth(),
     };
 
-    let mut server_config = ServerConfig::new(client_auth);
-    let key_file = &mut BufReader::new(File::open(&config.key_path)?);
-    let cert_file = &mut BufReader::new(File::open(&config.cert_path)?);
-
-    // Note that we must explicitly map these errors because rustls returns () as the error from
-    // both pemfile::certs() as well as pemfile::rsa_private_keys() and we want to return
-    // different errors for each.
+    let invalid_cert = |_| sup_error!(Error::InvalidCertFile(config.cert_path.clone()));
     let cert_chain =
-        pemfile::certs(cert_file).and_then(|c| if c.is_empty() { Err(()) } else { Ok(c) })
-                                 .map_err(|_| {
-                                     sup_error!(Error::InvalidCertFile(config.cert_path.clone()))
-                                 })?;
+        CertificateDer::pem_file_iter(&config.cert_path).map_err(invalid_cert)?
+                                                        .collect::<result::Result<Vec<_>, _>>()
+                                                        .map_err(invalid_cert)?;
+    if cert_chain.is_empty() {
+        return Err(sup_error!(Error::InvalidCertFile(config.cert_path.clone())));
+    }
+    let key = PrivateKeyDer::from_pem_file(&config.key_path).map_err(|_| {
+                  sup_error!(Error::InvalidKeyFile(config.key_path.clone()))
+              })?;
 
-    let key =
-        pemfile::rsa_private_keys(key_file).and_then(|mut k| k.pop().ok_or(()))
-                                           .map_err(|_| {
-                                               sup_error!(Error::InvalidKeyFile(config.key_path
-                                                                                      .clone()))
-                                           })?;
-
-    server_config.set_single_cert(cert_chain, key)?;
+    let mut server_config = builder.with_single_cert(cert_chain, key)?;
     server_config.ignore_client_order = true;
     Ok(server_config)
 }
@@ -1498,8 +1479,7 @@ struct TokioThreadCount(usize);
 
 impl Default for TokioThreadCount {
     fn default() -> Self {
-        // This is the same internal logic used in Tokio itself.
-        // https://docs.rs/tokio/0.1.12/src/tokio/runtime/builder.rs.html#68
+        // Tokio's own default: a worker for each CPU.
         TokioThreadCount(num_cpus::get().max(1))
     }
 }
@@ -1646,81 +1626,37 @@ fn track_memory_stats() {
                 .set(jemalloc_ctl::stats::retained().unwrap().to_i64());
 }
 
-struct CtlAcceptor {
-    rx:               ctl_gateway::server::MgrReceiver,
-    state:            Arc<ManagerState>,
-    shutdown_trigger: oneshot::Receiver<()>,
-}
-
-impl CtlAcceptor {
-    fn new(state: Arc<ManagerState>,
-           rx: ctl_gateway::server::MgrReceiver,
-           shutdown_trigger: oneshot::Receiver<()>)
-           -> Self {
-        CtlAcceptor { state,
-                      rx,
-                      shutdown_trigger }
-    }
-}
-
-impl Stream for CtlAcceptor {
-    type Error = ();
-    type Item = CtlHandler;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        match self.shutdown_trigger.poll() {
-            Ok(Async::Ready(())) => {
+/// Run control commands from the ctl gateway until shutdown. Commands block (a `doj svc load`
+/// can install packages), so each runs on the runtime's blocking threads.
+async fn ctl_commands(state: Arc<ManagerState>,
+                      mut rx: ctl_gateway::server::MgrReceiver,
+                      mut shutdown: oneshot::Receiver<()>,
+                      tasks: TaskTracker) {
+    loop {
+        tokio::select! {
+            _ = &mut shutdown => {
                 info!("Signal received; stopping CtlAcceptor");
-                Ok(Async::Ready(None))
+                break;
             }
-            Err(e) => {
-                error!("Error polling CtlAcceptor shutdown trigger: {:?}", e);
-                Ok(Async::Ready(None))
-            }
-            Ok(Async::NotReady) => {
-                match self.rx.poll() {
-                    Ok(Async::Ready(Some(cmd))) => {
-                        let task = CtlHandler::new(cmd, self.state.clone());
-                        Ok(Async::Ready(Some(task)))
+            cmd = rx.recv() => {
+                match cmd {
+                    Some(cmd) => {
+                        let state = Arc::clone(&state);
+                        tasks.spawn_blocking(move || run_ctl_command(cmd, &state));
                     }
-                    Ok(Async::Ready(None)) => Ok(Async::Ready(None)),
-                    Ok(Async::NotReady) => Ok(Async::NotReady),
-                    Err(e) => {
-                        debug!("CtlAcceptor error, {:?}", e);
-                        Err(())
-                    }
+                    None => break,
                 }
             }
         }
     }
 }
 
-struct CtlHandler {
-    cmd:   ctl_gateway::server::CtlCommand,
-    state: Arc<ManagerState>,
-}
-
-impl CtlHandler {
-    fn new(cmd: ctl_gateway::server::CtlCommand, state: Arc<ManagerState>) -> Self {
-        CtlHandler { cmd, state }
-    }
-}
-
-impl Future for CtlHandler {
-    type Error = ();
-    type Item = ();
-
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match self.cmd.run(&self.state) {
-            Ok(()) => (),
-            Err(err) => {
-                debug!("CtlHandler failed, {:?}", err);
-                if self.cmd.req.transactional() {
-                    self.cmd.req.reply_complete(err);
-                }
-            }
+fn run_ctl_command(mut cmd: ctl_gateway::server::CtlCommand, state: &ManagerState) {
+    if let Err(err) = cmd.run(state) {
+        debug!("CtlHandler failed, {:?}", err);
+        if cmd.req.transactional() {
+            cmd.req.reply_complete(err);
         }
-        Ok(Async::Ready(()))
     }
 }
 
