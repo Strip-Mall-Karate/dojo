@@ -1,0 +1,208 @@
+#!/bin/sh
+# Installs the running live Dojo system onto a disk: a GPT disk with a BIOS boot
+# partition, an EFI system partition and an ext4 root holding /doj/pkgs, the karate
+# kernel and grub for both BIOS and UEFI. The installed machine boots straight into
+# doj-launch as PID 1.
+#
+# It erases the whole disk, so it does nothing unless the disk is named and --erase
+# confirms it. It never picks a disk itself.
+#
+# Without --root-password-hash or --root-password-stdin there is no console login, and
+# without --authorized-key no SSH: the machine is an appliance that runs only the
+# Supervisor and its services.
+set -eu
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: doj-install --erase [--root-password-hash <hash> | --root-password-stdin]
+                   [--authorized-key <file>] [--kernel-args <args>] <disk>
+USAGE
+  exit 2
+}
+
+die() {
+  echo "doj-install: $*" >&2
+  exit 1
+}
+
+step() {
+  echo "doj-install: $*"
+}
+
+erase=false
+password_hash=""
+password_stdin=false
+authorized_key=""
+kernel_args=""
+disk=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --erase) erase=true; shift ;;
+    --root-password-hash)
+      [ $# -ge 2 ] || usage
+      password_hash="$2"; shift 2 ;;
+    --root-password-stdin) password_stdin=true; shift ;;
+    --authorized-key)
+      [ $# -ge 2 ] || usage
+      authorized_key="$2"; shift 2 ;;
+    --kernel-args)
+      [ $# -ge 2 ] || usage
+      kernel_args="$2"; shift 2 ;;
+    -*) usage ;;
+    *)
+      [ -z "${disk}" ] || die "one disk at a time: ${disk} and $1"
+      disk="$1"; shift ;;
+  esac
+done
+[ -n "${disk}" ] || die "name the disk to install on"
+"${erase}" || die "refusing to touch ${disk}: --erase confirms that everything on it is lost"
+if [ -n "${password_hash}" ] && "${password_stdin}"; then
+  die "--root-password-hash and --root-password-stdin are two ways to give one password"
+fi
+case "${password_hash}" in
+  "" | '$'*'$'*) ;;
+  *) die "--root-password-hash takes a crypt(3) hash such as \$6\$..., not a password" ;;
+esac
+if [ -n "${authorized_key}" ] && [ ! -s "${authorized_key}" ]; then
+  die "no public key in ${authorized_key}"
+fi
+
+# The disk must be a whole disk, in use by nothing.
+[ -b "${disk}" ] || die "${disk} is not a block device"
+name="${disk##*/}"
+[ -d "/sys/class/block/${name}" ] || die "${disk} is not a disk the kernel knows"
+[ ! -e "/sys/class/block/${name}/partition" ] || die "${disk} is a partition; name the whole disk"
+if grep -q "^${disk}" /proc/mounts; then
+  die "${disk} or one of its partitions is mounted"
+fi
+
+# The newest release of a karate package in this system's /doj/pkgs. busybox's own
+# sort and tail, until PATH has busybox-static's applets.
+pkg() {
+  release=$(printf '%s\n' /doj/pkgs/karate/"$1"/*/* | busybox sort | busybox tail -n 1)
+  [ -d "${release}" ] || die "karate/$1 is not installed on this live system"
+  echo "${release}"
+}
+busybox=$(pkg busybox-static)
+PATH="$(pkg util-linux)/sbin:$(pkg util-linux)/bin:$(pkg e2fsprogs)/sbin:$(pkg dosfstools)/sbin:$(pkg grub)/sbin:$(pkg grub)/bin:${busybox}/bin:${PATH}"
+export PATH
+kernel=$(pkg linux)
+
+if "${password_stdin}"; then
+  printf 'root password: ' >&2
+  stty -echo 2>/dev/null || true
+  IFS= read -r password || true
+  stty echo 2>/dev/null || true
+  echo >&2
+  [ -n "${password}" ] || die "an empty password is no password"
+  password_hash=$(printf '%s\n' "${password}" | cryptpw -m sha512 -P 0)
+  unset password
+fi
+
+step "partitioning ${disk}"
+# 1: grub's BIOS boot partition, 2: the EFI system partition, 3: the root.
+sfdisk --quiet --wipe always "${disk}" <<'TABLE'
+label: gpt
+size=1MiB, type=21686148-6449-6E6F-744E-656564454649, name=bios
+size=64MiB, type=U, name=efi
+type=L, name=dojo
+TABLE
+
+# The partitions' device names, from the kernel rather than a naming convention.
+part() {
+  for p in /sys/class/block/"${name}"/"${name}"*; do
+    if [ "$(cat "${p}/partition")" = "$1" ]; then
+      echo "/dev/${p##*/}"
+      return 0
+    fi
+  done
+  return 1
+}
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  part 3 >/dev/null && [ -b "$(part 3)" ] && break
+  sleep 1
+done
+efi=$(part 2) || die "no partition 2 on ${disk}"
+root=$(part 3) || die "no partition 3 on ${disk}"
+partuuid=$(sfdisk --part-uuid "${disk}" 3)
+sfdisk --dump "${disk}"
+
+step "making the filesystems: ${efi} vfat, ${root} ext4"
+mkfs.vfat -n EFI "${efi}" >/dev/null
+mkfs.ext4 -q -F -L dojo "${root}"
+
+target=/mnt/dojo-install
+mkdir -p "${target}"
+mount -t ext4 "${root}" "${target}"
+cleanup() {
+  umount "${target}/boot/efi" 2>/dev/null || true
+  umount "${target}" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+step "copying /doj/pkgs and the stage 0 init"
+mkdir -p "${target}/doj" "${target}/doj/sup/default/specs" "${target}/boot/efi"
+cp -a /doj/pkgs "${target}/doj/"
+cp -a /bin /init "${target}/"
+for d in dev proc sys run tmp root etc mnt; do
+  mkdir -p "${target}/${d}"
+done
+chmod 1777 "${target}/tmp"
+chmod 0700 "${target}/root"
+
+step "installing the kernel ${kernel##/doj/pkgs/}"
+cp "${kernel}/boot/bzImage" "${target}/boot/vmlinuz"
+cp "${kernel}/boot/config" "${target}/boot/config"
+
+# Accounts: root, with a password only for a console login.
+echo "root:x:0:0:root:/root:/bin/sh" >"${target}/etc/passwd"
+echo "root:x:0:" >"${target}/etc/group"
+echo "root:${password_hash:-*}:0:0:99999:7:::" >"${target}/etc/shadow"
+chmod 0600 "${target}/etc/shadow"
+
+# A service the Supervisor loads at boot from its spec, out of the installed packages.
+load() {
+  ident=$(pkg "$1")
+  ident="${ident#/doj/pkgs/}"
+  echo "ident = \"${ident}\"" >"${target}/doj/sup/default/specs/$1.spec"
+  step "loading ${ident} at boot"
+}
+if [ -n "${password_hash}" ]; then
+  load doj-console
+fi
+if [ -n "${authorized_key}" ]; then
+  # karate/openssh's privilege separation drops to doj, the services' user, in an
+  # empty directory of its own package.
+  echo "doj:x:42:42:doj:/doj:/bin/false" >>"${target}/etc/passwd"
+  echo "doj:x:42:" >>"${target}/etc/group"
+  echo "doj:*:0:0:99999:7:::" >>"${target}/etc/shadow"
+  mkdir -p "${target}/root/.ssh"
+  chmod 0700 "${target}/root/.ssh"
+  cp "${authorized_key}" "${target}/root/.ssh/authorized_keys"
+  chmod 0600 "${target}/root/.ssh/authorized_keys"
+  load doj-sshd
+fi
+if [ -z "${password_hash}" ] && [ -z "${authorized_key}" ]; then
+  step "an appliance: no console login, no SSH"
+fi
+
+step "installing grub for BIOS and UEFI"
+mount -t vfat "${efi}" "${target}/boot/efi"
+grub-install --target=i386-pc --boot-directory="${target}/boot" "${disk}"
+grub-install --target=x86_64-efi --efi-directory="${target}/boot/efi" \
+  --boot-directory="${target}/boot" --removable --no-nvram
+cat >"${target}/boot/grub/grub.cfg" <<CFG
+serial --unit=0 --speed=115200
+terminal_input serial console
+terminal_output serial console
+set timeout=1
+menuentry "Dojo" {
+  search --no-floppy --label --set=root dojo
+  linux /boot/vmlinuz root=PARTUUID=${partuuid} rootfstype=ext4 rootwait rw console=tty0 console=ttyS0,115200 panic=-1 init=/init ${kernel_args}
+}
+CFG
+
+sync
+cleanup
+trap - EXIT
+step "installed on ${disk} (root PARTUUID=${partuuid})"

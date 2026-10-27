@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""Logs in on a Dojo VM's serial console the way a person would, for install-test.
+
+usage: console-login <port> <password> <transcript>
+
+Connects to the console boot serves on 127.0.0.1:<port>, gives a wrong password and
+expects it refused, logs in as root with <password>, runs a command and checks its
+output, then sends SIGTERM to PID 1 so the machine powers off. Everything the console
+says goes to <transcript>. Exits 0 only if every step saw what it expected.
+"""
+import socket
+import sys
+import time
+
+
+class Console:
+    def __init__(self, port, transcript):
+        self.out = open(transcript, "wb")
+        self.buf = b""
+        deadline = time.monotonic() + 60
+        while True:
+            try:
+                self.sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+                break
+            except OSError:
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(1)
+
+    def send(self, text):
+        self.sock.sendall(text.encode())
+
+    def expect(self, text, seconds, poke=False):
+        """Reads until text appears after the last match; pokes Enter now and then."""
+        want = text.encode()
+        deadline = time.monotonic() + seconds
+        next_poke = time.monotonic() + 5
+        while want not in self.buf:
+            now = time.monotonic()
+            if now > deadline:
+                raise TimeoutError(f"no {text!r} within {seconds}s")
+            if poke and now > next_poke:
+                self.send("\r")
+                next_poke = now + 10
+            self.sock.settimeout(1)
+            try:
+                chunk = self.sock.recv(4096)
+            except socket.timeout:
+                continue
+            if not chunk:
+                raise EOFError(f"the console closed before {text!r}")
+            self.out.write(chunk)
+            self.out.flush()
+            self.buf += chunk
+        self.buf = self.buf[self.buf.index(want) + len(want):]
+
+
+def main():
+    if len(sys.argv) != 4:
+        print(__doc__, file=sys.stderr)
+        return 2
+    port, password, transcript = int(sys.argv[1]), sys.argv[2], sys.argv[3]
+    con = Console(port, transcript)
+    step = "boot to a login prompt"
+    try:
+        con.expect("login:", 540, poke=True)
+        step = "a wrong password is refused"
+        con.send("root\r")
+        con.expect("Password:", 30)
+        con.send("not-" + password + "\r")
+        con.expect("Login incorrect", 30)
+        step = "the right password logs in"
+        con.expect("login:", 60, poke=True)
+        con.send("root\r")
+        con.expect("Password:", 30)
+        con.send(password + "\r")
+        con.expect("# ", 30)
+        step = "a command runs"
+        con.send("echo console-$((6*7)) $(cat /proc/1/comm)\r")
+        con.expect("console-42 doj-launch", 30)
+        step = "SIGTERM to PID 1"
+        con.send("kill -TERM 1\r")
+        con.expect("reboot: Power down", 120)
+    except (TimeoutError, EOFError) as e:
+        print(f"console-login: {step}: {e}", file=sys.stderr)
+        return 1
+    print("console-login: refused a wrong password, logged in, ran a command, powered off")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

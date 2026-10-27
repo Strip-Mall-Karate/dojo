@@ -1,51 +1,89 @@
 #!/usr/bin/env bash
-# Boots Dojo on x86_64 from Dojo's own karate packages: the karate/linux kernel
-# and an initramfs of busybox-static, doj-launch, doj-sup-static and doj, with
-# the arm64 VM's init, check and lease scripts. QEMU emulates the machine (TCG),
-# so this runs on any Mac or Linux host and proves nothing about hardware.
+# Boots Dojo on x86_64 from Dojo's own karate packages, either live from the
+# karate/linux kernel and an initramfs or from a disk doj-install wrote. QEMU
+# emulates the machine (TCG), so this runs on any Mac or Linux host with Nix and
+# proves nothing about hardware.
 #
-# <pkgs> is a copy of a builder's /doj/pkgs/karate holding those five packages;
-# the newest release of each is used. --check boots with dojo.check and exits 0
-# only if init reported success and the VM then powered off cleanly. --initrd
-# also keeps the assembled initramfs at the given path.
+# <pkgs> is a copy of a builder's /doj/pkgs/karate. The live image is busybox-static,
+# doj-launch, doj-sup-static and doj in /bin, as the arm64 VM has them, the arm64 VM's
+# init, check and lease, doj-install, and every package in <pkgs> under /doj/pkgs for
+# doj-install to copy. The newest release of each package is used.
+#
+#   --check                  boot with dojo.check; succeed only on "dojo: check ok"
+#   --install <args>         run doj-install <args> from the live image, then power off;
+#                            succeed only on "dojo: install ok"
+#   --refuse-install <args>  the same, succeeding only on "dojo: install failed"
+#   --file <host>:<guest>    put a file into the live image (an install's key file)
+#   --disk <image>           attach a raw disk image as /dev/vda
+#   --from-disk              boot the disk (grub through SeaBIOS) instead of the live image
+#   --uefi                   boot through QEMU's EDK II UEFI firmware instead of SeaBIOS
+#   --console <port>         serial console on 127.0.0.1:<port> instead of the log
+#   --ssh-port <port>        forward 127.0.0.1:<port> to the guest's port 22
+#   --log <file>             where the serial console goes (default: a temporary file)
+#   --timeout <seconds>      QEMU's deadline (default 600)
 set -euo pipefail
 
 usage() {
-  echo "usage: support/vm/x86_64/boot <pkgs> [--check] [--initrd <out.cpio.gz>] [--log <file>]" >&2
+  echo "usage: support/vm/x86_64/boot <pkgs> [--check | --install <args> | --refuse-install <args>]" \
+    "[--file <host>:<guest>]... [--disk <image>] [--from-disk] [--uefi] [--console <port>] [--ssh-port <port>]" \
+    "[--log <file>] [--timeout <seconds>]" >&2
   exit 2
 }
 [[ $# -ge 1 ]] || usage
 pkgs="$1"
 shift
-check=false
-keep_initrd=""
+mode=interactive
+install_args=""
+files=()
+disk=""
+from_disk=false
+uefi=false
+console=""
+ssh_port=""
 log=""
+deadline=600
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --check) check=true; shift ;;
-    --initrd)
+    --check) mode=check; shift ;;
+    --install | --refuse-install)
       [[ $# -ge 2 ]] || usage
-      keep_initrd="$2"; shift 2 ;;
+      mode="${1#--}"; install_args="$2"; shift 2 ;;
+    --file)
+      [[ $# -ge 2 && "$2" == *:/* ]] || usage
+      files+=("$2"); shift 2 ;;
+    --disk)
+      [[ $# -ge 2 ]] || usage
+      disk="$2"; shift 2 ;;
+    --from-disk) from_disk=true; shift ;;
+    --uefi) uefi=true; shift ;;
+    --console)
+      [[ $# -ge 2 ]] || usage
+      console="$2"; shift 2 ;;
+    --ssh-port)
+      [[ $# -ge 2 ]] || usage
+      ssh_port="$2"; shift 2 ;;
     --log)
       [[ $# -ge 2 ]] || usage
       log="$2"; shift 2 ;;
+    --timeout)
+      [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || usage
+      deadline="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
 [[ -d "${pkgs}" ]] || { echo "boot: no package directory at ${pkgs}" >&2; exit 2; }
-
-# The newest release of a package: <pkgs>/<name>/<version>/<release>.
-newest() {
-  local release
-  release="$(printf '%s\n' "${pkgs}/$1"/*/* | sort | tail -n 1)"
-  [[ -d "${release}" ]] || { echo "boot: no karate/$1 in ${pkgs}" >&2; exit 1; }
-  echo "${release}"
-}
-busybox="$(newest busybox-static)/bin/busybox"
-launch="$(newest doj-launcher)/bin/doj-launch"
-sup="$(newest doj-sup-static)/bin/doj-sup"
-doj="$(newest doj)/bin/doj"
-kernel="$(newest linux)/boot/bzImage"
+if "${from_disk}" && [[ -z "${disk}" ]]; then
+  echo "boot: --from-disk needs --disk" >&2
+  exit 2
+fi
+if "${from_disk}" && [[ "${mode}" == *install ]]; then
+  echo "boot: an install runs from the live image, not --from-disk" >&2
+  exit 2
+fi
+if [[ -n "${disk}" && ! -f "${disk}" ]]; then
+  echo "boot: no disk image at ${disk}" >&2
+  exit 2
+fi
 
 vm="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 {
@@ -53,66 +91,103 @@ vm="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   read -r coreutils
   read -r cpio
 } < <(nix-build --no-out-link "${vm}" -A qemu -A coreutils -A cpio)
+firmware="${qemu}/share/qemu/edk2-x86_64-code.fd"
 qemu="${qemu}/bin/qemu-system-x86_64"
 
 work="$(mktemp -d -t dojo-vm-x86_64)"
 trap 'chmod -R u+w "${work}"; rm -rf "${work}"' EXIT
 
-# The same root as the arm64 initrd in default.nix, with the karate binaries in
-# /bin where init and check expect them.
-root="${work}/root"
-mkdir -p "${root}"/{bin,root,dev,proc,sys,run,tmp,etc}
-cp "${busybox}" "${root}/bin/busybox"
-while read -r applet; do
-  ln -s busybox "${root}/bin/${applet}"
-done <"${vm}/applets"
-cp "${launch}" "${sup}" "${doj}" "${root}/bin/"
-cp "${vm}/init" "${root}/init"
-cp "${vm}/check" "${root}/bin/check"
-cp "${vm}/lease" "${root}/bin/lease"
-chmod 0755 "${root}/init" "${root}"/bin/{check,lease,busybox,doj-launch,doj-sup,doj}
-echo "root:x:0:0:root:/root:/bin/sh" >"${root}/etc/passwd"
-echo "root:x:0:" >"${root}/etc/group"
-initrd="${work}/initrd.cpio.gz"
-(cd "${root}" && find . | "${cpio}/bin/cpio" --quiet -o -H newc -R 0:0) | gzip -9 >"${initrd}"
-if [[ -n "${keep_initrd}" ]]; then
-  cp "${initrd}" "${keep_initrd}"
-fi
-
-append="console=ttyS0 panic=-1"
+args=(-machine q35 -accel tcg -cpu max -smp 2 -m 3072 -no-reboot)
 # QEMU options are comma lists inside one word.
 # shellcheck disable=SC2054
-args=(
-  -machine q35 -accel tcg -cpu max -smp 2 -m 2048
-  -kernel "${kernel}" -initrd "${initrd}"
-  -no-reboot
-  -netdev user,id=net0 -device virtio-net-pci,netdev=net0
-)
-
-if ! "${check}"; then
-  exec "${qemu}" "${args[@]}" -append "${append}" -nographic
+netdev=user,id=net0
+if [[ -n "${ssh_port}" ]]; then
+  netdev+=",hostfwd=tcp:127.0.0.1:${ssh_port}-:22"
+fi
+# shellcheck disable=SC2054
+args+=(-netdev "${netdev}" -device virtio-net-pci,netdev=net0)
+if [[ -n "${disk}" ]]; then
+  args+=(-drive "file=${disk},format=raw,if=virtio")
+fi
+if "${uefi}"; then
+  # The firmware's variables are not kept: doj-install boots UEFI from the removable
+  # media path, without a boot entry.
+  args+=(-drive "if=pflash,format=raw,readonly=on,file=${firmware}")
 fi
 
-# Emulation is several times slower than the arm64 VM's hypervisor, so the
-# deadline is longer than its 120 seconds.
-log="${log:-${work}/check.log}"
+if ! "${from_disk}"; then
+  # The newest release of a package: <pkgs>/<name>/<version>/<release>.
+  newest() {
+    local release
+    release="$(printf '%s\n' "${pkgs}/$1"/*/* | sort | tail -n 1)"
+    [[ -d "${release}" ]] || { echo "boot: no karate/$1 in ${pkgs}" >&2; exit 1; }
+    echo "${release}"
+  }
+  kernel="$(newest linux)/boot/bzImage"
+  root="${work}/root"
+  mkdir -p "${root}"/{bin,root,dev,proc,sys,run,tmp,etc,doj/pkgs}
+  cp "$(newest busybox-static)/bin/busybox" "${root}/bin/busybox"
+  while read -r applet; do
+    ln -s busybox "${root}/bin/${applet}"
+  done <"${vm}/applets"
+  cp "$(newest doj-launcher)/bin/doj-launch" "$(newest doj-sup-static)/bin/doj-sup" \
+    "$(newest doj)/bin/doj" "${root}/bin/"
+  cp "${vm}/init" "${root}/init"
+  cp "${vm}/check" "${root}/bin/check"
+  cp "${vm}/lease" "${root}/bin/lease"
+  cp "${vm}/../install/doj-install" "${root}/bin/doj-install"
+  chmod 0755 "${root}/init" "${root}"/bin/{check,lease,busybox,doj-launch,doj-sup,doj,doj-install}
+  echo "root:x:0:0:root:/root:/bin/sh" >"${root}/etc/passwd"
+  echo "root:x:0:" >"${root}/etc/group"
+  cp -R "${pkgs}" "${root}/doj/pkgs/karate"
+  for f in "${files[@]+"${files[@]}"}"; do
+    mkdir -p "${root}/$(dirname "${f#*:}")"
+    cp "${f%%:*}" "${root}/${f#*:}"
+  done
+  append="console=ttyS0 panic=-1"
+  case "${mode}" in
+    check) append+=" dojo.check" ;;
+    install | refuse-install)
+      echo "${install_args}" >"${root}/etc/doj-install.args"
+      append+=" dojo.install"
+      ;;
+  esac
+  initrd="${work}/initrd.cpio.gz"
+  (cd "${root}" && find . | "${cpio}/bin/cpio" --quiet -o -H newc -R 0:0) | gzip -6 >"${initrd}"
+  args+=(-kernel "${kernel}" -initrd "${initrd}" -append "${append}")
+fi
+
+if [[ -n "${console}" ]]; then
+  # A driver logs in on the serial console; the log is what QEMU itself says.
+  args+=(-display none -monitor none -serial "tcp:127.0.0.1:${console},server=on,wait=off")
+else
+  args+=(-nographic)
+fi
+
+log="${log:-${work}/console.log}"
 status=0
-"${coreutils}/bin/timeout" 600 "${qemu}" "${args[@]}" -nographic -append "${append} dojo.check" \
-  </dev/null >"${log}" 2>&1 || status=$?
-cat "${log}"
+"${coreutils}/bin/timeout" "${deadline}" "${qemu}" "${args[@]}" </dev/null >"${log}" 2>&1 || status=$?
 if [[ "${status}" -ne 0 ]]; then
-  echo "boot: QEMU exited ${status} (124 is the 600 second deadline)" >&2
+  echo "boot: QEMU exited ${status} (124 is the ${deadline} second deadline)" >&2
   exit 1
 fi
-if ! grep -q 'dojo: check ok' "${log}"; then
-  echo "boot: the VM shut down without reporting success" >&2
+expect=""
+case "${mode}" in
+  check) expect="dojo: check ok" ;;
+  install) expect="dojo: install ok" ;;
+  refuse-install) expect="dojo: install failed" ;;
+esac
+if [[ -n "${expect}" ]] && ! grep -q "${expect}" "${log}"; then
+  echo "boot: the VM shut down without \"${expect}\"" >&2
   exit 1
 fi
-if grep -q 'IP Address lookup failed' "${log}"; then
-  echo "boot: the Supervisor did not find its own address" >&2
-  exit 1
-fi
-if grep -q 'Kernel panic' "${log}" || ! grep -q 'reboot: Power down' "${log}"; then
-  echo "boot: the VM did not end cleanly (expected \"reboot: Power down\")" >&2
-  exit 1
+if [[ -z "${console}" ]]; then
+  if grep -q 'IP Address lookup failed' "${log}"; then
+    echo "boot: the Supervisor did not find its own address" >&2
+    exit 1
+  fi
+  if grep -q 'Kernel panic' "${log}" || ! grep -q 'reboot: Power down' "${log}"; then
+    echo "boot: the VM did not end cleanly (expected \"reboot: Power down\")" >&2
+    exit 1
+  fi
 fi

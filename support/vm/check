@@ -79,6 +79,11 @@ if [ -n "${members}" ]; then
   report "members=${alive} alive"
 fi
 
+# What else listens or logs in: an appliance has neither a getty nor sshd on port 22.
+listening=$(grep -c ' [0-9A-F]*:0016 [0-9A-F]*:0000 0A ' /proc/net/tcp /proc/net/tcp6 2>/dev/null |
+  grep -o '[0-9]*$' | grep -v '^0$' | grep -c .)
+report "getty=$(pidof getty || echo none) sshd=$(pidof sshd || echo none) port22=${listening}"
+
 report "check ok"
 # SIGINT to init reboots, SIGTERM powers off. Either way the Launcher stops the
 # Supervisor and, being init, ends the machine instead of exiting.
