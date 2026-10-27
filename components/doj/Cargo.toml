@@ -37,8 +37,11 @@ flate2 = "1.0.7"
 chrono = "0.4.6"
 
 [dependencies.clap]
-version = "2.33.0"
-features = ["suggestions", "color", "unstable"]
+version = "4.6.7"
+features = ["env", "string"]
+
+[dependencies.clap_complete]
+version = "4.6.11"
 
 [dependencies.dojo_core]
 path = "../core"

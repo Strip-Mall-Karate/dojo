@@ -15,8 +15,6 @@
 #![recursion_limit = "128"]
 
 #[macro_use]
-extern crate clap;
-#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
@@ -56,8 +54,8 @@ use crate::{common::{cli::{cache_key_path_from_matches,
             sup_client::{SrvClient,
                          SrvClientError}};
 
-use clap::{ArgMatches,
-           Shell};
+use clap::ArgMatches;
+use clap_complete::Shell;
 use doj::{cli,
           command::{self,
                     pkg::list::ListingType},
@@ -138,177 +136,177 @@ fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
     // https://github.com/kbknapp/clap-rs/issues/86
     let child = thread::Builder::new().stack_size(8 * 1024 * 1024)
                                       .spawn(move || {
-                                          cli::get(feature_flags).get_matches_from_safe_borrow(&mut args.iter())
-                                                    .unwrap_or_else(|e| e.exit())
+                                          cli::get(feature_flags).try_get_matches_from(args.iter())
+                                                                 .unwrap_or_else(|e| e.exit())
                                       })
                                       .unwrap();
     let app_matches = child.join().unwrap();
 
     match app_matches.subcommand() {
-        ("apply", Some(m)) => sub_svc_set(m)?,
-        ("cli", Some(matches)) => {
+        Some(("apply", m)) => sub_svc_set(m)?,
+        Some(("cli", matches)) => {
             match matches.subcommand() {
-                ("setup", Some(m)) => sub_cli_setup(ui, m)?,
-                ("completers", Some(m)) => sub_cli_completers(m, feature_flags)?,
+                Some(("setup", m)) => sub_cli_setup(ui, m)?,
+                Some(("completers", m)) => sub_cli_completers(m, feature_flags)?,
                 _ => unreachable!(),
             }
         }
-        ("config", Some(m)) => {
+        Some(("config", m)) => {
             match m.subcommand() {
-                ("apply", Some(m)) => sub_svc_set(m)?,
-                ("show", Some(m)) => sub_svc_config(m)?,
+                Some(("apply", m)) => sub_svc_set(m)?,
+                Some(("show", m)) => sub_svc_config(m)?,
                 _ => unreachable!(),
             }
         }
-        ("file", Some(m)) => {
+        Some(("file", m)) => {
             match m.subcommand() {
-                ("upload", Some(m)) => sub_file_put(m)?,
+                Some(("upload", m)) => sub_file_put(m)?,
                 _ => unreachable!(),
             }
         }
-        ("install", Some(m)) => sub_pkg_install(ui, m, feature_flags)?,
-        ("origin", Some(matches)) => {
+        Some(("install", m)) => sub_pkg_install(ui, m, feature_flags)?,
+        Some(("origin", matches)) => {
             match matches.subcommand() {
-                ("key", Some(m)) => {
+                Some(("key", m)) => {
                     match m.subcommand() {
-                        ("download", Some(sc)) => sub_origin_key_download(ui, sc)?,
-                        ("export", Some(sc)) => sub_origin_key_export(sc)?,
-                        ("generate", Some(sc)) => sub_origin_key_generate(ui, sc)?,
-                        ("import", Some(sc)) => sub_origin_key_import(ui, sc)?,
-                        ("upload", Some(sc)) => sub_origin_key_upload(ui, sc)?,
+                        Some(("download", sc)) => sub_origin_key_download(ui, sc)?,
+                        Some(("export", sc)) => sub_origin_key_export(sc)?,
+                        Some(("generate", sc)) => sub_origin_key_generate(ui, sc)?,
+                        Some(("import", sc)) => sub_origin_key_import(ui, sc)?,
+                        Some(("upload", sc)) => sub_origin_key_upload(ui, sc)?,
                         _ => unreachable!(),
                     }
                 }
-                ("secret", Some(m)) => {
+                Some(("secret", m)) => {
                     match m.subcommand() {
-                        ("upload", Some(sc)) => sub_origin_secret_upload(ui, sc)?,
-                        ("delete", Some(sc)) => sub_origin_secret_delete(ui, sc)?,
-                        ("list", Some(sc)) => sub_origin_secret_list(ui, sc)?,
+                        Some(("upload", sc)) => sub_origin_secret_upload(ui, sc)?,
+                        Some(("delete", sc)) => sub_origin_secret_delete(ui, sc)?,
+                        Some(("list", sc)) => sub_origin_secret_list(ui, sc)?,
                         _ => unreachable!(),
                     }
                 }
-                ("delete", Some(m)) => sub_origin_delete(ui, m)?,
+                Some(("delete", m)) => sub_origin_delete(ui, m)?,
                 _ => unreachable!(),
             }
         }
-        ("bldr", Some(matches)) => {
+        Some(("bldr", matches)) => {
             match matches.subcommand() {
-                ("job", Some(m)) => {
+                Some(("job", m)) => {
                     match m.subcommand() {
-                        ("start", Some(m)) => sub_bldr_job_start(ui, m)?,
-                        ("cancel", Some(m)) => sub_bldr_job_cancel(ui, m)?,
-                        ("promote", Some(m)) => sub_bldr_job_promote_or_demote(ui, m, true)?,
-                        ("demote", Some(m)) => sub_bldr_job_promote_or_demote(ui, m, false)?,
-                        ("status", Some(m)) => sub_bldr_job_status(ui, m)?,
+                        Some(("start", m)) => sub_bldr_job_start(ui, m)?,
+                        Some(("cancel", m)) => sub_bldr_job_cancel(ui, m)?,
+                        Some(("promote", m)) => sub_bldr_job_promote_or_demote(ui, m, true)?,
+                        Some(("demote", m)) => sub_bldr_job_promote_or_demote(ui, m, false)?,
+                        Some(("status", m)) => sub_bldr_job_status(ui, m)?,
                         _ => unreachable!(),
                     }
                 }
-                ("channel", Some(m)) => {
+                Some(("channel", m)) => {
                     match m.subcommand() {
-                        ("create", Some(m)) => sub_bldr_channel_create(ui, m)?,
-                        ("destroy", Some(m)) => sub_bldr_channel_destroy(ui, m)?,
-                        ("list", Some(m)) => sub_bldr_channel_list(ui, m)?,
-                        _ => unreachable!(),
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
-        ("pkg", Some(matches)) => {
-            match matches.subcommand() {
-                ("binds", Some(m)) => sub_pkg_binds(m)?,
-                ("binlink", Some(m)) => sub_pkg_binlink(ui, m)?,
-                ("build", Some(m)) => sub_pkg_build(ui, m)?,
-                ("channels", Some(m)) => sub_pkg_channels(ui, m)?,
-                ("config", Some(m)) => sub_pkg_config(m)?,
-                ("dependencies", Some(m)) => sub_pkg_dependencies(m)?,
-                ("env", Some(m)) => sub_pkg_env(m)?,
-                ("exec", Some(m)) => sub_pkg_exec(m, &remaining_args)?,
-                ("export", Some(m)) => sub_pkg_export(ui, m)?,
-                ("hash", Some(m)) => sub_pkg_hash(m)?,
-                ("install", Some(m)) => sub_pkg_install(ui, m, feature_flags)?,
-                ("list", Some(m)) => sub_pkg_list(m)?,
-                ("path", Some(m)) => sub_pkg_path(m)?,
-                ("provides", Some(m)) => sub_pkg_provides(m)?,
-                ("search", Some(m)) => sub_pkg_search(m)?,
-                ("sign", Some(m)) => sub_pkg_sign(ui, m)?,
-                ("uninstall", Some(m)) => sub_pkg_uninstall(ui, m)?,
-                ("upload", Some(m)) => sub_pkg_upload(ui, m)?,
-                ("delete", Some(m)) => sub_pkg_delete(ui, m)?,
-                ("verify", Some(m)) => sub_pkg_verify(ui, m)?,
-                ("header", Some(m)) => sub_pkg_header(ui, m)?,
-                ("info", Some(m)) => sub_pkg_info(ui, m)?,
-                ("promote", Some(m)) => sub_pkg_promote(ui, m)?,
-                ("demote", Some(m)) => sub_pkg_demote(ui, m)?,
-                _ => unreachable!(),
-            }
-        }
-        ("plan", Some(matches)) => {
-            match matches.subcommand() {
-                ("init", Some(m)) => sub_plan_init(ui, m)?,
-                ("render", Some(m)) => sub_plan_render(ui, m)?,
-                _ => unreachable!(),
-            }
-        }
-        ("ring", Some(matches)) => {
-            match matches.subcommand() {
-                ("key", Some(m)) => {
-                    match m.subcommand() {
-                        ("export", Some(sc)) => sub_ring_key_export(sc)?,
-                        ("import", Some(sc)) => sub_ring_key_import(ui, sc)?,
-                        ("generate", Some(sc)) => sub_ring_key_generate(ui, sc)?,
+                        Some(("create", m)) => sub_bldr_channel_create(ui, m)?,
+                        Some(("destroy", m)) => sub_bldr_channel_destroy(ui, m)?,
+                        Some(("list", m)) => sub_bldr_channel_list(ui, m)?,
                         _ => unreachable!(),
                     }
                 }
                 _ => unreachable!(),
             }
         }
-        ("shell", Some(matches)) => {
+        Some(("pkg", matches)) => {
             match matches.subcommand() {
-                ("lock", Some(m)) => sub_shell_lock(m)?,
-                ("env", Some(m)) => sub_shell_env(m)?,
+                Some(("binds", m)) => sub_pkg_binds(m)?,
+                Some(("binlink", m)) => sub_pkg_binlink(ui, m)?,
+                Some(("build", m)) => sub_pkg_build(ui, m)?,
+                Some(("channels", m)) => sub_pkg_channels(ui, m)?,
+                Some(("config", m)) => sub_pkg_config(m)?,
+                Some(("dependencies", m)) => sub_pkg_dependencies(m)?,
+                Some(("env", m)) => sub_pkg_env(m)?,
+                Some(("exec", m)) => sub_pkg_exec(m, &remaining_args)?,
+                Some(("export", m)) => sub_pkg_export(ui, m)?,
+                Some(("hash", m)) => sub_pkg_hash(m)?,
+                Some(("install", m)) => sub_pkg_install(ui, m, feature_flags)?,
+                Some(("list", m)) => sub_pkg_list(m)?,
+                Some(("path", m)) => sub_pkg_path(m)?,
+                Some(("provides", m)) => sub_pkg_provides(m)?,
+                Some(("search", m)) => sub_pkg_search(m)?,
+                Some(("sign", m)) => sub_pkg_sign(ui, m)?,
+                Some(("uninstall", m)) => sub_pkg_uninstall(ui, m)?,
+                Some(("upload", m)) => sub_pkg_upload(ui, m)?,
+                Some(("delete", m)) => sub_pkg_delete(ui, m)?,
+                Some(("verify", m)) => sub_pkg_verify(ui, m)?,
+                Some(("header", m)) => sub_pkg_header(ui, m)?,
+                Some(("info", m)) => sub_pkg_info(ui, m)?,
+                Some(("promote", m)) => sub_pkg_promote(ui, m)?,
+                Some(("demote", m)) => sub_pkg_demote(ui, m)?,
                 _ => unreachable!(),
             }
         }
-        ("svc", Some(matches)) => {
+        Some(("plan", matches)) => {
             match matches.subcommand() {
-                ("key", Some(m)) => {
+                Some(("init", m)) => sub_plan_init(ui, m)?,
+                Some(("render", m)) => sub_plan_render(ui, m)?,
+                _ => unreachable!(),
+            }
+        }
+        Some(("ring", matches)) => {
+            match matches.subcommand() {
+                Some(("key", m)) => {
                     match m.subcommand() {
-                        ("generate", Some(sc)) => sub_service_key_generate(ui, sc)?,
+                        Some(("export", sc)) => sub_ring_key_export(sc)?,
+                        Some(("import", sc)) => sub_ring_key_import(ui, sc)?,
+                        Some(("generate", sc)) => sub_ring_key_generate(ui, sc)?,
                         _ => unreachable!(),
                     }
                 }
-                ("load", Some(m)) => sub_svc_load(m)?,
-                ("unload", Some(m)) => sub_svc_unload(m)?,
-                ("start", Some(m)) => sub_svc_start(m)?,
-                ("stop", Some(m)) => sub_svc_stop(m)?,
-                ("status", Some(m)) => sub_svc_status(m)?,
                 _ => unreachable!(),
             }
         }
-        ("sup", Some(m)) => {
+        Some(("shell", matches)) => {
+            match matches.subcommand() {
+                Some(("lock", m)) => sub_shell_lock(m)?,
+                Some(("env", m)) => sub_shell_env(m)?,
+                _ => unreachable!(),
+            }
+        }
+        Some(("svc", matches)) => {
+            match matches.subcommand() {
+                Some(("key", m)) => {
+                    match m.subcommand() {
+                        Some(("generate", sc)) => sub_service_key_generate(ui, sc)?,
+                        _ => unreachable!(),
+                    }
+                }
+                Some(("load", m)) => sub_svc_load(m)?,
+                Some(("unload", m)) => sub_svc_unload(m)?,
+                Some(("start", m)) => sub_svc_start(m)?,
+                Some(("stop", m)) => sub_svc_stop(m)?,
+                Some(("status", m)) => sub_svc_status(m)?,
+                _ => unreachable!(),
+            }
+        }
+        Some(("sup", m)) => {
             match m.subcommand() {
-                ("depart", Some(m)) => sub_sup_depart(m)?,
-                ("secret", Some(m)) => {
+                Some(("depart", m)) => sub_sup_depart(m)?,
+                Some(("secret", m)) => {
                     match m.subcommand() {
-                        ("generate", _) => sub_sup_secret_generate()?,
+                        Some(("generate", _)) => sub_sup_secret_generate()?,
                         _ => unreachable!(),
                     }
                 }
                 // this is effectively an alias of `doj svc status`
-                ("status", Some(m)) => sub_svc_status(m)?,
+                Some(("status", m)) => sub_svc_status(m)?,
                 _ => unreachable!(),
             }
         }
-        ("supportbundle", _) => sub_supportbundle(ui)?,
-        ("setup", Some(m)) => sub_cli_setup(ui, m)?,
-        ("start", Some(m)) => sub_svc_start(m)?,
-        ("stop", Some(m)) => sub_svc_stop(m)?,
-        ("user", Some(matches)) => {
+        Some(("supportbundle", _)) => sub_supportbundle(ui)?,
+        Some(("setup", m)) => sub_cli_setup(ui, m)?,
+        Some(("start", m)) => sub_svc_start(m)?,
+        Some(("stop", m)) => sub_svc_stop(m)?,
+        Some(("user", matches)) => {
             match matches.subcommand() {
-                ("key", Some(m)) => {
+                Some(("key", m)) => {
                     match m.subcommand() {
-                        ("generate", Some(sc)) => sub_user_key_generate(ui, sc)?,
+                        Some(("generate", sc)) => sub_user_key_generate(ui, sc)?,
                         _ => unreachable!(),
                     }
                 }
@@ -320,30 +318,34 @@ fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
     Ok(())
 }
 
-fn sub_cli_setup(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_cli_setup(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::cli::setup::start(ui, &cache_key_path)
 }
 
-fn sub_cli_completers(m: &ArgMatches<'_>, feature_flags: FeatureFlag) -> Result<()> {
-    let shell = m.value_of("SHELL")
+fn sub_cli_completers(m: &ArgMatches, feature_flags: FeatureFlag) -> Result<()> {
+    let shell = m.get_one::<String>("SHELL")
+                 .map(String::as_str)
                  .expect("Missing Shell; A shell is required");
 
     // TODO (CM): Interesting... the completions generated can depend
     // on what feature flags happen to be enabled at the time you
     // generated the completions
-    cli::get(feature_flags).gen_completions_to("doj",
-                                               shell.parse::<Shell>().unwrap(),
-                                               &mut io::stdout());
+    let shell = shell.parse::<Shell>()
+                     .expect("SHELL is one of the shells clap_complete supports");
+    clap_complete::generate(shell,
+                            &mut cli::get(feature_flags),
+                            "doj",
+                            &mut io::stdout());
     Ok(())
 }
 
-fn sub_origin_key_download(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let origin = m.value_of("ORIGIN").unwrap(); // Required via clap
-    let revision = m.value_of("REVISION");
-    let with_secret = m.is_present("WITH_SECRET");
-    let with_encryption = m.is_present("WITH_ENCRYPTION");
+fn sub_origin_key_download(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let origin = m.get_one::<String>("ORIGIN").map(String::as_str).unwrap(); // Required via clap
+    let revision = m.get_one::<String>("REVISION").map(String::as_str);
+    let with_secret = m.get_flag("WITH_SECRET");
+    let with_encryption = m.get_flag("WITH_ENCRYPTION");
     let token = maybe_auth_token(&m);
     let url = bldr_url_from_matches(&m)?;
     let cache_key_path = cache_key_path_from_matches(&m);
@@ -358,22 +360,24 @@ fn sub_origin_key_download(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
                                           &cache_key_path)
 }
 
-fn sub_origin_key_export(m: &ArgMatches<'_>) -> Result<()> {
-    let origin = m.value_of("ORIGIN").unwrap(); // Required via clap
-    let pair_type = PairType::from_str(m.value_of("PAIR_TYPE").unwrap_or("public"))?;
+fn sub_origin_key_export(m: &ArgMatches) -> Result<()> {
+    let origin = m.get_one::<String>("ORIGIN").map(String::as_str).unwrap(); // Required via clap
+    let pair_type = PairType::from_str(m.get_one::<String>("PAIR_TYPE")
+                                        .map(String::as_str)
+                                        .unwrap_or("public"))?;
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::origin::key::export::start(origin, pair_type, &cache_key_path)
 }
 
-fn sub_origin_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_origin_key_generate(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let origin = origin_param_or_env(&m)?;
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::origin::key::generate::start(ui, &origin, &cache_key_path)
 }
 
-fn sub_origin_key_import(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_origin_key_import(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let mut content = String::new();
     let cache_key_path = cache_key_path_from_matches(&m);
     io::stdin().read_to_string(&mut content)?;
@@ -382,15 +386,15 @@ fn sub_origin_key_import(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     command::origin::key::import::start(ui, content.trim(), &cache_key_path)
 }
 
-fn sub_origin_key_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_origin_key_upload(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let token = auth_token_param_or_env(&m)?;
     let cache_key_path = cache_key_path_from_matches(&m);
 
-    if m.is_present("ORIGIN") {
-        let origin = m.value_of("ORIGIN").unwrap();
+    if m.contains_id("ORIGIN") {
+        let origin = m.get_one::<String>("ORIGIN").map(String::as_str).unwrap();
         // you can either specify files, or infer the latest key names
-        let with_secret = m.is_present("WITH_SECRET");
+        let with_secret = m.get_flag("WITH_SECRET");
         command::origin::key::upload_latest::start(ui,
                                                    &url,
                                                    &token,
@@ -398,18 +402,22 @@ fn sub_origin_key_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
                                                    with_secret,
                                                    &cache_key_path)
     } else {
-        let keyfile = Path::new(m.value_of("PUBLIC_FILE").unwrap());
-        let secret_keyfile = m.value_of("SECRET_FILE").map(|f| Path::new(f));
+        let keyfile = Path::new(m.get_one::<String>("PUBLIC_FILE")
+                                 .map(String::as_str)
+                                 .unwrap());
+        let secret_keyfile = m.get_one::<String>("SECRET_FILE")
+                              .map(String::as_str)
+                              .map(|f| Path::new(f));
         command::origin::key::upload::start(ui, &url, &token, &keyfile, secret_keyfile)
     }
 }
 
-fn sub_origin_secret_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_origin_secret_upload(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let token = auth_token_param_or_env(&m)?;
     let origin = origin_param_or_env(&m)?;
-    let key = m.value_of("KEY_NAME").unwrap();
-    let secret = m.value_of("SECRET").unwrap();
+    let key = m.get_one::<String>("KEY_NAME").map(String::as_str).unwrap();
+    let secret = m.get_one::<String>("SECRET").map(String::as_str).unwrap();
     let cache_key_path = cache_key_path_from_matches(&m);
     command::origin::secret::upload::start(ui,
                                            &url,
@@ -420,33 +428,35 @@ fn sub_origin_secret_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
                                            &cache_key_path)
 }
 
-fn sub_origin_secret_delete(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_origin_secret_delete(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let token = auth_token_param_or_env(&m)?;
     let origin = origin_param_or_env(&m)?;
-    let key = m.value_of("KEY_NAME").unwrap();
+    let key = m.get_one::<String>("KEY_NAME").map(String::as_str).unwrap();
     command::origin::secret::delete::start(ui, &url, &token, &origin, &key)
 }
 
-fn sub_origin_secret_list(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_origin_secret_list(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let token = auth_token_param_or_env(&m)?;
     let origin = origin_param_or_env(&m)?;
     command::origin::secret::list::start(ui, &url, &token, &origin)
 }
 
-fn sub_origin_delete(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_origin_delete(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let origin = origin_param_or_env(&m)?;
     let url = bldr_url_from_matches(&m)?;
     let token = auth_token_param_or_env(&m)?;
     command::origin::delete::start(ui, &url, &token, &origin)
 }
 
-fn sub_pkg_binlink(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
-    let dest_dir = Path::new(m.value_of("DEST_DIR").unwrap()); // required by clap
-    let force = m.is_present("FORCE");
-    match m.value_of("BINARY") {
+fn sub_pkg_binlink(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
+    let dest_dir = Path::new(m.get_one::<String>("DEST_DIR").map(String::as_str).unwrap()); // required by clap
+    let force = m.get_flag("FORCE");
+    match m.get_one::<String>("BINARY").map(String::as_str) {
         Some(binary) => {
             command::pkg::binlink::start(ui, &ident, &binary, dest_dir, &FS_ROOT, force)
         }
@@ -454,11 +464,15 @@ fn sub_pkg_binlink(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     }
 }
 
-fn sub_pkg_build(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let plan_context = m.value_of("PLAN_CONTEXT").unwrap(); // Required via clap
-    let root = m.value_of("DOJ_STUDIO_ROOT");
-    let src = m.value_of("SRC_PATH");
-    let keys_string = match m.values_of("DOJ_ORIGIN_KEYS") {
+fn sub_pkg_build(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let plan_context = m.get_one::<String>("PLAN_CONTEXT")
+                        .map(String::as_str)
+                        .unwrap(); // Required via clap
+    let root = m.get_one::<String>("DOJ_STUDIO_ROOT").map(String::as_str);
+    let src = m.get_one::<String>("SRC_PATH").map(String::as_str);
+    let keys_string = match m.get_many::<String>("DOJ_ORIGIN_KEYS")
+                             .map(|v| v.map(String::as_str))
+    {
         Some(keys) => {
             let cache_key_path = cache_key_path_from_matches(&m);
             for key in keys.clone() {
@@ -474,35 +488,41 @@ fn sub_pkg_build(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
         Some(s) => Some(s),
         None => None,
     };
-    let docker = m.is_present("DOCKER");
-    let reuse = m.is_present("REUSE");
+    let docker = m.get_flag("DOCKER");
+    let reuse = m.get_flag("REUSE");
 
     command::pkg::build::start(ui, plan_context, root, src, keys, reuse, docker)
 }
 
-fn sub_pkg_config(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+fn sub_pkg_config(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
 
     common::command::package::config::start(&ident, &*FS_ROOT)?;
     Ok(())
 }
 
-fn sub_pkg_binds(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+fn sub_pkg_binds(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
 
     common::command::package::binds::start(&ident, &*FS_ROOT)?;
     Ok(())
 }
 
-fn sub_pkg_dependencies(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
-    let scope = if m.is_present("TRANSITIVE") {
+fn sub_pkg_dependencies(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
+    let scope = if m.get_flag("TRANSITIVE") {
         command::pkg::Scope::PackageAndDependencies
     } else {
         command::pkg::Scope::Package
     };
 
-    let direction = if m.is_present("REVERSE") {
+    let direction = if m.get_flag("REVERSE") {
         command::pkg::DependencyRelation::Supports
     } else {
         command::pkg::DependencyRelation::Requires
@@ -510,17 +530,17 @@ fn sub_pkg_dependencies(m: &ArgMatches<'_>) -> Result<()> {
     command::pkg::dependencies::start(&ident, scope, direction, &*FS_ROOT)
 }
 
-fn sub_shell_lock(m: &ArgMatches<'_>) -> Result<()> {
-    command::shell::lock(&env::current_dir()?, &*FS_ROOT, m.is_present("UPDATE"))
+fn sub_shell_lock(m: &ArgMatches) -> Result<()> {
+    command::shell::lock(&env::current_dir()?, &*FS_ROOT, m.get_flag("UPDATE"))
 }
 
-fn sub_shell_env(m: &ArgMatches<'_>) -> Result<()> {
+fn sub_shell_env(m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(m)?;
     command::shell::env(&env::current_dir()?, &*FS_ROOT, &url)
 }
 
-fn sub_pkg_env(m: &ArgMatches<'_>) -> Result<()> {
-    let idents = m.values_of("PKG_IDENT")
+fn sub_pkg_env(m: &ArgMatches) -> Result<()> {
+    let idents = m.get_many::<String>("PKG_IDENT").map(|v| v.map(String::as_str))
                   .unwrap() // Required via clap
                   .map(PackageIdent::from_str)
                   .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -528,24 +548,28 @@ fn sub_pkg_env(m: &ArgMatches<'_>) -> Result<()> {
     command::pkg::env::start(&idents, &*FS_ROOT)
 }
 
-fn sub_pkg_exec(m: &ArgMatches<'_>, cmd_args: &[OsString]) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?; // Required via clap
-    let cmd = m.value_of("CMD").unwrap(); // Required via clap
+fn sub_pkg_exec(m: &ArgMatches, cmd_args: &[OsString]) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?; // Required via clap
+    let cmd = m.get_one::<String>("CMD").map(String::as_str).unwrap(); // Required via clap
 
     command::pkg::exec::start(&ident, cmd, cmd_args)
 }
 
-fn sub_pkg_export(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
-    let format = &m.value_of("FORMAT").unwrap();
+fn sub_pkg_export(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
+    let format = &m.get_one::<String>("FORMAT").map(String::as_str).unwrap();
     let url = bldr_url_from_matches(&m)?;
     let channel = channel_from_matches_or_default(&m);
     let export_fmt = command::pkg::export::format_for(ui, &format)?;
     command::pkg::export::start(ui, &url, &channel, &ident, &export_fmt)
 }
 
-fn sub_pkg_hash(m: &ArgMatches<'_>) -> Result<()> {
-    match m.value_of("SOURCE") {
+fn sub_pkg_hash(m: &ArgMatches) -> Result<()> {
+    match m.get_one::<String>("SOURCE").map(String::as_str) {
         Some(source) => {
             // hash single file
             command::pkg::hash::start(&source)
@@ -562,14 +586,16 @@ fn sub_pkg_hash(m: &ArgMatches<'_>) -> Result<()> {
     }
 }
 
-fn sub_pkg_uninstall(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
-    let execute_strategy = if m.is_present("DRYRUN") {
+fn sub_pkg_uninstall(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
+    let execute_strategy = if m.get_flag("DRYRUN") {
         command::pkg::ExecutionStrategy::DryRun
     } else {
         command::pkg::ExecutionStrategy::Run
     };
-    let scope = if m.is_present("NO_DEPS") {
+    let scope = if m.get_flag("NO_DEPS") {
         command::pkg::Scope::Package
     } else {
         command::pkg::Scope::PackageAndDependencies
@@ -586,7 +612,7 @@ fn sub_pkg_uninstall(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
                                    &excludes,
                                    &services)
 }
-fn sub_bldr_channel_create(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_bldr_channel_create(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let origin = origin_param_or_env(&m)?;
     let channel = required_channel_from_matches(&m);
@@ -594,7 +620,7 @@ fn sub_bldr_channel_create(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     command::bldr::channel::create::start(ui, &url, &token, &origin, &channel)
 }
 
-fn sub_bldr_channel_destroy(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_bldr_channel_destroy(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let origin = origin_param_or_env(&m)?;
     let channel = required_channel_from_matches(&m);
@@ -602,36 +628,38 @@ fn sub_bldr_channel_destroy(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     command::bldr::channel::destroy::start(ui, &url, &token, &origin, &channel)
 }
 
-fn sub_bldr_channel_list(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_bldr_channel_list(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let origin = origin_param_or_env(&m)?;
     command::bldr::channel::list::start(ui, &url, &origin)
 }
 
-fn sub_bldr_job_start(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?; // Required via clap
+fn sub_bldr_job_start(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?; // Required via clap
     let url = bldr_url_from_matches(&m)?;
     let target = target_from_matches(m)?;
-    let group = m.is_present("GROUP");
+    let group = m.get_flag("GROUP");
     let token = auth_token_param_or_env(&m)?;
     command::bldr::job::start::start(ui, &url, (&ident, target), &token, group)
 }
 
-fn sub_bldr_job_cancel(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_bldr_job_cancel(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
-    let group_id = m.value_of("GROUP_ID").unwrap(); // Required via clap
+    let group_id = m.get_one::<String>("GROUP_ID").map(String::as_str).unwrap(); // Required via clap
     let token = auth_token_param_or_env(&m)?;
-    let force = m.is_present("FORCE");
+    let force = m.get_flag("FORCE");
     command::bldr::job::cancel::start(ui, &url, &group_id, &token, force)
 }
 
-fn sub_bldr_job_promote_or_demote(ui: &mut UI, m: &ArgMatches<'_>, promote: bool) -> Result<()> {
+fn sub_bldr_job_promote_or_demote(ui: &mut UI, m: &ArgMatches, promote: bool) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
-    let group_id = m.value_of("GROUP_ID").unwrap(); // Required via clap
+    let group_id = m.get_one::<String>("GROUP_ID").map(String::as_str).unwrap(); // Required via clap
     let channel = required_channel_from_matches(&m);
-    let origin = m.value_of("ORIGIN");
-    let interactive = m.is_present("INTERACTIVE");
-    let verbose = m.is_present("VERBOSE");
+    let origin = m.get_one::<String>("ORIGIN").map(String::as_str);
+    let interactive = m.get_flag("INTERACTIVE");
+    let verbose = m.get_flag("VERBOSE");
     let token = auth_token_param_or_env(&m)?;
     command::bldr::job::promote::start(ui,
                                        &url,
@@ -644,26 +672,30 @@ fn sub_bldr_job_promote_or_demote(ui: &mut UI, m: &ArgMatches<'_>, promote: bool
                                        promote)
 }
 
-fn sub_bldr_job_status(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_bldr_job_status(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
-    let group_id = m.value_of("GROUP_ID");
-    let origin = m.value_of("ORIGIN");
-    let limit = m.value_of("LIMIT")
+    let group_id = m.get_one::<String>("GROUP_ID").map(String::as_str);
+    let origin = m.get_one::<String>("ORIGIN").map(String::as_str);
+    let limit = m.get_one::<String>("LIMIT")
+                 .map(String::as_str)
                  .unwrap_or("10")
                  .parse::<usize>()
                  .unwrap();
-    let show_jobs = m.is_present("SHOW_JOBS");
+    let show_jobs = m.get_flag("SHOW_JOBS");
 
     command::bldr::job::status::start(ui, &url, group_id, origin, limit, show_jobs)
 }
 
-fn sub_plan_init(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let name = m.value_of("PKG_NAME").map(String::from);
+fn sub_plan_init(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let name = m.get_one::<String>("PKG_NAME")
+                .map(String::as_str)
+                .map(String::from);
     let origin = origin_param_or_env(&m)?;
-    let with_docs = m.is_present("WITH_DOCS");
-    let with_callbacks = m.is_present("WITH_CALLBACKS");
-    let with_all = m.is_present("WITH_ALL");
-    let scaffolding_ident = scaffolding::scaffold_check(ui, m.value_of("SCAFFOLDING"))?;
+    let with_docs = m.get_flag("WITH_DOCS");
+    let with_callbacks = m.get_flag("WITH_CALLBACKS");
+    let with_all = m.get_flag("WITH_ALL");
+    let scaffolding_ident =
+        scaffolding::scaffold_check(ui, m.get_one::<String>("SCAFFOLDING").map(String::as_str))?;
 
     command::plan::init::start(ui,
                                origin,
@@ -674,20 +706,30 @@ fn sub_plan_init(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
                                name)
 }
 
-fn sub_plan_render(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let template_path = Path::new(m.value_of("TEMPLATE_PATH").unwrap());
+fn sub_plan_render(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let template_path = Path::new(m.get_one::<String>("TEMPLATE_PATH")
+                                   .map(String::as_str)
+                                   .unwrap());
 
-    let default_toml_path = Path::new(m.value_of("DEFAULT_TOML").unwrap());
+    let default_toml_path = Path::new(m.get_one::<String>("DEFAULT_TOML")
+                                       .map(String::as_str)
+                                       .unwrap());
 
-    let user_toml_path = m.value_of("USER_TOML").map(Path::new);
+    let user_toml_path = m.get_one::<String>("USER_TOML")
+                          .map(String::as_str)
+                          .map(Path::new);
 
-    let mock_data_path = m.value_of("MOCK_DATA").map(Path::new);
+    let mock_data_path = m.get_one::<String>("MOCK_DATA")
+                          .map(String::as_str)
+                          .map(Path::new);
 
-    let print = m.is_present("PRINT");
-    let render = !m.is_present("NO_RENDER");
-    let quiet = m.is_present("QUIET");
+    let print = m.get_flag("PRINT");
+    let render = !m.get_flag("NO_RENDER");
+    let quiet = m.get_flag("QUIET");
 
-    let render_dir = Path::new(m.value_of("RENDER_DIR").unwrap());
+    let render_dir = Path::new(m.get_one::<String>("RENDER_DIR")
+                                .map(String::as_str)
+                                .unwrap());
 
     command::plan::render::start(ui,
                                  template_path,
@@ -700,27 +742,27 @@ fn sub_plan_render(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
                                  quiet)
 }
 
-fn sub_pkg_install(ui: &mut UI, m: &ArgMatches<'_>, feature_flags: FeatureFlag) -> Result<()> {
+fn sub_pkg_install(ui: &mut UI, m: &ArgMatches, feature_flags: FeatureFlag) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let channel = channel_from_matches_or_default(m);
     let install_sources = install_sources_from_matches(m)?;
     let token = maybe_auth_token(&m);
     let install_mode =
-        if feature_flags.contains(FeatureFlag::OFFLINE_INSTALL) && m.is_present("OFFLINE") {
+        if feature_flags.contains(FeatureFlag::OFFLINE_INSTALL) && m.get_flag("OFFLINE") {
             InstallMode::Offline
         } else {
             InstallMode::default()
         };
 
     let local_package_usage =
-        if feature_flags.contains(FeatureFlag::IGNORE_LOCAL) && m.is_present("IGNORE_LOCAL") {
+        if feature_flags.contains(FeatureFlag::IGNORE_LOCAL) && m.get_flag("IGNORE_LOCAL") {
             LocalPackageUsage::Ignore
         } else {
             LocalPackageUsage::default()
         };
 
     let install_hook_mode = if !feature_flags.contains(FeatureFlag::INSTALL_HOOK)
-                               || m.is_present("IGNORE_INSTALL_HOOK")
+                               || m.get_flag("IGNORE_INSTALL_HOOK")
     {
         InstallHookMode::Ignore
     } else {
@@ -742,8 +784,8 @@ fn sub_pkg_install(ui: &mut UI, m: &ArgMatches<'_>, feature_flags: FeatureFlag) 
                                                      &local_package_usage,
                                                      install_hook_mode)?;
 
-        if m.is_present("BINLINK") {
-            let force = m.is_present("FORCE");
+        if m.get_flag("BINLINK") {
+            let force = m.get_flag("FORCE");
             command::pkg::binlink::binlink_all_in_pkg(ui,
                                                       pkg_install.ident(),
                                                       Path::new(DEFAULT_BINLINK_DIR),
@@ -754,37 +796,41 @@ fn sub_pkg_install(ui: &mut UI, m: &ArgMatches<'_>, feature_flags: FeatureFlag) 
     Ok(())
 }
 
-fn sub_pkg_path(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+fn sub_pkg_path(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
 
     command::pkg::path::start(&ident, &*FS_ROOT)
 }
 
-fn sub_pkg_list(m: &ArgMatches<'_>) -> Result<()> {
+fn sub_pkg_list(m: &ArgMatches) -> Result<()> {
     let listing_type = ListingType::from(m);
 
     command::pkg::list::start(&listing_type, &*FS_ROOT)
 }
 
-fn sub_pkg_provides(m: &ArgMatches<'_>) -> Result<()> {
-    let filename = m.value_of("FILE").unwrap(); // Required via clap
+fn sub_pkg_provides(m: &ArgMatches) -> Result<()> {
+    let filename = m.get_one::<String>("FILE").map(String::as_str).unwrap(); // Required via clap
 
-    let full_releases = m.is_present("FULL_RELEASES");
-    let full_paths = m.is_present("FULL_PATHS");
+    let full_releases = m.get_flag("FULL_RELEASES");
+    let full_paths = m.get_flag("FULL_PATHS");
 
     command::pkg::provides::start(&filename, &*FS_ROOT, full_releases, full_paths)
 }
 
-fn sub_pkg_search(m: &ArgMatches<'_>) -> Result<()> {
+fn sub_pkg_search(m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
-    let search_term = m.value_of("SEARCH_TERM").unwrap(); // Required via clap
+    let search_term = m.get_one::<String>("SEARCH_TERM")
+                       .map(String::as_str)
+                       .unwrap(); // Required via clap
     let token = maybe_auth_token(&m);
     command::pkg::search::start(&search_term, &url, token.as_ref().map(String::as_str))
 }
 
-fn sub_pkg_sign(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
-    let dst = Path::new(m.value_of("DEST").unwrap()); // Required via clap
+fn sub_pkg_sign(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let src = Path::new(m.get_one::<String>("SOURCE").map(String::as_str).unwrap()); // Required via clap
+    let dst = Path::new(m.get_one::<String>("DEST").map(String::as_str).unwrap()); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
     let pair = SigKeyPair::get_latest_pair_for(&origin_param_or_env(&m)?,
                                                &cache_key_path,
@@ -793,7 +839,7 @@ fn sub_pkg_sign(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     command::pkg::sign::start(ui, &pair, &src, &dst)
 }
 
-fn sub_pkg_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_pkg_upload(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let key_path = cache_key_path_from_matches(&m);
     let url = bldr_url_from_matches(&m)?;
 
@@ -803,10 +849,12 @@ fn sub_pkg_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
 
     // When packages are uploaded we check if they exist in the db
     // before allowing a write to the backend, this bypasses the check
-    let force_upload = m.is_present("FORCE");
+    let force_upload = m.get_flag("FORCE");
 
     let token = auth_token_param_or_env(&m)?;
-    let artifact_paths = m.values_of("HART_FILE").unwrap(); // Required via clap
+    let artifact_paths = m.get_many::<String>("HART_FILE")
+                          .map(|v| v.map(String::as_str))
+                          .unwrap(); // Required via clap
     for artifact_path in artifact_paths.map(Path::new) {
         command::pkg::upload::start(ui,
                                     &url,
@@ -819,10 +867,12 @@ fn sub_pkg_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_pkg_delete(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_pkg_delete(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let token = auth_token_param_or_env(&m)?;
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
     let target = target_from_matches(m)?;
 
     command::pkg::delete::start(ui, &url, (&ident, target), &token)?;
@@ -830,47 +880,53 @@ fn sub_pkg_delete(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_pkg_verify(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
+fn sub_pkg_verify(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let src = Path::new(m.get_one::<String>("SOURCE").map(String::as_str).unwrap()); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::pkg::verify::start(ui, &src, &cache_key_path)
 }
 
-fn sub_pkg_header(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
+fn sub_pkg_header(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let src = Path::new(m.get_one::<String>("SOURCE").map(String::as_str).unwrap()); // Required via clap
 
     command::pkg::header::start(ui, &src)
 }
 
-fn sub_pkg_info(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
-    let to_json = m.is_present("TO_JSON");
+fn sub_pkg_info(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let src = Path::new(m.get_one::<String>("SOURCE").map(String::as_str).unwrap()); // Required via clap
+    let to_json = m.get_flag("TO_JSON");
 
     command::pkg::info::start(ui, &src, to_json)
 }
 
-fn sub_pkg_promote(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_pkg_promote(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let channel = required_channel_from_matches(&m);
     let token = auth_token_param_or_env(&m)?;
     let target = target_from_matches(m)?;
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?; // Required via clap
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?; // Required via clap
     command::pkg::promote::start(ui, &url, (&ident, target), &channel, &token)
 }
 
-fn sub_pkg_demote(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_pkg_demote(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let channel = required_channel_from_matches(&m);
     let token = auth_token_param_or_env(&m)?;
     let target = target_from_matches(m)?;
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?; // Required via clap
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?; // Required via clap
     command::pkg::demote::start(ui, &url, (&ident, target), &channel, &token)
 }
 
-fn sub_pkg_channels(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_pkg_channels(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?; // Required via clap
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?; // Required via clap
     let token = maybe_auth_token(&m);
     let target = target_from_matches(m)?;
 
@@ -880,16 +936,18 @@ fn sub_pkg_channels(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
                                   token.as_ref().map(String::as_str))
 }
 
-fn sub_svc_set(m: &ArgMatches<'_>) -> Result<()> {
+fn sub_svc_set(m: &ArgMatches) -> Result<()> {
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
-    let service_group = ServiceGroup::from_str(m.value_of("SERVICE_GROUP").unwrap())?;
+    let service_group = ServiceGroup::from_str(m.get_one::<String>("SERVICE_GROUP")
+                                                .map(String::as_str)
+                                                .unwrap())?;
     let mut ui = ui();
     let mut validate = protocol::ctl::SvcValidateCfg::default();
     validate.service_group = Some(service_group.clone().into());
     let mut buf = Vec::with_capacity(protocol::butterfly::MAX_SVC_CFG_SIZE);
-    let cfg_len = match m.value_of("FILE") {
+    let cfg_len = match m.get_one::<String>("FILE").map(String::as_str) {
         Some("-") | None => io::stdin().read_to_end(&mut buf)?,
         Some(f) => {
             let mut file = File::open(f)?;
@@ -918,7 +976,10 @@ fn sub_svc_set(m: &ArgMatches<'_>) -> Result<()> {
         _ => set.cfg = Some(buf.to_vec()),
     }
     set.service_group = Some(service_group.into());
-    set.version = Some(value_t!(m, "VERSION_NUMBER", u64).unwrap());
+    set.version = Some(m.get_one::<String>("VERSION_NUMBER")
+                        .expect(concat!("VERSION_NUMBER", " is required"))
+                        .parse::<u64>()
+                        .unwrap());
     ui.begin(format!("Setting new configuration version {} for {}",
                      set.version
                         .as_ref()
@@ -962,8 +1023,10 @@ fn sub_svc_set(m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_svc_config(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+fn sub_svc_config(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
@@ -988,20 +1051,25 @@ fn sub_svc_config(m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_svc_load(m: &ArgMatches<'_>) -> Result<()> {
+fn sub_svc_load(m: &ArgMatches) -> Result<()> {
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
     let mut msg = protocol::ctl::SvcLoad::default();
     update_svc_load_from_input(m, &mut msg)?;
-    let ident: PackageIdent = m.value_of("PKG_IDENT").unwrap().parse()?;
+    let ident: PackageIdent = m.get_one::<String>("PKG_IDENT")
+                               .map(String::as_str)
+                               .unwrap()
+                               .parse()?;
     msg.ident = Some(ident.into());
     ctl_call(&listen_ctl_addr, &secret_key, msg, |m| handle_ctl_reply(&m))?;
     Ok(())
 }
 
-fn sub_svc_unload(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+fn sub_svc_unload(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
@@ -1011,8 +1079,10 @@ fn sub_svc_unload(m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_svc_start(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+fn sub_svc_start(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
@@ -1022,12 +1092,12 @@ fn sub_svc_start(m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_svc_status(m: &ArgMatches<'_>) -> Result<()> {
+fn sub_svc_status(m: &ArgMatches) -> Result<()> {
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
     let mut msg = protocol::ctl::SvcStatus::default();
-    if let Some(pkg) = m.value_of("PKG_IDENT") {
+    if let Some(pkg) = m.get_one::<String>("PKG_IDENT").map(String::as_str) {
         msg.ident = Some(PackageIdent::from_str(pkg)?.into());
     }
 
@@ -1042,8 +1112,10 @@ fn sub_svc_status(m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_svc_stop(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+fn sub_svc_stop(m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.get_one::<String>("PKG_IDENT")
+                                        .map(String::as_str)
+                                        .unwrap())?;
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
@@ -1053,21 +1125,26 @@ fn sub_svc_stop(m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_file_put(m: &ArgMatches<'_>) -> Result<()> {
-    let service_group = ServiceGroup::from_str(m.value_of("SERVICE_GROUP").unwrap())?;
+fn sub_file_put(m: &ArgMatches) -> Result<()> {
+    let service_group = ServiceGroup::from_str(m.get_one::<String>("SERVICE_GROUP")
+                                                .map(String::as_str)
+                                                .unwrap())?;
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
     let mut ui = ui();
     let mut msg = protocol::ctl::SvcFilePut::default();
-    let file = Path::new(m.value_of("FILE").unwrap());
+    let file = Path::new(m.get_one::<String>("FILE").map(String::as_str).unwrap());
     if file.metadata()?.len() > protocol::butterfly::MAX_FILE_PUT_SIZE_BYTES as u64 {
         ui.fatal(format!("File too large. Maximum size allowed is {} bytes.",
                          protocol::butterfly::MAX_FILE_PUT_SIZE_BYTES))?;
         process::exit(1);
     };
     msg.service_group = Some(service_group.clone().into());
-    msg.version = Some(value_t!(m, "VERSION_NUMBER", u64).unwrap());
+    msg.version = Some(m.get_one::<String>("VERSION_NUMBER")
+                        .expect(concat!("VERSION_NUMBER", " is required"))
+                        .parse::<u64>()
+                        .unwrap());
     msg.filename = Some(file.file_name().unwrap().to_string_lossy().into_owned());
     let mut buf = Vec::with_capacity(protocol::butterfly::MAX_FILE_PUT_SIZE_BYTES);
     let cache = cache_key_path_from_matches(&m);
@@ -1118,13 +1195,16 @@ fn sub_file_put(m: &ArgMatches<'_>) -> Result<()> {
     Ok(())
 }
 
-fn sub_sup_depart(m: &ArgMatches<'_>) -> Result<()> {
+fn sub_sup_depart(m: &ArgMatches) -> Result<()> {
     let cfg = config::load()?;
     let listen_ctl_addr = listen_ctl_addr_from_input(m)?;
     let secret_key = ctl_secret_key(&cfg)?;
     let mut ui = ui();
     let mut msg = protocol::ctl::SupDepart::default();
-    msg.member_id = Some(m.value_of("MEMBER_ID").unwrap().to_string());
+    msg.member_id = Some(m.get_one::<String>("MEMBER_ID")
+                          .map(String::as_str)
+                          .unwrap()
+                          .to_string());
     ui.begin(format!("Permanently marking {} as departed",
                      msg.member_id
                         .as_ref()
@@ -1156,21 +1236,21 @@ fn sub_sup_secret_generate() -> Result<()> {
 
 fn sub_supportbundle(ui: &mut UI) -> Result<()> { command::supportbundle::start(ui) }
 
-fn sub_ring_key_export(m: &ArgMatches<'_>) -> Result<()> {
-    let ring = m.value_of("RING").unwrap(); // Required via clap
+fn sub_ring_key_export(m: &ArgMatches) -> Result<()> {
+    let ring = m.get_one::<String>("RING").map(String::as_str).unwrap(); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::ring::key::export::start(ring, &cache_key_path)
 }
 
-fn sub_ring_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let ring = m.value_of("RING").unwrap(); // Required via clap
+fn sub_ring_key_generate(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let ring = m.get_one::<String>("RING").map(String::as_str).unwrap(); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::ring::key::generate::start(ui, ring, &cache_key_path)
 }
 
-fn sub_ring_key_import(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_ring_key_import(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let mut content = String::new();
     let cache_key_path = cache_key_path_from_matches(&m);
     io::stdin().read_to_string(&mut content)?;
@@ -1179,16 +1259,18 @@ fn sub_ring_key_import(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     command::ring::key::import::start(ui, content.trim(), &cache_key_path)
 }
 
-fn sub_service_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
+fn sub_service_key_generate(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let org = org_param_or_env(&m)?;
-    let service_group = ServiceGroup::from_str(m.value_of("SERVICE_GROUP").unwrap())?;
+    let service_group = ServiceGroup::from_str(m.get_one::<String>("SERVICE_GROUP")
+                                                .map(String::as_str)
+                                                .unwrap())?;
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::service::key::generate::start(ui, &org, &service_group, &cache_key_path)
 }
 
-fn sub_user_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let user = m.value_of("USER").unwrap(); // Required via clap
+fn sub_user_key_generate(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let user = m.get_one::<String>("USER").map(String::as_str).unwrap(); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
 
     command::user::key::generate::start(ui, user, &cache_key_path)
@@ -1256,8 +1338,8 @@ fn raw_parse_args() -> (Vec<OsString>, Vec<OsString>) {
 /// Check to see if the user has passed in an AUTH_TOKEN param. If not, check the
 /// DOJ_AUTH_TOKEN env var. If not, check the CLI config to see if there is a default auth
 /// token set. If that's empty too, then error.
-fn auth_token_param_or_env(m: &ArgMatches<'_>) -> Result<String> {
-    match m.value_of("AUTH_TOKEN") {
+fn auth_token_param_or_env(m: &ArgMatches) -> Result<String> {
+    match m.get_one::<String>("AUTH_TOKEN").map(String::as_str) {
         Some(o) => Ok(o.to_string()),
         None => {
             match henv::var(AUTH_TOKEN_ENVVAR) {
@@ -1288,7 +1370,7 @@ fn ctl_secret_key(config: &Config) -> Result<String> {
 /// Check to see if an auth token exists and convert it to a string slice if it does. Unlike
 /// auth_token_param_or_env, it's ok for no auth token to be present here. This is useful for
 /// commands that can optionally take an auth token for operating on private packages.
-fn maybe_auth_token(m: &ArgMatches<'_>) -> Option<String> {
+fn maybe_auth_token(m: &ArgMatches) -> Option<String> {
     match auth_token_param_or_env(&m) {
         Ok(t) => Some(t),
         Err(_) => None,
@@ -1298,8 +1380,8 @@ fn maybe_auth_token(m: &ArgMatches<'_>) -> Option<String> {
 /// Check to see if the user has passed in an ORIGIN param.  If not, check the DOJO_ORIGIN env
 /// var. If not, check the CLI config to see if there is a default origin set. If that's empty too,
 /// then error.
-fn origin_param_or_env(m: &ArgMatches<'_>) -> Result<String> {
-    match m.value_of("ORIGIN") {
+fn origin_param_or_env(m: &ArgMatches) -> Result<String> {
+    match m.get_one::<String>("ORIGIN").map(String::as_str) {
         Some(o) => Ok(o.to_string()),
         None => {
             match henv::var(ORIGIN_ENVVAR) {
@@ -1317,8 +1399,8 @@ fn origin_param_or_env(m: &ArgMatches<'_>) -> Result<String> {
 /// Check to see if the user has passed in an ORG param.
 /// If not, check the DOJO_ORG env var. If that's
 /// empty too, then error.
-fn org_param_or_env(m: &ArgMatches<'_>) -> Result<String> {
-    match m.value_of("ORG") {
+fn org_param_or_env(m: &ArgMatches) -> Result<String> {
+    match m.get_one::<String>("ORG").map(String::as_str) {
         Some(o) => Ok(o.to_string()),
         None => {
             henv::var(DOJO_ORG_ENVVAR).map_err(|_| {
@@ -1331,8 +1413,8 @@ fn org_param_or_env(m: &ArgMatches<'_>) -> Result<String> {
 /// Check to see if the user has passed in a Builder URL param.  If not, check the DOJ_BLDR_URL env
 /// var. If not, check the CLI config to see if there is a default url set. If that's empty too,
 /// then we'll use the default (https://bldr.karate.company).
-fn bldr_url_from_matches(matches: &ArgMatches<'_>) -> Result<String> {
-    match matches.value_of("BLDR_URL") {
+fn bldr_url_from_matches(matches: &ArgMatches) -> Result<String> {
+    match matches.get_one::<String>("BLDR_URL").map(String::as_str) {
         Some(url) => Ok(url.to_string()),
         None => {
             match henv::var(BLDR_URL_ENVVAR) {
@@ -1351,26 +1433,29 @@ fn bldr_url_from_matches(matches: &ArgMatches<'_>) -> Result<String> {
 
 /// Resolve a channel. Taken from the environment or from CLI args, if
 /// given.
-fn channel_from_matches(matches: &ArgMatches<'_>) -> Option<ChannelIdent> {
-    matches.value_of("CHANNEL").map(ChannelIdent::from)
+fn channel_from_matches(matches: &ArgMatches) -> Option<ChannelIdent> {
+    matches.get_one::<String>("CHANNEL")
+           .map(String::as_str)
+           .map(ChannelIdent::from)
 }
 
 /// Resolve a channel. Taken from the environment or from CLI args. This
 /// should only be called when the argument is required by the CLAP config,
 /// otherwise this would panic.
-fn required_channel_from_matches(matches: &ArgMatches<'_>) -> ChannelIdent {
+fn required_channel_from_matches(matches: &ArgMatches) -> ChannelIdent {
     channel_from_matches(matches).unwrap()
 }
 
 /// Resolve a channel. Taken from the environment or from CLI args, if
 /// given or return the default channel value.
-fn channel_from_matches_or_default(matches: &ArgMatches<'_>) -> ChannelIdent {
+fn channel_from_matches_or_default(matches: &ArgMatches) -> ChannelIdent {
     channel_from_matches(matches).unwrap_or_else(ChannelIdent::configured_value)
 }
 
 /// Resolve a target. Default to x86_64-linux if none specified
-fn target_from_matches(matches: &ArgMatches<'_>) -> Result<PackageTarget> {
-    matches.value_of("PKG_TARGET")
+fn target_from_matches(matches: &ArgMatches) -> Result<PackageTarget> {
+    matches.get_one::<String>("PKG_TARGET")
+           .map(String::as_str)
            .map(PackageTarget::from_str)
            .unwrap_or_else(|| Ok(active_target()))
            .map_err(Error::DojoCore)
@@ -1386,18 +1471,19 @@ fn active_target() -> PackageTarget {
     }
 }
 
-fn install_sources_from_matches(matches: &ArgMatches<'_>) -> Result<Vec<InstallSource>> {
+fn install_sources_from_matches(matches: &ArgMatches) -> Result<Vec<InstallSource>> {
     matches
-        .values_of("PKG_IDENT_OR_ARTIFACT")
+        .get_many::<String>("PKG_IDENT_OR_ARTIFACT").map(|v| v.map(String::as_str))
         .unwrap() // Required via clap
         .map(|t| t.parse().map_err(Error::from))
         .collect()
 }
 
-fn excludes_from_matches(matches: &ArgMatches<'_>) -> Vec<PackageIdent> {
+fn excludes_from_matches(matches: &ArgMatches) -> Vec<PackageIdent> {
     matches
-        .values_of("EXCLUDE")
-        .unwrap_or_default()
+        .get_many::<String>("EXCLUDE")
+        .into_iter()
+        .flatten()
         .map(|i| PackageIdent::from_str(i).unwrap()) // unwrap safe as we've validated the input
         .collect()
 }
@@ -1562,16 +1648,19 @@ fn supervisor_services() -> Result<Vec<PackageIdent>> {
 
 /// A Builder URL, but *only* if the user specified it via CLI args or
 /// the environment
-fn bldr_url_from_input(m: &ArgMatches<'_>) -> Option<String> {
-    m.value_of("BLDR_URL")
+fn bldr_url_from_input(m: &ArgMatches) -> Option<String> {
+    m.get_one::<String>("BLDR_URL")
+     .map(String::as_str)
      .and_then(|u| Some(u.to_string()))
      .or_else(bldr_url_from_env)
 }
 
 /// If the user provides both --application and --environment options,
 /// parse and set the value on the spec.
-fn get_app_env_from_input(m: &ArgMatches<'_>) -> Result<Option<ApplicationEnvironment>> {
-    if let (Some(app), Some(env)) = (m.value_of("APPLICATION"), m.value_of("ENVIRONMENT")) {
+fn get_app_env_from_input(m: &ArgMatches) -> Result<Option<ApplicationEnvironment>> {
+    if let (Some(app), Some(env)) = (m.get_one::<String>("APPLICATION").map(String::as_str),
+                                     m.get_one::<String>("ENVIRONMENT").map(String::as_str))
+    {
         Ok(Some(ApplicationEnvironment { application: app.to_string(),
                                          environment: env.to_string(), }))
     } else {
@@ -1579,8 +1668,8 @@ fn get_app_env_from_input(m: &ArgMatches<'_>) -> Result<Option<ApplicationEnviro
     }
 }
 
-fn get_binds_from_input(m: &ArgMatches<'_>) -> Result<Option<ServiceBindList>> {
-    match m.values_of("BIND") {
+fn get_binds_from_input(m: &ArgMatches) -> Result<Option<ServiceBindList>> {
+    match m.get_many::<String>("BIND").map(|v| v.map(String::as_str)) {
         Some(bind_strs) => {
             let mut list = ServiceBindList::default();
             for bind_str in bind_strs {
@@ -1592,36 +1681,43 @@ fn get_binds_from_input(m: &ArgMatches<'_>) -> Result<Option<ServiceBindList>> {
     }
 }
 
-fn get_binding_mode_from_input(m: &ArgMatches<'_>) -> Option<protocol::types::BindingMode> {
+fn get_binding_mode_from_input(m: &ArgMatches) -> Option<protocol::types::BindingMode> {
     // There won't be errors, because we validate with `valid_binding_mode`
-    m.value_of("BINDING_MODE")
+    m.get_one::<String>("BINDING_MODE")
+     .map(String::as_str)
      .and_then(|b| BindingMode::from_str(b).ok())
 }
 
-fn get_group_from_input(m: &ArgMatches<'_>) -> Option<String> {
-    m.value_of("GROUP").map(ToString::to_string)
+fn get_group_from_input(m: &ArgMatches) -> Option<String> {
+    m.get_one::<String>("GROUP")
+     .map(String::as_str)
+     .map(ToString::to_string)
 }
 
-fn get_health_check_interval_from_input(m: &ArgMatches<'_>)
+fn get_health_check_interval_from_input(m: &ArgMatches)
                                         -> Option<protocol::types::HealthCheckInterval> {
     // Value will have already been validated by `cli::valid_health_check_interval`
-    m.value_of("HEALTH_CHECK_INTERVAL")
+    m.get_one::<String>("HEALTH_CHECK_INTERVAL")
+     .map(String::as_str)
      .and_then(|s| HealthCheckInterval::from_str(s).ok())
      .map(|s| s.into())
 }
 
-fn get_topology_from_input(m: &ArgMatches<'_>) -> Option<Topology> {
-    m.value_of("TOPOLOGY")
+fn get_topology_from_input(m: &ArgMatches) -> Option<Topology> {
+    m.get_one::<String>("TOPOLOGY")
+     .map(String::as_str)
      .and_then(|f| Topology::from_str(f).ok())
 }
 
-fn get_strategy_from_input(m: &ArgMatches<'_>) -> Option<UpdateStrategy> {
-    m.value_of("STRATEGY")
+fn get_strategy_from_input(m: &ArgMatches) -> Option<UpdateStrategy> {
+    m.get_one::<String>("STRATEGY")
+     .map(String::as_str)
      .and_then(|f| UpdateStrategy::from_str(f).ok())
 }
 
-fn listen_ctl_addr_from_input(m: &ArgMatches<'_>) -> Result<ListenCtlAddr> {
-    m.value_of("REMOTE_SUP")
+fn listen_ctl_addr_from_input(m: &ArgMatches) -> Result<ListenCtlAddr> {
+    m.get_one::<String>("REMOTE_SUP")
+     .map(String::as_str)
      .map_or(Ok(ListenCtlAddr::default()), resolve_listen_ctl_addr)
 }
 
@@ -1648,8 +1744,8 @@ fn resolve_listen_ctl_addr(input: &str) -> Result<ListenCtlAddr> {
 /// Check to see if the user has passed in a USER param.
 /// If not, check the DOJ_USER env var. If that's
 /// empty too, then return an error.
-fn user_param_or_env(m: &ArgMatches<'_>) -> Option<String> {
-    match m.value_of("USER") {
+fn user_param_or_env(m: &ArgMatches) -> Option<String> {
+    match m.get_one::<String>("USER").map(String::as_str) {
         Some(u) => Some(u.to_string()),
         None => {
             match env::var(DOJO_USER_ENVVAR) {
@@ -1679,12 +1775,12 @@ fn ui() -> UI {
 
 /// Set all fields for an `SvcLoad` message that we can from the given opts. This function
 /// populates all *shared* options between `run` and `load`.
-fn update_svc_load_from_input(m: &ArgMatches<'_>, msg: &mut protocol::ctl::SvcLoad) -> Result<()> {
+fn update_svc_load_from_input(m: &ArgMatches, msg: &mut protocol::ctl::SvcLoad) -> Result<()> {
     msg.bldr_url = bldr_url_from_input(m);
     msg.bldr_channel = channel_from_matches(m).map(|c| c.to_string());
     msg.application_environment = get_app_env_from_input(m)?;
     msg.binds = get_binds_from_input(m)?;
-    if m.is_present("FORCE") {
+    if m.get_flag("FORCE") {
         msg.force = Some(true);
     }
     msg.group = get_group_from_input(m);
