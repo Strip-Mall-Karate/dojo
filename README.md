@@ -34,6 +34,12 @@ another.
 
 See [BUILDING.md](BUILDING.md).
 
+In the dev shell (`direnv allow`), `doj` is `bin/doj`: it builds the tree's own
+`doj` with cargo when its sources changed, showing cargo's output only when the
+build fails, and runs it. cargo's check that nothing changed takes most of a
+second, so a script that calls `doj` many times can run `target/debug/doj`.
+The whole workspace builds on macOS as well as Linux.
+
 ## The Dojo VM
 
 On an Apple silicon Mac with Nix, `support/vm/boot` boots Dojo in an arm64 VM

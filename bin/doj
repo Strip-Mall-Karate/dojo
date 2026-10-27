@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Copyright (c) 2026 Strip Mall Karate Company
+# SPDX-License-Identifier: Apache-2.0
+#
+# doj built from this tree: cargo rebuilds it when its sources changed, then it runs with the
+# arguments given. The dev shell puts bin/ on PATH, so `doj` in the tree is the tree's own.
+# cargo's output is shown only when the build fails; on success it would replay every cached
+# warning on each call.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+root="$(cd "${SCRIPT_DIR}/.." && pwd)"
+status=0
+build_output="$(cargo build --quiet --locked --manifest-path "${root}/Cargo.toml" -p doj --bin doj 2>&1)" ||
+  status=$?
+if [[ ${status} -ne 0 ]]; then
+  printf '%s\n' "${build_output}" >&2
+  exit "${status}"
+fi
+exec "${CARGO_TARGET_DIR:-${root}/target}/debug/doj" "$@"
