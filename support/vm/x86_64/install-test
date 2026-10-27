@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Tests doj-install end to end in emulated x86_64 VMs, on disk images only:
+#   refuse     the installer touches nothing without --erase
+#   appliance  installs with no login, boots from the disk through BIOS and through
+#              UEFI and passes the VM check both times, with no getty and nothing on
+#              port 22
+#   ssh        installs with an authorized key, boots from the disk and runs a command
+#              over SSH; a password is not accepted
+#   console    installs with a root password, boots from the disk, refuses a wrong
+#              password on the serial console and logs in with the right one
+# <out> gets the disk images, a throwaway SSH key and every boot's log. Each boot has
+# boot's deadline; the script stops at the first failure and exits 1.
+set -euo pipefail
+
+usage() {
+  echo "usage: support/vm/x86_64/install-test <pkgs> <out> [refuse|appliance|ssh|console]..." >&2
+  exit 2
+}
+[[ $# -ge 2 ]] || usage
+pkgs="$1" out="$2"
+shift 2
+tests=("$@")
+[[ ${#tests[@]} -gt 0 ]] || tests=(refuse appliance ssh console)
+mkdir -p "${out}"
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+boot="${here}/boot"
+ssh_port=19622
+console_port=19623
+
+fail() {
+  echo "install-test: $*" >&2
+  exit 1
+}
+
+new_disk() {
+  rm -f "$1"
+  # A sparse 2 GiB raw image.
+  dd if=/dev/zero of="$1" bs=1 count=0 seek=2g 2>/dev/null
+}
+
+run_refuse() {
+  new_disk "${out}/refuse.img"
+  "${boot}" "${pkgs}" --disk "${out}/refuse.img" --refuse-install /dev/vda --log "${out}/refuse.log" ||
+    fail "refuse: the install did not fail"
+  grep -F "doj-install: refusing to touch /dev/vda" "${out}/refuse.log" || fail "refuse: no refusal message"
+  cmp -n 2147483648 "${out}/refuse.img" /dev/zero || fail "refuse: the disk changed"
+  echo "install-test: refuse: ok, the disk is still all zeros"
+}
+
+run_appliance() {
+  new_disk "${out}/appliance.img"
+  "${boot}" "${pkgs}" --disk "${out}/appliance.img" \
+    --install "--erase --kernel-args dojo.check /dev/vda" --log "${out}/appliance-install.log" ||
+    fail "appliance: the install failed"
+  "${boot}" "${pkgs}" --disk "${out}/appliance.img" --from-disk --check --log "${out}/appliance-boot.log" ||
+    fail "appliance: the disk boot failed its check"
+  grep -F "dojo: getty=none sshd=none port22=0" "${out}/appliance-boot.log" ||
+    fail "appliance: a getty or sshd is running"
+  "${boot}" "${pkgs}" --disk "${out}/appliance.img" --from-disk --uefi --check \
+    --log "${out}/appliance-uefi-boot.log" || fail "appliance: the UEFI disk boot failed its check"
+  grep -F "efi: EFI v" "${out}/appliance-uefi-boot.log" || fail "appliance: the kernel did not boot through UEFI"
+  echo "install-test: appliance: ok"
+}
+
+run_ssh() {
+  rm -f "${out}/id_ed25519" "${out}/id_ed25519.pub"
+  ssh-keygen -q -t ed25519 -N "" -C install-test -f "${out}/id_ed25519"
+  new_disk "${out}/ssh.img"
+  "${boot}" "${pkgs}" --disk "${out}/ssh.img" --file "${out}/id_ed25519.pub:/etc/doj-install/key.pub" \
+    --install "--erase --authorized-key /etc/doj-install/key.pub /dev/vda" --log "${out}/ssh-install.log" ||
+    fail "ssh: the install failed"
+  "${boot}" "${pkgs}" --disk "${out}/ssh.img" --from-disk --ssh-port "${ssh_port}" \
+    --log "${out}/ssh-boot.log" &
+  vm=$!
+  local opts=(-p "${ssh_port}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+    -o ConnectTimeout=10 -o LogLevel=ERROR)
+  local ok=false
+  for _ in $(seq 1 60); do
+    if ssh "${opts[@]}" -o BatchMode=yes -i "${out}/id_ed25519" -o IdentitiesOnly=yes root@127.0.0.1 \
+      'echo ssh-$((6*7)) $(cat /proc/1/comm); uname -sm' >"${out}/ssh-command.txt" 2>&1; then
+      ok=true
+      break
+    fi
+    sleep 5
+  done
+  cat "${out}/ssh-command.txt"
+  if "${ok}"; then
+    # Keys only: with no key offered, a password is not even asked for.
+    if ssh "${opts[@]}" -o BatchMode=yes -o PubkeyAuthentication=no root@127.0.0.1 true \
+      >"${out}/ssh-password.txt" 2>&1; then
+      ok=false
+      echo "install-test: ssh: logged in without a key" >&2
+    fi
+    cat "${out}/ssh-password.txt"
+    ssh "${opts[@]}" -o BatchMode=yes -i "${out}/id_ed25519" -o IdentitiesOnly=yes root@127.0.0.1 \
+      'kill -TERM 1' || true
+  fi
+  if ! "${ok}"; then
+    # Nothing will power it off; end it rather than wait out its deadline.
+    pkill -f "file=${out}/ssh.img" || true
+  fi
+  wait "${vm}" || fail "ssh: the disk boot did not end cleanly"
+  "${ok}" || fail "ssh: no command ran over SSH"
+  grep -q "ssh-42 doj-launch" "${out}/ssh-command.txt" || fail "ssh: the command's output is wrong"
+  grep -q "Permission denied (publickey)" "${out}/ssh-password.txt" || fail "ssh: sshd offered more than keys"
+  echo "install-test: ssh: ok"
+}
+
+run_console() {
+  local password hash
+  password="install-test-$$"
+  hash="$(nix run nixpkgs#openssl -- passwd -6 "${password}")"
+  new_disk "${out}/console.img"
+  "${boot}" "${pkgs}" --disk "${out}/console.img" \
+    --install "--erase --root-password-hash ${hash} /dev/vda" --log "${out}/console-install.log" ||
+    fail "console: the install failed"
+  "${boot}" "${pkgs}" --disk "${out}/console.img" --from-disk --console "${console_port}" \
+    --log "${out}/console-boot.log" &
+  vm=$!
+  local status=0
+  python3 -I "${here}/console-login" "${console_port}" "${password}" "${out}/console-transcript.txt" || status=$?
+  if [[ "${status}" -ne 0 ]]; then
+    pkill -f "file=${out}/console.img" || true
+  fi
+  wait "${vm}" || fail "console: the disk boot did not end cleanly"
+  [[ "${status}" -eq 0 ]] || fail "console: the login did not go as expected"
+  echo "install-test: console: ok"
+}
+
+for t in "${tests[@]}"; do
+  case "${t}" in
+    refuse | appliance | ssh | console) "run_${t}" ;;
+    *) usage ;;
+  esac
+done
+echo "install-test: ${tests[*]}: ok"

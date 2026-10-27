@@ -74,8 +74,31 @@ nixpkgs in the guest: the `karate/linux` kernel and an initramfs of
 of each in `<pkgs>`, a copy of a builder's `/doj/pkgs/karate`. QEMU emulates the
 machine, so it runs on any Mac or Linux host with Nix and is a development loop,
 not proof that a machine boots. `--check` runs the checks above with a 600
-second deadline, `--initrd <file>` keeps the initramfs and `--log <file>` the
-serial console.
+second deadline and `--log <file>` keeps the serial console. Every package in
+`<pkgs>` also goes into the image's `/doj/pkgs`, for `doj-install`.
+
+### Installing onto a disk
+
+`support/install/doj-install` installs a live Dojo system onto a disk: a GPT
+table with a BIOS boot partition, an EFI system partition and an ext4 root that
+holds `/doj/pkgs`, the karate kernel and grub for BIOS and UEFI, booting into
+`doj-launch` as PID 1. It erases the disk, so it needs the disk named and
+`--erase`, and never chooses one itself.
+
+With no other flags the machine is an appliance: the Supervisor and its services,
+no login. `--root-password-hash <hash>` or `--root-password-stdin` adds a console
+login (`karate/doj-console`), and `--authorized-key <file>` adds SSH with keys
+only (`karate/doj-sshd`). Each is a Supervisor service, loaded at boot from a spec
+in `/doj/sup/default/specs` and the installed packages, without a network.
+
+`support/vm/x86_64/install-test <pkgs> <out>` tests it in emulated VMs on disk
+images in `<out>`: the installer refuses without `--erase` and leaves the disk
+untouched, an appliance install boots from its disk through BIOS and UEFI and
+passes `--check` with no getty or sshd, a key install takes a command over SSH
+and refuses a password, and a password install refuses a wrong password on the
+serial console and logs in with the right one. `<pkgs>` must hold the packages
+those installs copy and their dependencies (`grub`, `e2fsprogs`, `util-linux`,
+`dosfstools`, `doj-console`, `doj-sshd`, `openssh`).
 
 ### A ring
 

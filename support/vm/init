@@ -36,6 +36,20 @@ if [ -n "${ring}" ]; then
   ip link set eth1 up
 fi
 
+# dojo.install runs doj-install with the arguments in /etc/doj-install.args, a live
+# image's answer file, and powers off without starting the Launcher.
+if grep -qw dojo.install /proc/cmdline; then
+  # The answer file holds words, one argument each.
+  # shellcheck disable=SC2046
+  if /bin/doj-install $(cat /etc/doj-install.args); then
+    echo "dojo: install ok"
+  else
+    echo "dojo: install failed"
+  fi
+  sync
+  poweroff -f
+fi
+
 if grep -qw dojo.check /proc/cmdline; then
   /bin/check &
 fi
