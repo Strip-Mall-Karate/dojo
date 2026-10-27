@@ -15,69 +15,38 @@
 use std::{path::Path,
           time::Duration};
 
-use dojo_core::{env,
-                package::PackageTarget,
+use dojo_core::{package::PackageTarget,
                 util::sys};
-use hyper::{client::{pool::{Config,
-                            Pool},
-                     Client as HyperClient,
-                     IntoUrl,
-                     RequestBuilder},
-            header::UserAgent,
-            http::h1::Http11Protocol,
-            net::HttpsConnector};
-use hyper_openssl::OpensslClient;
-use openssl::ssl::{SslConnector,
-                   SslConnectorBuilder,
-                   SslMethod,
-                   SslOption,
-                   SSL_OP_NO_COMPRESSION,
-                   SSL_OP_NO_SSLV2,
-                   SSL_OP_NO_SSLV3,
-                   SSL_VERIFY_NONE};
+use log::debug;
+use reqwest::{IntoUrl,
+              Method,
+              blocking::{Client,
+                         RequestBuilder}};
 use url::Url;
 
-use crate::{error::{Error,
-                    Result},
-            net::ProxyHttpsConnector,
-            proxy::{proxy_unless_domain_exempted,
-                    ProxyInfo},
-            ssl};
+use crate::{error::Result,
+            tls};
 
-// Read and write TCP socket timeout for Hyper/HTTP client calls.
-const CLIENT_SOCKET_RW_TIMEOUT_SEC: u64 = 300;
+/// How long a request may take, connecting, sending and receiving.
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(300);
 
-header! { (ProxyAuthorization, "Proxy-Authorization") => [String] }
-
-/// A generic wrapper around a Hyper HTTP client intended for API-like usage.
-///
-/// When an `ApiClient` is created, it has a constant URL base which is assumed to be some API
-/// endpoint. This allows the underlying Hyper client to load and use any relevant HTTP proxy
-/// support and to provide reasonable User-Agent HTTP headers, etc.
+/// An HTTP client for one API endpoint, sending Dojo's User-Agent.
 #[derive(Debug)]
 pub struct ApiClient {
-    /// The base URL for the client.
-    endpoint:          Url,
-    /// An instance of a `hyper::Client` which is configured with an SSL context and optionally
-    /// using an HTTP proxy.
-    inner:             HyperClient,
-    /// Proxy information, if a proxy is being used.
-    proxy:             Option<ProxyInfo>,
-    /// The URL scheme of the endpoint.
-    target_scheme:     String,
-    /// The `User-Agent` header string to use for HTTP calls.
-    user_agent_header: UserAgent,
+    /// The base URL every path is joined to.
+    endpoint: Url,
+    inner:    Client,
 }
 
 impl ApiClient {
-    /// Creates and returns a new `ApiClient` instance.
+    /// Creates a client for `endpoint` that names `product` and `version`
+    /// in its User-Agent.
     ///
     /// # Errors
     ///
-    /// * If the underlying Hyper client cannot be created
-    /// * If a suitable SSL context cannot be established
-    /// * If an HTTP proxy cannot be correctly setup
-    /// * If a `User-Agent` HTTP header string cannot be constructed
+    /// * If `endpoint` is not a URL
+    /// * If the TLS configuration or its CA certificates cannot be loaded
+    /// * If system information for the User-Agent cannot be read
     pub fn new<T>(endpoint: T,
                   product: &str,
                   version: &str,
@@ -85,107 +54,69 @@ impl ApiClient {
                   -> Result<Self>
         where T: IntoUrl
     {
-        let endpoint = endpoint.into_url().map_err(Error::UrlParseError)?;
-        Ok(ApiClient { inner: new_hyper_client(&endpoint, fs_root_path)?,
-                       proxy: proxy_unless_domain_exempted(Some(&endpoint))?,
-                       target_scheme: endpoint.scheme().to_string(),
-                       endpoint,
-                       user_agent_header: user_agent(product, version)? })
+        let endpoint = endpoint.into_url()?;
+        let inner = Client::builder().user_agent(user_agent(product, version)?)
+                                     .timeout(CLIENT_TIMEOUT)
+                                     .tls_backend_preconfigured(tls::config(fs_root_path)?)
+                                     .build()?;
+        Ok(ApiClient { endpoint, inner })
     }
 
-    /// Builds an HTTP GET request for a given path.
     pub fn get(&self, path: &str) -> RequestBuilder { self.get_with_custom_url(path, |_| {}) }
 
-    /// Builds an HTTP GET request for a given path with the ability to customize the target URL.
-    pub fn get_with_custom_url<F>(&self, path: &str, mut customize_url: F) -> RequestBuilder
+    pub fn get_with_custom_url<F>(&self, path: &str, customize_url: F) -> RequestBuilder
         where F: FnMut(&mut Url)
     {
-        let mut url = self.url_for(path);
-        customize_url(&mut url);
-        debug!("GET {} with {:?}", &url, &self);
-        self.add_headers(self.inner.get(url))
+        self.request(Method::GET, path, customize_url)
     }
 
-    /// Builds an HTTP HEAD request for a given path.
     pub fn head(&self, path: &str) -> RequestBuilder { self.head_with_custom_url(path, |_| {}) }
 
-    /// Builds an HTTP HEAD request for a given path with the ability to customize the target URL.
-    pub fn head_with_custom_url<F>(&self, path: &str, mut customize_url: F) -> RequestBuilder
+    pub fn head_with_custom_url<F>(&self, path: &str, customize_url: F) -> RequestBuilder
         where F: FnMut(&mut Url)
     {
-        let mut url = self.url_for(path);
-        customize_url(&mut url);
-        debug!("HEAD {} with {:?}", &url, &self);
-        self.add_headers(self.inner.head(url))
+        self.request(Method::HEAD, path, customize_url)
     }
 
-    /// Builds an HTTP PATCH request for a given path.
     pub fn patch(&self, path: &str) -> RequestBuilder { self.patch_with_custom_url(path, |_| {}) }
 
-    /// Builds an HTTP PATCH request for a given path with the ability to customize the target URL.
-    pub fn patch_with_custom_url<F>(&self, path: &str, mut customize_url: F) -> RequestBuilder
+    pub fn patch_with_custom_url<F>(&self, path: &str, customize_url: F) -> RequestBuilder
         where F: FnMut(&mut Url)
     {
-        let mut url = self.url_for(path);
-        customize_url(&mut url);
-        debug!("PATH {} with {:?}", &url, &self);
-        self.add_headers(self.inner.patch(url))
+        self.request(Method::PATCH, path, customize_url)
     }
 
-    /// Builds an HTTP POST request for a given path.
     pub fn post(&self, path: &str) -> RequestBuilder { self.post_with_custom_url(path, |_| {}) }
 
-    /// Builds an HTTP POST request for a given path with the ability to customize the target URL.
-    pub fn post_with_custom_url<F>(&self, path: &str, mut customize_url: F) -> RequestBuilder
+    pub fn post_with_custom_url<F>(&self, path: &str, customize_url: F) -> RequestBuilder
         where F: FnMut(&mut Url)
     {
-        let mut url = self.url_for(path);
-        customize_url(&mut url);
-        debug!("POST {} with {:?}", &url, &self);
-        self.add_headers(self.inner.post(url))
+        self.request(Method::POST, path, customize_url)
     }
 
-    /// Builds an HTTP PUT request for a given path.
     pub fn put(&self, path: &str) -> RequestBuilder { self.put_with_custom_url(path, |_| {}) }
 
-    /// Builds an HTTP PUT request for a given path with the ability to customize the target URL.
-    pub fn put_with_custom_url<F>(&self, path: &str, mut customize_url: F) -> RequestBuilder
+    pub fn put_with_custom_url<F>(&self, path: &str, customize_url: F) -> RequestBuilder
         where F: FnMut(&mut Url)
     {
-        let mut url = self.url_for(path);
-        customize_url(&mut url);
-        debug!("PUT {} with {:?}", &url, &self);
-        self.add_headers(self.inner.put(url))
+        self.request(Method::PUT, path, customize_url)
     }
 
-    /// Builds an HTTP DELETE request for a given path.
     pub fn delete(&self, path: &str) -> RequestBuilder { self.delete_with_custom_url(path, |_| {}) }
 
-    /// Builds an HTTP DELETE request for a given path with the ability to customize the target URL.
-    pub fn delete_with_custom_url<F>(&self, path: &str, mut customize_url: F) -> RequestBuilder
+    pub fn delete_with_custom_url<F>(&self, path: &str, customize_url: F) -> RequestBuilder
+        where F: FnMut(&mut Url)
+    {
+        self.request(Method::DELETE, path, customize_url)
+    }
+
+    fn request<F>(&self, method: Method, path: &str, mut customize_url: F) -> RequestBuilder
         where F: FnMut(&mut Url)
     {
         let mut url = self.url_for(path);
         customize_url(&mut url);
-        debug!("DELETE {} with {:?}", &url, &self);
-        self.add_headers(self.inner.delete(url))
-    }
-
-    fn add_headers<'a>(&'a self, rb: RequestBuilder<'a>) -> RequestBuilder {
-        let mut rb = rb.header(self.user_agent_header.clone());
-        // If the target URL is an `"http"` scheme and we're using a proxy server, then add the
-        // proxy authorization header if appropriate. Note that for `"https"` targets, the proxy
-        // server will be operating in TCP tunneling mode and will be authenticated on connection to
-        // the proxy server which is why we should not add an additional header in this latter
-        // case.
-        if self.target_scheme == "http" {
-            if let Some(ref info) = self.proxy {
-                if let Some(header_value) = info.authorization_header_value() {
-                    rb = rb.header(ProxyAuthorization(header_value));
-                }
-            }
-        }
-        rb
+        debug!("{} {}", method, url);
+        self.inner.request(method, url)
     }
 
     fn url_for(&self, path: &str) -> Url {
@@ -205,98 +136,12 @@ impl ApiClient {
     }
 }
 
-/// Builds a new hyper HTTP client with appropriate SSL configuration and HTTP/HTTPS proxy support.
-///
-/// ## Linux Platforms
-///
-/// We need a set of root certificates when connected to SSL/TLS web endpoints and this usually
-/// boiled down to using an all-in-one certificate file (such as a `cacert.pem` file) or a directory
-/// of files which are certificates. The strategy to location or use a reasonable set of
-/// certificates is as follows:
-///
-/// 1. If the `SSL_CERT_FILE` environment variable is set, then use its value for the certificates.
-///    Internally this is triggering default OpenSSL behavior for this environment variable.
-/// 2. If the `SSL_CERT_DIR` environment variable is set, then use its value for the directory
-///    containing certificates. Like the `SSL_CERT_FILE` case above, this triggers default OpenSSL
-///    behavior for this environment variable.
-/// 3. If the `karate/cacerts` Dojo package is installed locally, then use the latest release's
-///    `cacert.pem` file.
-/// 4. If none of the conditions above are met, then a `cacert.pem` will be written in an SSL cache
-///    directory (by default `/doj/cache/ssl` for a root user and `$HOME/.doj/cache/ssl` for a
-///    non-root user) and this will be used. The contents of this file will be inlined in this crate
-///    at build time as a fallback insurance policy, meaning that if the a program using this code
-///    is operating in a minimal environment which may not contain system certificates, it can still
-///    operate. Once a `karate/cacerts` Dojo package is present, the logic would fall back to
-///    preferring the package version to the cached/inline file version.
-///
-/// ## Mac Platforms
-///
-/// The Mac platform uses a Security Framework to store and find root certificates and the hyper
-/// library will default to using this on the Mac. Therefore the behavior on the Mac remains
-/// unchanged and will use the system's certificates.
-fn new_hyper_client(url: &Url, fs_root_path: Option<&Path>) -> Result<HyperClient> {
-    let connector = ssl_connector(fs_root_path)?;
-    let ssl_client = OpensslClient::from(connector);
-
-    let timeout_in_secs = match env::var("DOJ_CLIENT_SOCKET_TIMEOUT") {
-        Ok(t) => {
-            match t.parse::<u64>() {
-                Ok(n) => n,
-                Err(_) => CLIENT_SOCKET_RW_TIMEOUT_SEC,
-            }
-        }
-        Err(_) => CLIENT_SOCKET_RW_TIMEOUT_SEC,
-    };
-    debug!("Client socket timeout: {} secs", timeout_in_secs);
-
-    let timeout = Some(Duration::from_secs(timeout_in_secs));
-
-    match proxy_unless_domain_exempted(Some(url))? {
-        Some(proxy) => {
-            debug!("Using proxy {}:{}...", proxy.host(), proxy.port());
-            let connector = ProxyHttpsConnector::new(proxy, ssl_client)?;
-            let pool = Pool::with_connector(Config::default(), connector);
-            let mut client = HyperClient::with_protocol(Http11Protocol::with_connector(pool));
-            client.set_read_timeout(timeout);
-            client.set_write_timeout(timeout);
-            Ok(client)
-        }
-        None => {
-            let connector = HttpsConnector::new(ssl_client);
-            let pool = Pool::with_connector(Config::default(), connector);
-            let mut client = HyperClient::with_protocol(Http11Protocol::with_connector(pool));
-            client.set_read_timeout(timeout);
-            client.set_write_timeout(timeout);
-            Ok(client)
-        }
-    }
-}
-
-/// Returns an HTTP User-Agent string type for use by Hyper when making HTTP requests.
-///
-/// The general form for Dojo-related clients are of the following form:
-///
-/// ```text
-/// <PRODUCT>/<VERSION> (<TARGET>; <KERNEL_RELEASE>)
-/// ```
-///
-/// where:
-///
-/// * `<PRODUCT>`: is the provided product name
-/// * `<VERSION>`: is the provided version string which may also include a release number
-/// * `<TARGET>`: is the machine architecture and the kernel separated by a dash in lower case
-/// * `<KERNEL_RELEASE>`: is the kernel release string from `uname`
-///
-/// For example:
-///
-/// ```text
-/// doj/0.6.0/20160606153031 (x86_64-darwin; 14.5.0)
-/// ```
+/// `product/version (target; kernel release)`.
 ///
 /// # Errors
 ///
 /// * If system information cannot be obtained via `uname`
-fn user_agent(product: &str, version: &str) -> Result<UserAgent> {
+fn user_agent(product: &str, version: &str) -> Result<String> {
     let uname = sys::uname()?;
     let ua = format!("{}/{} ({}; {})",
                      product.trim(),
@@ -304,22 +149,66 @@ fn user_agent(product: &str, version: &str) -> Result<UserAgent> {
                      PackageTarget::active_target(),
                      uname.release.trim().to_lowercase());
     debug!("User-Agent: {}", &ua);
-    Ok(UserAgent(ua))
+    Ok(ua)
 }
 
-fn ssl_connector(fs_root_path: Option<&Path>) -> Result<SslConnector> {
-    let mut conn = SslConnectorBuilder::new(SslMethod::tls())?;
-    let mut options = SslOption::empty();
-    options.toggle(SSL_OP_NO_SSLV2);
-    options.toggle(SSL_OP_NO_SSLV3);
-    options.toggle(SSL_OP_NO_COMPRESSION);
-    ssl::set_ca(&mut conn, fs_root_path)?;
-    conn.set_options(options);
-    conn.set_cipher_list("ALL!EXPORT!EXPORT40!EXPORT56!aNULL!LOW!RC4@STRENGTH")?;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    if env::var("DOJ_SSL_CERT_VERIFY_NONE").is_ok() {
-        conn.set_verify(SSL_VERIFY_NONE);
+    fn client(endpoint: &str) -> ApiClient {
+        ApiClient::new(endpoint, "dojo-test", "0.0.0", None).unwrap()
     }
 
-    Ok(conn.build())
+    #[test]
+    fn paths_join_the_endpoint() {
+        assert_eq!(client("https://bldr.karate.company/v1").url_for("depot/pkgs")
+                                                           .as_str(),
+                   "https://bldr.karate.company/v1/depot/pkgs");
+        assert_eq!(client("https://bldr.karate.company/v1/").url_for("depot/pkgs")
+                                                            .as_str(),
+                   "https://bldr.karate.company/v1/depot/pkgs");
+        assert_eq!(client("https://bldr.karate.company/v1").url_for("")
+                                                           .as_str(),
+                   "https://bldr.karate.company/v1");
+    }
+
+    /// Serves one request on localhost and returns its head, as received.
+    fn serve_once() -> (String, std::sync::mpsc::Receiver<String>) {
+        use std::{io::{Read,
+                       Write},
+                  net::TcpListener,
+                  sync::mpsc,
+                  thread};
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/v1", listener.local_addr().unwrap());
+        let (tx, rx) = mpsc::channel();
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut head = Vec::new();
+            let mut byte = [0u8; 1];
+            while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap() == 1 {
+                head.push(byte[0]);
+            }
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                  .unwrap();
+            tx.send(String::from_utf8(head).unwrap()).unwrap();
+        });
+        (url, rx)
+    }
+
+    #[test]
+    fn requests_carry_the_user_agent_and_path() {
+        let (url, received) = serve_once();
+        let response = client(&url).get("depot/pkgs").send().unwrap();
+        assert_eq!(response.status(), 200);
+        let head = received.recv().unwrap().to_lowercase();
+        assert!(head.starts_with("get /v1/depot/pkgs http/1.1\r\n"),
+                "{}",
+                head);
+        assert!(head.contains("\r\nuser-agent: dojo-test/0.0.0 ("),
+                "{}",
+                head);
+    }
 }

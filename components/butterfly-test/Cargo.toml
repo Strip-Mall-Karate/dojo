@@ -6,8 +6,8 @@ authors = []
 workspace = "../../"
 
 [dependencies]
-lazy_static = "*"
-time = "*"
+lazy_static = "1.3.0"
+time = "0.1.42"
 
 [dependencies.dojo_butterfly]
 path = "../butterfly"

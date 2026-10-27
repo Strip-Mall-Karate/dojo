@@ -1,28 +1,21 @@
 [package]
 name = "dojo_api_client"
 version = "0.0.0"
-edition = "2018"
+edition = "2024"
 authors = []
 workspace = "../../"
 
 [dependencies]
-broadcast = "*"
-chrono = "*"
-# Pending upgrade activities
-hyper = "0.10"
-hyper-openssl = "*"
-log = "0.4"
-pbr = "*"
-rand = "*"
-regex = "*"
-serde = "*"
-serde_derive = "*"
-serde_json = "*"
-tee = "*"
-url = "*"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+dojo_core = { path = "../core" }
+dojo_http_client = { path = "../http-client" }
+log = "0.4.34"
+percent-encoding = "2.3.2"
+reqwest = { version = "0.13.5", default-features = false, features = ["blocking"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+thiserror = "2.0.21"
+url = "2.5.8"
 
-[dependencies.dojo_core]
-path = "../core"
-
-[dependencies.dojo_http_client]
-path = "../http-client"
+[dev-dependencies]
+tempfile = "3.27.0"

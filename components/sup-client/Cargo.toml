@@ -6,15 +6,15 @@ authors = []
 workspace = "../../"
 
 [dependencies]
-futures = "*"
+futures = "0.1.26"
 dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
 dojo_common = { path = "../common" }
 log = "0.4"
-prost = "*"
-termcolor = "*"
-tokio = "*"
-tokio-core = "*"
-tokio-codec = "*"
+prost = "0.5.0"
+termcolor = "1.0.4"
+tokio = "0.1.18"
+tokio-core = "0.1.17"
+tokio-codec = "0.1.1"
 
 [build-dependencies]
 protoc = "1.4"

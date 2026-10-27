@@ -56,12 +56,11 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
 - x86_64 proof runs on the local-network Linux machine under the `local-network` skill's rules
   (a throwaway checkout, a throwaway `GIT_CONFIG_GLOBAL`, `nice -n 15`, delete what you created,
   confirm no processes remain). The VM proves arm64.
-- **A test run is only as good as the binaries that started.** With OpenSSL 1.0.2 from the old
-  nixpkgs, any test binary that loads libcrypto dies at load with `libdl.so.2: undefined symbol:
-  _dl_catch_error` and cargo exits 127, so seven test binaries (both Supervisor ones, Butterfly,
-  common, both `doj` ones, the Docker exporter) silently never ran for the first months of this
-  fork. Preload the current glibc's `libdl.so.2` (`LD_PRELOAD`) in the test environment, and
-  count the binaries that ran against the ones cargo built before calling a run green.
+- **A test run is only as good as the binaries that started.** While the tree linked OpenSSL
+  1.0.2 from an old nixpkgs, every test binary that loaded libcrypto died at load (`libdl.so.2:
+  undefined symbol: _dl_catch_error`, exit 127), so seven test binaries silently never ran for the
+  first months of this fork. A loader error is not counted as a failed test: count the binaries
+  that ran against the ones cargo built before calling a run green.
 - Expected failures that are not regressions: the Supervisor fixtures carry `TARGET x86_64-linux`
   and cannot load on arm64; `compile_hook_table` and the Supervisor integration tests install
   `karate/busybox-static` from Builder, which does not exist yet; `dojo_common`'s templating tests
