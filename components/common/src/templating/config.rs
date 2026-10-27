@@ -25,7 +25,6 @@ use crate::{error::{Error,
 use serde::{Serialize,
             Serializer};
 use serde_json;
-use serde_transcode;
 use std::{self,
           borrow::Cow,
           env,
@@ -326,37 +325,10 @@ impl Cfg {
                     Err(err) => debug!("Attempted to parse env config as toml and failed {}", err),
                 }
 
-                // We know we're not dealing with TOML, so we'll
-                // assume it's JSON. Since we're currently decoding to
-                // toml::value::Table, and there isn't really an easy
-                // way to directly go from a JSON string to that, we
-                // first transcode the JSON string into a TOML string,
-                // and then deserialize from THAT.
-                //
-                // Not the greatest, but it works.
-                let (as_toml, transcode_result) = {
-                    let mut buffer = String::new();
-                    let mut deserializer = serde_json::Deserializer::from_str(&config);
-                    let res = {
-                        let mut serializer = toml::Serializer::new(&mut buffer);
-                        serde_transcode::transcode(&mut deserializer, &mut serializer)
-                    };
-                    (buffer, res)
-                };
-                match transcode_result {
-                    Ok(()) => {
-                        // it's TOML now, so turn it into a TOML table
-                        match toml::de::from_str(&as_toml) {
-                            Ok(toml) => {
-                                return Ok(Some(toml));
-                            }
-                            Err(err) => {
-                                // Note: it should be impossible to
-                                // get down here
-                                debug!("Attempted to reparse env config as toml and failed {}", err)
-                            }
-                        }
-                    }
+                // We know we're not dealing with TOML, so we'll assume it's JSON. A JSON
+                // object deserializes straight into a TOML table.
+                match serde_json::from_str::<toml::Table>(&config) {
+                    Ok(toml) => return Ok(Some(toml)),
                     Err(err) => debug!("Attempted to parse env config as json and failed {}", err),
                 }
 
@@ -398,7 +370,7 @@ impl Serialize for Cfg {
             }
         }
 
-        toml::ser::tables_last(&table, serializer)
+        table.serialize(serializer)
     }
 }
 
@@ -1118,7 +1090,7 @@ mod test {
 
     #[test]
     fn test_compile_recursive_config_dir() {
-        let root = TempDir::new().expect("create temp dir").into_path();
+        let root = TempDir::new().expect("create temp dir").keep();
 
         // Setup a dummy package directory with a config file inside
         // a directory structure

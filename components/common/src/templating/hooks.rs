@@ -193,7 +193,6 @@ pub trait Hook: fmt::Debug + Sized + Send {
         where S: AsRef<OsStr>
     {
         use dojo_core::os::users;
-        use std::io::Error as IoError;
 
         let mut cmd = Command::new(path.as_ref());
         cmd.stdin(Stdio::null())
@@ -228,18 +227,10 @@ pub trait Hook: fmt::Debug + Sized + Send {
                    &pkg.svc_user);
         }
 
-        cmd.before_exec(|| {
-               // Run in your own process group! This prevents terminal
-               // signals (e.g. ^C) sent to a Supervisor running in the
-               // foreground from being passed down to any running hooks,
-               // which could cause them to terminate prematurely, among
-               // other things.
-               if unsafe { libc::setpgid(0, 0) } == 0 {
-                   Ok(())
-               } else {
-                   Err(IoError::last_os_error())
-               }
-           });
+        // Run in your own process group! This prevents terminal signals (e.g. ^C) sent to a
+        // Supervisor running in the foreground from being passed down to any running hooks,
+        // which could cause them to terminate prematurely, among other things.
+        cmd.process_group(0);
 
         Ok(cmd.spawn()?)
     }

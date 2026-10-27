@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fmt,
+use std::{convert::TryFrom,
+          fmt,
           str::FromStr};
 
-use bytes::BytesMut;
 use prost::Message as ProstMessage;
 
 pub use crate::protocol::swim::{SwimPayload,
@@ -273,7 +273,7 @@ pub struct Swim {
 impl Swim {
     pub fn decode(bytes: &[u8]) -> Result<Self> {
         let proto = proto::Swim::decode(bytes)?;
-        let r#type = SwimType::from_i32(proto.r#type).ok_or(Error::ProtocolMismatch("type"))?;
+        let r#type = SwimType::try_from(proto.r#type).map_err(|_| Error::ProtocolMismatch("type"))?;
         let mut memberships = Vec::with_capacity(proto.membership.len());
         for membership in proto.membership.clone() {
             memberships.push(Membership::from_proto(membership)?);
@@ -290,9 +290,7 @@ impl Swim {
 
     pub fn encode(self) -> Result<Vec<u8>> {
         let proto: proto::Swim = self.into();
-        let mut buf = BytesMut::with_capacity(proto.encoded_len());
-        proto.encode(&mut buf)?;
-        Ok(buf.to_vec())
+        Ok(proto.encode_to_vec())
     }
 }
 

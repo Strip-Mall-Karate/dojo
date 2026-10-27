@@ -44,7 +44,9 @@ use std::{borrow::Cow,
           path::{Path,
                  PathBuf},
           result::Result as StdResult,
-          str::FromStr};
+          str::FromStr,
+          thread,
+          time::Duration};
 
 use crate::{api_client::{self,
                          Client,
@@ -66,7 +68,6 @@ use crate::{api_client::{self,
                     ChannelIdent}};
 use dojo_api_client::StatusCode;
 use glob;
-use retry::retry;
 
 use crate::{error::{Error,
                     Result},
@@ -680,10 +681,12 @@ impl<'a> InstallTask<'a> {
                    ident);
         } else if self.is_offline() {
             return Err(Error::OfflineArtifactNotFound(ident.as_ref().clone()));
-        } else if retry(RETRIES,
-                        RETRY_WAIT,
-                        || self.fetch_artifact(ui, (ident, target), token),
-                        |res| res.is_ok()).is_err()
+        } else if !(0..RETRIES).any(|attempt| {
+                                   if attempt > 0 {
+                                       thread::sleep(Duration::from_millis(RETRY_WAIT));
+                                   }
+                                   self.fetch_artifact(ui, (ident, target), token).is_ok()
+                               })
         {
             return Err(Error::DownloadFailed(format!("We tried {} times but \
                                                       could not download {}. \

@@ -1,7 +1,3 @@
-extern crate pkg_config;
-extern crate prost;
-extern crate prost_build;
-
 use std::{env,
           fs,
           path::PathBuf};

@@ -12,124 +12,107 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeMap;
-
-use handlebars::{Handlebars,
+use handlebars::{to_json,
+                 BlockContext,
+                 BlockParams,
+                 Context,
+                 Handlebars,
                  Helper,
                  HelperDef,
+                 HelperResult,
+                 JsonTruthy,
+                 Output,
                  RenderContext,
-                 RenderError,
                  Renderable};
 use serde_json::Value as Json;
 
-use super::{super::RenderResult,
-            to_json,
-            JsonTruthy};
+use super::render_error;
 
+/// Iterates like `each`, but only over the members whose `alive` field is true. Given an
+/// object, it iterates over the object's fields if the object itself is alive.
 #[derive(Clone, Copy)]
 pub struct EachAliveHelper;
 
+fn is_alive(member: &Json) -> bool { member.get("alive").and_then(Json::as_bool).unwrap_or(false) }
+
 impl HelperDef for EachAliveHelper {
-    fn call(&self, h: &Helper<'_>, r: &Handlebars, rc: &mut RenderContext<'_>) -> RenderResult<()> {
+    fn call<'reg: 'rc, 'rc>(&self,
+                            h: &Helper<'rc>,
+                            r: &'reg Handlebars<'reg>,
+                            ctx: &'rc Context,
+                            rc: &mut RenderContext<'reg, 'rc>,
+                            out: &mut dyn Output)
+                            -> HelperResult {
         let value = h.param(0)
-                     .ok_or_else(|| RenderError::new("Param not found for helper \"eachAlive\""))?;
-        if let Some(template) = h.template() {
-            rc.promote_local_vars();
-            let local_path_root = value.path_root()
-                                       .map(|p| format!("{}/{}", rc.get_path(), p));
-            let rendered = match (value.value().is_truthy(), value.value()) {
-                (true, &Json::Array(ref list)) => {
-                    let alive_members: Vec<Json> = list.iter()
-                                                       .filter_map(|m| {
-                                                           m.as_object().and_then(|m| {
-                                if m.contains_key("alive") && m["alive"].as_bool().unwrap() {
-                                    Some(to_json(&m))
-                                } else {
-                                    None
-                                }
-                            })
-                                                       })
-                                                       .collect();
-                    let len = alive_members.len();
-                    for (i, alive_member) in alive_members.iter().enumerate() {
-                        let mut local_rc = rc.derive();
-                        local_rc.set_local_var("@first".to_string(), to_json(&(i == 0usize)));
-                        local_rc.set_local_var("@last".to_string(), to_json(&(i == len - 1)));
-                        local_rc.set_local_var("@index".to_string(), to_json(&i));
-
-                        if let Some(block_param) = h.block_param() {
-                            let mut map = BTreeMap::new();
-                            map.insert(block_param.to_string(), to_json(alive_member));
-                            local_rc.push_block_context(&map)?;
-                        }
-
-                        template.render(r, &mut local_rc)?;
-
-                        if h.block_param().is_some() {
-                            local_rc.pop_block_context();
+                     .ok_or_else(|| render_error("Param not found for helper \"eachAlive\""))?;
+        let Some(template) = h.template() else {
+            return Ok(());
+        };
+        match (value.value().is_truthy(false), value.value()) {
+            (true, Json::Array(list)) => {
+                let alive_members: Vec<&Json> = list.iter().filter(|m| is_alive(m)).collect();
+                let len = alive_members.len();
+                rc.push_block(BlockContext::new());
+                for (i, member) in alive_members.into_iter().enumerate() {
+                    if let Some(block) = rc.block_mut() {
+                        block.set_local_var("first", to_json(i == 0));
+                        block.set_local_var("last", to_json(i == len - 1));
+                        block.set_local_var("index", to_json(i));
+                        block.set_base_value(member.clone());
+                        if let Some(name) = h.block_param() {
+                            let mut params = BlockParams::new();
+                            params.add_value(name, member.clone())?;
+                            block.set_block_params(params);
                         }
                     }
-                    Ok(())
+                    template.render(r, ctx, rc, out)?;
                 }
-                (true, &Json::Object(ref obj)) => {
-                    let mut first: bool = true;
-                    if !obj.contains_key("alive") || !obj["alive"].as_bool().unwrap() {
-                        return Ok(());
+                rc.pop_block();
+                Ok(())
+            }
+            (true, Json::Object(obj)) => {
+                if !is_alive(value.value()) {
+                    return Ok(());
+                }
+                let obj_path = value.context_path();
+                let len = obj.len();
+                rc.push_block(BlockContext::new());
+                for (i, (k, v)) in obj.iter().enumerate() {
+                    if let Some(block) = rc.block_mut() {
+                        block.set_local_var("first", to_json(i == 0));
+                        block.set_local_var("last", to_json(i == len - 1));
+                        block.set_local_var("key", to_json(k));
+                        block.set_local_var("index", to_json(i));
+                        match obj_path {
+                            Some(path) => {
+                                let mut path = path.clone();
+                                path.push(k.clone());
+                                *block.base_path_mut() = path;
+                            }
+                            None => block.set_base_value(v.clone()),
+                        }
+                        let mut params = BlockParams::new();
+                        if let Some((value_name, key_name)) = h.block_param_pair() {
+                            params.add_value(value_name, v.clone())?;
+                            params.add_value(key_name, to_json(k))?;
+                        } else if let Some(name) = h.block_param() {
+                            params.add_value(name, v.clone())?;
+                        }
+                        block.set_block_params(params);
                     }
-                    for k in obj.keys() {
-                        let mut local_rc = rc.derive();
-                        if let Some(ref p) = local_path_root {
-                            local_rc.push_local_path_root(p.clone());
-                        }
-                        local_rc.set_local_var("@first".to_string(), to_json(&first));
-                        local_rc.set_local_var("@key".to_string(), to_json(k));
-
-                        if first {
-                            first = false;
-                        }
-
-                        if let Some(inner_path) = value.path() {
-                            let new_path =
-                                format!("{}/{}.[{}]", local_rc.get_path(), inner_path, k);
-                            local_rc.set_path(new_path);
-                        }
-
-                        if let Some((bp_key, bp_val)) = h.block_param_pair() {
-                            let mut map = BTreeMap::new();
-                            map.insert(bp_key.to_string(), to_json(k));
-                            map.insert(bp_val.to_string(), to_json(obj.get(k).unwrap()));
-                            local_rc.push_block_context(&map)?;
-                        }
-
-                        template.render(r, &mut local_rc)?;
-
-                        if h.block_param().is_some() {
-                            local_rc.pop_block_context();
-                        }
-
-                        if local_path_root.is_some() {
-                            local_rc.pop_local_path_root();
-                        }
-                    }
-                    Ok(())
+                    template.render(r, ctx, rc, out)?;
                 }
-                (false, _) => {
-                    if let Some(else_template) = h.inverse() {
-                        else_template.render(r, rc)?;
-                    }
-                    Ok(())
+                rc.pop_block();
+                Ok(())
+            }
+            (false, _) => {
+                match h.inverse() {
+                    Some(else_template) => else_template.render(r, ctx, rc, out),
+                    None => Ok(()),
                 }
-                _ => {
-                    Err(RenderError::new(format!("Param type is not iterable: \
-                                                  {:?}",
-                                                 template)))
-                }
-            };
-
-            rc.demote_local_vars();
-            return rendered;
+            }
+            (true, other) => Err(render_error(format!("Param type is not iterable: {:?}", other))),
         }
-        Ok(())
     }
 }
 

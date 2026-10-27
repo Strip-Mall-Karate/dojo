@@ -20,7 +20,6 @@ use std::{env,
                BufRead,
                BufReader,
                Read,
-               Stdout,
                Write},
           process::{self,
                     Command},
@@ -28,7 +27,8 @@ use std::{env,
 use uuid::Uuid;
 
 use crate::api_client::DisplayProgress;
-use pbr;
+use indicatif::{ProgressBar,
+                ProgressStyle};
 use termcolor::{self,
                 ColorChoice,
                 ColorSpec,
@@ -814,14 +814,14 @@ mod tty {
 /// writer (i.e. implementing the `Write` trait) as a means to increase progress towards
 /// completion.
 pub struct ConsoleProgressBar {
-    bar:     pbr::ProgressBar<Stdout>,
+    bar:     ProgressBar,
     total:   u64,
     current: u64,
 }
 
 impl Default for ConsoleProgressBar {
     fn default() -> Self {
-        ConsoleProgressBar { bar:     pbr::ProgressBar::new(0),
+        ConsoleProgressBar { bar:     ProgressBar::hidden(),
                              total:   0,
                              current: 0, }
     }
@@ -829,34 +829,28 @@ impl Default for ConsoleProgressBar {
 
 impl DisplayProgress for ConsoleProgressBar {
     fn size(&mut self, size: u64) {
-        self.bar = pbr::ProgressBar::new(size);
-        self.bar.set_units(pbr::Units::Bytes);
-        self.bar.show_tick = true;
-        self.bar.message("    ");
+        self.bar = ProgressBar::new(size);
+        self.bar.set_style(ProgressStyle::with_template("    {spinner} [{bar:40}] {bytes}/{total_bytes} \
+                                                         {percent}% {binary_bytes_per_sec} {eta}")
+                               .expect("progress bar template should be valid")
+                               .progress_chars("=> "));
         self.total = size;
     }
 
-    fn finish(&mut self) {
-        println!();
-        io::stdout().flush().expect("flush() fail");
-    }
+    fn finish(&mut self) { self.bar.finish(); }
 }
 
 impl Write for ConsoleProgressBar {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self.bar.write(buf) {
-            Ok(n) => {
-                self.current += n as u64;
-                if self.current == self.total {
-                    self.finish();
-                }
-                Ok(n)
-            }
-            Err(e) => Err(e),
+        self.bar.inc(buf.len() as u64);
+        self.current += buf.len() as u64;
+        if self.current == self.total {
+            self.finish();
         }
+        Ok(buf.len())
     }
 
-    fn flush(&mut self) -> io::Result<()> { self.bar.flush() }
+    fn flush(&mut self) -> io::Result<()> { Ok(()) }
 }
 
 pub fn print_wrapped<U>(stream: &mut dyn WriteColor,
@@ -892,7 +886,7 @@ pub fn print_wrapped<U>(stream: &mut dyn WriteColor,
     stream.flush()
 }
 
-pub fn print(writer: &mut WriteColor, buf: &[u8], color_spec: &ColorSpec) -> io::Result<()> {
+pub fn print(writer: &mut dyn WriteColor, buf: &[u8], color_spec: &ColorSpec) -> io::Result<()> {
     writer.reset()?;
     writer.set_color(color_spec)?;
     writer.write_all(buf)?;
@@ -900,7 +894,7 @@ pub fn print(writer: &mut WriteColor, buf: &[u8], color_spec: &ColorSpec) -> io:
     writer.reset()
 }
 
-pub fn println(writer: &mut WriteColor, buf: &[u8], color_spec: &ColorSpec) -> io::Result<()> {
+pub fn println(writer: &mut dyn WriteColor, buf: &[u8], color_spec: &ColorSpec) -> io::Result<()> {
     print(writer, buf, color_spec)?;
     writer.write_all(b"\n")?;
     writer.flush()

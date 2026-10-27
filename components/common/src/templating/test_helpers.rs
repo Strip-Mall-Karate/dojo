@@ -18,9 +18,7 @@ use std::{fs::File,
           path::{Path,
                  PathBuf}};
 
-use crate::json;
 use serde_json;
-use valico::json_schema;
 
 pub fn create_with_content<P>(path: P, content: &str)
     where P: AsRef<Path>
@@ -46,20 +44,13 @@ pub fn file_content<P>(path: P) -> String
 /// rendered, along with a pretty-printed formatting of the
 /// offending JSON.
 pub fn assert_valid(json_string: &str, schema: &str) {
-    let result = validate_string(json_string, schema);
-    if !result.is_valid() {
-        let error_string = result.errors
-                                 .into_iter()
-                                 .map(|x| format!("  {:?}", x))
-                                 .collect::<Vec<String>>()
-                                 .join("\n");
-        let pretty_json = json::stringify_pretty(json::parse(json_string).expect("JSON should \
-                                                                                  parse if we \
-                                                                                  get this far"),
-                                                 2);
-        assert!(
-                false,
-                r#"
+    let errors = validate_string(json_string, schema);
+    if !errors.is_empty() {
+        let input: serde_json::Value =
+            serde_json::from_str(json_string).expect("JSON should parse if we get this far");
+        let pretty_json = serde_json::to_string_pretty(&input).expect("JSON should serialize");
+        panic!(
+               r#"
 JSON does not validate!
 Errors:
 {}
@@ -67,16 +58,18 @@ Errors:
 JSON:
 {}
 "#,
-                error_string, pretty_json
+               errors.join("\n"),
+               pretty_json
         );
     }
 }
 
-/// Compares the incoming JSON string against the JSON schema
-/// and returns the resulting `ValidationState`.
+/// Compares the incoming JSON string against the JSON schema and returns every validation
+/// error, rendered with the path to the offending value. An empty list means the input is
+/// valid.
 ///
 /// In general, you should prefer using `assert_valid` directly.
-pub fn validate_string(input: &str, schema: &str) -> json_schema::ValidationState {
+pub fn validate_string(input: &str, schema: &str) -> Vec<String> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests")
                                                         .join("fixtures")
                                                         .join(schema);
@@ -86,14 +79,14 @@ pub fn validate_string(input: &str, schema: &str) -> json_schema::ValidationStat
                .expect("could not read schema file");
     let parsed_schema: serde_json::Value =
         serde_json::from_str(&raw_schema).expect("Could not parse schema as JSON");
-    let mut scope = json_schema::scope::Scope::new();
-    // NOTE: using `false` instead of `true` allows us to use
-    // `$comment` keyword, as well as our own `$deprecated` and
-    // `$since` keywords.
-    let schema = scope.compile_and_return(parsed_schema, false)
-                      .expect("Could not compile the schema");
+    // Unknown keywords are ignored, which allows the `$comment` keyword as well as our own
+    // `$deprecated` and `$since` keywords.
+    let validator = jsonschema::validator_for(&parsed_schema).expect("Could not compile the \
+                                                                      schema");
 
     let input_json: serde_json::Value =
         serde_json::from_str(input).expect("Could not parse input as JSON");
-    schema.validate(&input_json)
+    validator.iter_errors(&input_json)
+             .map(|e| format!("  {}: {}", e.instance_path(), e))
+             .collect()
 }

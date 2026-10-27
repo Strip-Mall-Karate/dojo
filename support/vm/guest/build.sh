@@ -33,6 +33,9 @@ fi
 mkdir -p "$out/root/bin" "$out/root/nix/store"
 for b in doj-launch doj-sup doj; do
   cp "target/release/$b" "$out/root/bin/$b"
+  # The release profile keeps full debug info, which target/ still has. The
+  # guest unpacks the payload into RAM, so the copies drop it and keep symbols.
+  run strip --strip-debug "$out/root/bin/$b"
   # Append, so the binary's own RUNPATH (its glibc) still comes first.
   run patchelf --add-rpath "$libpath" "$out/root/bin/$b"
 done

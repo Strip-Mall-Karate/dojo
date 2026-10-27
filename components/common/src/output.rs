@@ -42,8 +42,8 @@ use std::{fmt,
                Write},
           result,
           sync::{atomic::{AtomicBool,
-                          Ordering,
-                          ATOMIC_BOOL_INIT},
+                          Ordering},
+                 LazyLock,
                  Mutex}};
 use termcolor::{BufferWriter,
                 Color,
@@ -51,11 +51,10 @@ use termcolor::{BufferWriter,
                 ColorSpec,
                 WriteColor};
 
-static VERBOSITY: AtomicBool = ATOMIC_BOOL_INIT;
+static VERBOSITY: AtomicBool = AtomicBool::new(false);
 
-lazy_static! {
-    static ref FORMAT: Mutex<OutputFormat> = Mutex::new(OutputFormat::Color(ColorSpec::default()));
-}
+static FORMAT: LazyLock<Mutex<OutputFormat>> =
+    LazyLock::new(|| Mutex::new(OutputFormat::Color(ColorSpec::default())));
 
 /// Get the OutputFormat for which content is to be rendered
 // Maybe return a &'static instead of cloning?
@@ -159,7 +158,7 @@ impl<'a> StructuredOutput<'a> {
     // If we ever want to create multiple output formats in the future, we would do it here -
     // essentially create a flag we check to see what output you want, then call a different
     // formatting function. Viola!
-    fn format(&self, writer: &mut WriteColor) -> io::Result<()> {
+    fn format(&self, writer: &mut dyn WriteColor) -> io::Result<()> {
         writer.reset()?;
         match self.format {
             OutputFormat::JSON => {

@@ -1,23 +1,13 @@
-use prost_build;
-
-use tempfile;
-
 use std::{collections::HashMap,
           env,
           fs,
-          io::{Error,
-               ErrorKind,
-               Read,
-               Result,
+          io::{Result,
                Write},
           path::{Path,
-                 PathBuf},
-          process::Command};
+                 PathBuf}};
 
-use heck::SnakeCase;
+use heck::ToSnakeCase;
 use prost::Message;
-use prost_build::{protoc,
-                  protoc_include};
 use prost_types::{DescriptorProto,
                   FileDescriptorProto,
                   FileDescriptorSet};
@@ -34,9 +24,12 @@ fn generate_protocols() {
     let mut config = prost_build::Config::new();
     config.type_attribute(".", "#[derive(Serialize, Deserialize)]");
     config.type_attribute(".", "#[serde(rename_all = \"kebab-case\")]");
+    let descriptor_set = PathBuf::from(env::var("OUT_DIR").unwrap()).join("descriptor-set.bin");
+    config.file_descriptor_set_path(&descriptor_set);
     config.compile_protos(&protocol_files(), &protocol_includes())
           .expect("protocols");
-    compile_proto_impls(&protocol_files(), &protocol_includes()).expect("protocol-impls");
+    compile_proto_impls(&descriptor_set).expect("protocol-impls");
+    fs::remove_file(&descriptor_set).unwrap();
     for file in generated_files() {
         fs::rename(&file,
                    format!("src/generated/{}",
@@ -74,47 +67,9 @@ fn protocol_files() -> Vec<String> {
 
 fn protocol_includes() -> Vec<String> { vec!["protocols".to_string()] }
 
-fn compile_proto_impls<P>(protos: &[P], includes: &[P]) -> Result<()>
-    where P: AsRef<Path>
-{
-    let target: PathBuf = env::var_os("OUT_DIR").ok_or_else(|| {
-                                                    Error::new(ErrorKind::Other,
-                                                               "OUT_DIR environment variable is \
-                                                                not set")
-                                                })?
-                                                .into();
-
-    let tmp = tempfile::TempDir::new()?;
-    let descriptor_set = tmp.path().join("prost-descriptor-set");
-
-    let mut cmd = Command::new(protoc());
-    cmd.arg("--include_imports")
-       .arg("--include_source_info")
-       .arg("-o")
-       .arg(&descriptor_set);
-
-    for include in includes {
-        cmd.arg("-I").arg(include.as_ref());
-    }
-
-    // Set the protoc include after the user includes in case the user wants to
-    // override one of the built-in .protos.
-    cmd.arg("-I").arg(protoc_include());
-
-    for proto in protos {
-        cmd.arg(proto.as_ref());
-    }
-
-    let output = cmd.output()?;
-    if !output.status.success() {
-        return Err(Error::new(ErrorKind::Other,
-                              format!("protoc failed: {}",
-                                      String::from_utf8_lossy(&output.stderr))));
-    }
-
-    let mut buf = Vec::new();
-    fs::File::open(descriptor_set)?.read_to_end(&mut buf)?;
-    let descriptor_set = FileDescriptorSet::decode(&buf)?;
+fn compile_proto_impls(descriptor_set: &Path) -> Result<()> {
+    let target = descriptor_set.parent().unwrap();
+    let descriptor_set = FileDescriptorSet::decode(fs::read(descriptor_set)?.as_slice())?;
 
     let modules = generate(descriptor_set.file);
     for (module, content) in modules {
