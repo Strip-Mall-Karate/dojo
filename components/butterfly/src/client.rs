@@ -14,46 +14,45 @@
 
 //! The Butterfly client library.
 //!
-//! This will connect to a given butterfly members `Pull` thread, and inject a rumor.
+//! This connects to a given butterfly member's gossip port and injects a rumor.
+
+use std::{io,
+          net::{SocketAddr,
+                TcpStream,
+                ToSocketAddrs}};
 
 use dojo_core::{crypto::SymKey,
                 service::ServiceGroup};
-use zmq;
 
 use crate::{error::{Error,
                     Result},
+            gossip,
             message,
             rumor::{departure::Departure,
                     service_config::ServiceConfig,
                     service_file::ServiceFile,
-                    Rumor},
-            ZMQ_CONTEXT};
+                    Rumor}};
 
-/// Holds a ZMQ Push socket, and an optional ring encryption key.
+/// Sends rumors to one member's gossip port, optionally encrypting them with a ring key. Each
+/// send opens its own connection.
 pub struct Client {
-    socket:   zmq::Socket,
+    addr:     SocketAddr,
     ring_key: Option<SymKey>,
 }
 
 impl Client {
-    /// Connect this client to the address, and optionally encrypt the traffic.
+    /// A client for the member at `addr`, encrypting the traffic if given a ring key.
     pub fn new(addr: &str, ring_key: Option<SymKey>) -> Result<Client> {
-        let socket = (**ZMQ_CONTEXT).as_mut()
-                                    .socket(zmq::PUSH)
-                                    .expect("Failure to create the ZMQ push socket");
-        socket.set_linger(-1)
-              .expect("Failure to set the ZMQ push socket to not linger");
-        socket.set_tcp_keepalive(0)
-              .expect("Failure to set the ZMQ push socket to not use keepalive");
-        socket.set_immediate(true)
-              .expect("Failure to set the ZMQ push socket to immediate");
-        socket.set_sndhwm(1000)
-              .expect("Failure to set the ZMQ push socket hwm");
-        socket.set_sndtimeo(500)
-              .expect("Failure to set the ZMQ send timeout");
-        let to_addr = format!("tcp://{}", addr);
-        socket.connect(&to_addr).map_err(Error::ZmqConnectError)?;
-        Ok(Client { socket, ring_key })
+        let addr = addr.to_socket_addrs()
+                       .map_err(Error::GossipConnectError)?
+                       .next()
+                       .ok_or_else(|| {
+                           Error::GossipConnectError(io::Error::new(io::ErrorKind::NotFound,
+                                                                    format!("{} names no \
+                                                                             address",
+                                                                            addr)))
+                       })?;
+        Ok(Client { addr, ring_key })
     }
 
     /// Create a departure notification and send it to the server.
@@ -97,6 +96,10 @@ impl Client {
     {
         let bytes = rumor.write_to_bytes()?;
         let wire_msg = message::generate_wire(bytes, self.ring_key.as_ref())?;
-        self.socket.send(&wire_msg, 0).map_err(Error::ZmqSendError)
+        let mut stream = TcpStream::connect_timeout(&self.addr, gossip::SEND_TIMEOUT)
+            .map_err(Error::GossipConnectError)?;
+        stream.set_write_timeout(Some(gossip::SEND_TIMEOUT))
+              .map_err(Error::GossipSendError)?;
+        gossip::write_frame(&mut stream, &wire_msg).map_err(Error::GossipSendError)
     }
 }

@@ -12,136 +12,145 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The pull thread.
+//! Receiving rumors.
 //!
-//! This module handles pulling all the pushed rumors from every member off a ZMQ socket.
+//! Every member listens on its gossip port and reads the rumors other members
+//! push to it, one task per connection.
 
-use std::{thread,
+use std::{sync::LazyLock,
           time::Duration};
 
 use dojo_core::util::ToI64;
+use futures_util::StreamExt;
 use prometheus::{IntCounterVec,
                  IntGaugeVec};
-use zmq;
+use tokio::{net::{TcpListener,
+                  TcpStream},
+            time};
+use tokio_util::codec::FramedRead;
 
-use crate::{rumor::{RumorEnvelope,
+use crate::{gossip,
+            rumor::{RumorEnvelope,
                     RumorKind},
             server::Server,
-            trace::TraceKind,
-            ZMQ_CONTEXT};
+            trace::TraceKind};
 
-lazy_static! {
-    static ref GOSSIP_MESSAGES_RECEIVED: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_gossip_messages_received_total",
-                                  "Total number of gossip messages received",
-                                  &["type", "mode", "blocked"]).unwrap();
-    static ref GOSSIP_BYTES_RECEIVED: IntGaugeVec =
-        register_int_gauge_vec!("doj_butterfly_gossip_received_bytes",
-                                "Gossip message size received in bytes",
-                                &["type", "mode", "blocked"]).unwrap();
-}
+static GOSSIP_MESSAGES_RECEIVED: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_gossip_messages_received_total",
+                              "Total number of gossip messages received",
+                              &["type", "mode", "blocked"]).unwrap()
+});
+static GOSSIP_BYTES_RECEIVED: LazyLock<IntGaugeVec> = LazyLock::new(|| {
+    register_int_gauge_vec!("doj_butterfly_gossip_received_bytes",
+                            "Gossip message size received in bytes",
+                            &["type", "mode", "blocked"]).unwrap()
+});
 
-/// Takes a reference to the server itself
-pub struct Pull {
-    pub server: Server,
-}
-
-impl Pull {
-    /// Create a new Pull
-    pub fn new(server: Server) -> Pull { Pull { server } }
-
-    /// Run this thread. Creates a socket, binds to the `gossip_addr`, then processes messages as
-    /// they are received. Uses a ZMQ pull socket, so inbound messages are fair-queued.
-    pub fn run(&mut self) {
-        let socket = (**ZMQ_CONTEXT).as_mut()
-                                    .socket(zmq::PULL)
-                                    .expect("Failure to create the ZMQ pull socket");
-        socket.set_linger(0)
-              .expect("Failure to set the ZMQ Pull socket to not linger");
-        socket.set_tcp_keepalive(0)
-              .expect("Failure to set the ZMQ Pull socket to not use keepalive");
-        socket.bind(&format!("tcp://{}", self.server.gossip_addr()))
-              .expect("Failure to bind the ZMQ Pull socket to the port");
-        'recv: loop {
-            if self.server.paused() {
-                thread::sleep(Duration::from_millis(100));
-                continue;
+/// Accepts gossip connections on `listener` and reads the rumors each one
+/// carries, until the runtime shuts down.
+pub async fn run(server: Server, listener: TcpListener) {
+    loop {
+        match listener.accept().await {
+            Ok((stream, _)) => {
+                tokio::spawn(read_rumors(server.clone(), stream));
             }
+            Err(e) => error!("Cannot accept a gossip connection: {}", e),
+        }
+    }
+}
 
-            let msg = match socket.recv_msg(0) {
-                Ok(msg) => msg,
-                Err(e) => {
-                    error!("Error receiving message: {:?}", e);
-                    continue 'recv;
-                }
-            };
+/// Reads frames from one sender until it closes the connection, sends a bad
+/// frame, or goes quiet for longer than `gossip::RECV_TIMEOUT`. A paused
+/// server holds each frame until it resumes, as a partitioned member would
+/// receive it late.
+async fn read_rumors(server: Server, stream: TcpStream) {
+    let peer = stream.peer_addr().ok();
+    let mut frames = FramedRead::new(stream, gossip::codec());
+    loop {
+        let frame = match time::timeout(gossip::RECV_TIMEOUT, frames.next()).await {
+            Ok(Some(Ok(frame))) => frame,
+            Ok(Some(Err(e))) => {
+                error!("Cannot read a rumor from {:?}: {}", peer, e);
+                return;
+            }
+            Ok(None) => return,
+            Err(_) => {
+                debug!("Closing an idle gossip connection from {:?}", peer);
+                return;
+            }
+        };
+        while server.paused() {
+            time::sleep(Duration::from_millis(100)).await;
+        }
+        receive(&server, &frame);
+    }
+}
 
-            let payload = match self.server.unwrap_wire(&msg) {
-                Ok(payload) => payload,
-                Err(e) => {
-                    // NOTE: In the future, we might want to block people who send us
-                    // garbage all the time.
-                    error!("Error parsing protocol message: {:?}", e);
-                    let label_values = &["unwrap_wire", "failure", "unknown"];
-                    GOSSIP_BYTES_RECEIVED.with_label_values(label_values)
-                                         .set(msg.len().to_i64());
-                    GOSSIP_MESSAGES_RECEIVED.with_label_values(label_values)
-                                            .inc();
-                    continue;
-                }
-            };
-
-            let proto = match RumorEnvelope::decode(&payload) {
-                Ok(proto) => proto,
-                Err(e) => {
-                    error!("Error parsing protocol message: {:?}", e);
-                    let label_values = &["undecodable", "failure", "unknown"];
-                    GOSSIP_BYTES_RECEIVED.with_label_values(label_values)
-                                         .set(payload.len().to_i64());
-                    GOSSIP_MESSAGES_RECEIVED.with_label_values(label_values)
-                                            .inc();
-                    continue 'recv;
-                }
-            };
-
-            let blocked = self.server.is_member_blocked(&proto.from_id);
-            let blocked_label = if blocked { "true" } else { "false" };
-            let label_values = &[&proto.r#type.to_string(), "success", blocked_label];
-
+/// Unwraps, decodes and records one rumor.
+fn receive(server: &Server, frame: &[u8]) {
+    let payload = match server.unwrap_wire(frame) {
+        Ok(payload) => payload,
+        Err(e) => {
+            // NOTE: In the future, we might want to block people who send us
+            // garbage all the time.
+            error!("Error parsing protocol message: {:?}", e);
+            let label_values = &["unwrap_wire", "failure", "unknown"];
+            GOSSIP_BYTES_RECEIVED.with_label_values(label_values)
+                                 .set(frame.len().to_i64());
             GOSSIP_MESSAGES_RECEIVED.with_label_values(label_values)
                                     .inc();
+            return;
+        }
+    };
+
+    let proto = match RumorEnvelope::decode(&payload) {
+        Ok(proto) => proto,
+        Err(e) => {
+            error!("Error parsing protocol message: {:?}", e);
+            let label_values = &["undecodable", "failure", "unknown"];
             GOSSIP_BYTES_RECEIVED.with_label_values(label_values)
                                  .set(payload.len().to_i64());
+            GOSSIP_MESSAGES_RECEIVED.with_label_values(label_values)
+                                    .inc();
+            return;
+        }
+    };
 
-            if blocked {
-                warn!("Not processing message from {} - it is blocked",
-                      proto.from_id);
-                continue 'recv;
-            }
+    let blocked = server.is_member_blocked(&proto.from_id);
+    let blocked_label = if blocked { "true" } else { "false" };
+    let label_values = &[&proto.r#type.to_string(), "success", blocked_label];
 
-            trace_it!(GOSSIP: &self.server, TraceKind::RecvRumor, &proto.from_id, &proto);
-            match proto.kind {
-                RumorKind::Membership(membership) => {
-                    self.server
-                        .insert_member_from_rumor(membership.member, membership.health);
-                }
-                RumorKind::Service(service) => self.server.insert_service(*service),
-                RumorKind::ServiceConfig(service_config) => {
-                    self.server.insert_service_config(service_config);
-                }
-                RumorKind::ServiceFile(service_file) => {
-                    self.server.insert_service_file(service_file);
-                }
-                RumorKind::Election(election) => {
-                    self.server.insert_election(election);
-                }
-                RumorKind::ElectionUpdate(election) => {
-                    self.server.insert_update_election(election);
-                }
-                RumorKind::Departure(departure) => {
-                    self.server.insert_departure(departure);
-                }
-            }
+    GOSSIP_MESSAGES_RECEIVED.with_label_values(label_values)
+                            .inc();
+    GOSSIP_BYTES_RECEIVED.with_label_values(label_values)
+                         .set(payload.len().to_i64());
+
+    if blocked {
+        warn!("Not processing message from {} - it is blocked",
+              proto.from_id);
+        return;
+    }
+
+    trace_it!(GOSSIP: server, TraceKind::RecvRumor, &proto.from_id, &proto);
+    match proto.kind {
+        RumorKind::Membership(membership) => {
+            server.insert_member_from_rumor(membership.member, membership.health);
+        }
+        RumorKind::Service(service) => server.insert_service(*service),
+        RumorKind::ServiceConfig(service_config) => {
+            server.insert_service_config(service_config);
+        }
+        RumorKind::ServiceFile(service_file) => {
+            server.insert_service_file(service_file);
+        }
+        RumorKind::Election(election) => {
+            server.insert_election(election);
+        }
+        RumorKind::ElectionUpdate(election) => {
+            server.insert_update_election(election);
+        }
+        RumorKind::Departure(departure) => {
+            server.insert_departure(departure);
         }
     }
 }

@@ -15,9 +15,6 @@
 #[macro_use]
 extern crate dojo_butterfly;
 
-#[macro_use]
-extern crate lazy_static;
-
 use dojo_butterfly::{member::{Health,
                               Member},
                      rumor::{departure::Departure,
@@ -43,12 +40,10 @@ use std::{net::{IpAddr,
           str::FromStr,
           sync::Mutex,
           thread,
-          time::Duration};
-use time::SteadyTime;
+          time::{Duration,
+                 Instant}};
 
-lazy_static! {
-    static ref SERVER_PORT: Mutex<u16> = Mutex::new(6666);
-}
+static SERVER_PORT: Mutex<u16> = Mutex::new(6666);
 
 #[derive(Debug)]
 struct NSuitability(u64);
@@ -409,7 +404,7 @@ impl SwimNet {
         let timing = Timing::default();
         let next_period = timing.next_protocol_period();
         loop {
-            if SteadyTime::now() <= next_period {
+            if Instant::now() <= next_period {
                 thread::sleep(Duration::from_millis(100));
             } else {
                 return;

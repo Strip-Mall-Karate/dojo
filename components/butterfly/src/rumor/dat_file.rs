@@ -24,8 +24,6 @@ use std::{fs::File,
           path::{Path,
                  PathBuf}};
 
-use byteorder::{ByteOrder,
-                LittleEndian};
 use dojo_core::fs::AtomicWriter;
 
 use crate::{error::{Error,
@@ -102,7 +100,7 @@ impl DatFile {
             }
             reader.read_exact(&mut size_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
-            let rumor_size = LittleEndian::read_u64(&size_buf);
+            let rumor_size = u64::from_le_bytes(size_buf);
             rumor_buf.resize(rumor_size as usize, 0);
             reader.read_exact(&mut rumor_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
@@ -121,7 +119,7 @@ impl DatFile {
             }
             reader.read_exact(&mut size_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
-            let rumor_size = LittleEndian::read_u64(&size_buf);
+            let rumor_size = u64::from_le_bytes(size_buf);
             rumor_buf.resize(rumor_size as usize, 0);
             reader.read_exact(&mut rumor_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
@@ -139,7 +137,7 @@ impl DatFile {
             }
             reader.read_exact(&mut size_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
-            let rumor_size = LittleEndian::read_u64(&size_buf);
+            let rumor_size = u64::from_le_bytes(size_buf);
             rumor_buf.resize(rumor_size as usize, 0);
             reader.read_exact(&mut rumor_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
@@ -156,7 +154,7 @@ impl DatFile {
             }
             reader.read_exact(&mut size_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
-            let rumor_size = LittleEndian::read_u64(&size_buf);
+            let rumor_size = u64::from_le_bytes(size_buf);
             rumor_buf.resize(rumor_size as usize, 0);
             reader.read_exact(&mut rumor_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
@@ -173,7 +171,7 @@ impl DatFile {
             }
             reader.read_exact(&mut size_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
-            let rumor_size = LittleEndian::read_u64(&size_buf);
+            let rumor_size = u64::from_le_bytes(size_buf);
             rumor_buf.resize(rumor_size as usize, 0);
             reader.read_exact(&mut rumor_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
@@ -191,7 +189,7 @@ impl DatFile {
             }
             reader.read_exact(&mut size_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
-            let rumor_size = LittleEndian::read_u64(&size_buf);
+            let rumor_size = u64::from_le_bytes(size_buf);
             rumor_buf.resize(rumor_size as usize, 0);
             reader.read_exact(&mut rumor_buf)
                   .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
@@ -210,7 +208,7 @@ impl DatFile {
                 }
                 reader.read_exact(&mut size_buf)
                       .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
-                let rumor_size = LittleEndian::read_u64(&size_buf);
+                let rumor_size = u64::from_le_bytes(size_buf);
                 rumor_buf.resize(rumor_size as usize, 0);
                 reader.read_exact(&mut rumor_buf)
                       .map_err(|err| Error::DatFileIO(self.path.clone(), err))?;
@@ -309,9 +307,8 @@ impl DatFile {
         where W: Write
     {
         let mut total = 0;
-        let mut len_buf = [0; 8];
         let bytes = membership.clone().write_to_bytes().unwrap();
-        LittleEndian::write_u64(&mut len_buf, bytes.len() as u64);
+        let len_buf = (bytes.len() as u64).to_le_bytes();
         total += writer.write(&len_buf)
                        .map_err(|err| Error::DatFileIO(self.path.clone(), err))?
                  as u64;
@@ -343,9 +340,8 @@ impl DatFile {
               W: Write
     {
         let mut total = 0;
-        let mut rumor_len = [0; 8];
         let bytes = rumor.write_to_bytes().unwrap();
-        LittleEndian::write_u64(&mut rumor_len, bytes.len() as u64);
+        let rumor_len = (bytes.len() as u64).to_le_bytes();
         total += writer.write(&rumor_len)
                        .map_err(|err| Error::DatFileIO(self.path.clone(), err))?
                  as u64;
@@ -391,12 +387,12 @@ impl Header {
             // embedded within it, so we fake it.
             1 => {
                 (48, // This is the size
-                 Header { member_len:         LittleEndian::read_u64(&bytes[0..8]),
-                          service_len:        LittleEndian::read_u64(&bytes[8..16]),
-                          service_config_len: LittleEndian::read_u64(&bytes[16..24]),
-                          service_file_len:   LittleEndian::read_u64(&bytes[24..32]),
-                          election_len:       LittleEndian::read_u64(&bytes[32..40]),
-                          update_len:         LittleEndian::read_u64(&bytes[40..48]),
+                 Header { member_len:         read_u64(&bytes[0..8]),
+                          service_len:        read_u64(&bytes[8..16]),
+                          service_config_len: read_u64(&bytes[16..24]),
+                          service_file_len:   read_u64(&bytes[24..32]),
+                          election_len:       read_u64(&bytes[32..40]),
+                          update_len:         read_u64(&bytes[40..48]),
                           departure_len:      0, })
             }
             // This should be the latest version of the header. As we deprecate
@@ -408,14 +404,14 @@ impl Header {
             // will be that you read the back-compat version of the data format, and then write the
             // new.
             _ => {
-                (LittleEndian::read_u64(&bytes[0..8]),
-                 Header { member_len:         LittleEndian::read_u64(&bytes[8..16]),
-                          service_len:        LittleEndian::read_u64(&bytes[16..24]),
-                          service_config_len: LittleEndian::read_u64(&bytes[24..32]),
-                          service_file_len:   LittleEndian::read_u64(&bytes[32..40]),
-                          election_len:       LittleEndian::read_u64(&bytes[40..48]),
-                          update_len:         LittleEndian::read_u64(&bytes[48..56]),
-                          departure_len:      LittleEndian::read_u64(&bytes[56..64]), })
+                (read_u64(&bytes[0..8]),
+                 Header { member_len:         read_u64(&bytes[8..16]),
+                          service_len:        read_u64(&bytes[16..24]),
+                          service_config_len: read_u64(&bytes[24..32]),
+                          service_file_len:   read_u64(&bytes[32..40]),
+                          election_len:       read_u64(&bytes[40..48]),
+                          update_len:         read_u64(&bytes[48..56]),
+                          departure_len:      read_u64(&bytes[56..64]), })
             }
         }
     }
@@ -424,16 +420,23 @@ impl Header {
         // The header is the size of the struct plus 8 bytes for the length of the header itself.
         let header_size = mem::size_of::<Self>() + 8;
         let mut bytes = vec![0; header_size];
-        LittleEndian::write_u64(&mut bytes[0..8], header_size as u64);
-        LittleEndian::write_u64(&mut bytes[8..16], self.member_len);
-        LittleEndian::write_u64(&mut bytes[16..24], self.service_len);
-        LittleEndian::write_u64(&mut bytes[24..32], self.service_config_len);
-        LittleEndian::write_u64(&mut bytes[32..40], self.service_file_len);
-        LittleEndian::write_u64(&mut bytes[40..48], self.election_len);
-        LittleEndian::write_u64(&mut bytes[48..56], self.update_len);
-        LittleEndian::write_u64(&mut bytes[56..64], self.departure_len);
+        bytes[0..8].copy_from_slice(&(header_size as u64).to_le_bytes());
+        bytes[8..16].copy_from_slice(&(self.member_len).to_le_bytes());
+        bytes[16..24].copy_from_slice(&(self.service_len).to_le_bytes());
+        bytes[24..32].copy_from_slice(&(self.service_config_len).to_le_bytes());
+        bytes[32..40].copy_from_slice(&(self.service_file_len).to_le_bytes());
+        bytes[40..48].copy_from_slice(&(self.election_len).to_le_bytes());
+        bytes[48..56].copy_from_slice(&(self.update_len).to_le_bytes());
+        bytes[56..64].copy_from_slice(&(self.departure_len).to_le_bytes());
         Ok(bytes)
     }
+}
+
+/// The little-endian `u64` in an 8-byte slice.
+fn read_u64(bytes: &[u8]) -> u64 {
+    let mut buf = [0; 8];
+    buf.copy_from_slice(bytes);
+    u64::from_le_bytes(buf)
 }
 
 #[cfg(test)]

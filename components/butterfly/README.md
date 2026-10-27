@@ -1,8 +1,8 @@
 # Butterfly
 
 Butterfly is the Dojo gossip protocol. It's an implementation of
-SWIM+Inf+Susp for membership, and a ZeroMQ based newscast-inspired gossip
-protocol.
+SWIM+Inf+Susp for membership over UDP, and a newscast-inspired gossip protocol
+that sends length-delimited rumors over TCP.
 
 ## Goals
 

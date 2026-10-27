@@ -12,21 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The push thread.
+//! Distributing rumors.
 //!
-//! This is the thread for distributing rumors to members. It distributes to `FANOUT` members, no
-//! more often than `Timing::GOSSIP_PERIOD_DEFAULT_MS`.
+//! Every gossip round sends each member's hot rumors to it, `FANOUT` members at a time and no more
+//! often than `Timing::GOSSIP_PERIOD_DEFAULT_MS`.
 
-use std::{thread,
+use std::{sync::LazyLock,
           time::Duration};
 
+use bytes::Bytes;
 use dojo_core::util::ToI64;
+use futures_util::SinkExt;
 use prometheus::{IntCounterVec,
                  IntGaugeVec};
-use time::SteadyTime;
-use zmq;
+use tokio::{net::TcpStream,
+            task::JoinSet,
+            time};
+use tokio_util::codec::FramedWrite;
 
-use crate::{member::{Member,
+use crate::{gossip,
+            member::{Member,
                      Membership},
             rumor::{RumorEnvelope,
                     RumorKey,
@@ -34,114 +39,70 @@ use crate::{member::{Member,
                     RumorType},
             server::{timing::Timing,
                      Server},
-            trace::TraceKind,
-            ZMQ_CONTEXT};
+            trace::TraceKind};
 
 const FANOUT: usize = 5;
 
-lazy_static! {
-    static ref GOSSIP_MESSAGES_SENT: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_gossip_messages_sent_total",
-                                  "Total number of gossip messages sent",
-                                  &["type", "mode"]).unwrap();
-    static ref GOSSIP_BYTES_SENT: IntGaugeVec =
-        register_int_gauge_vec!("doj_butterfly_gossip_sent_bytes",
-                                "Gossip message size sent in bytes",
-                                &["type", "mode"]).unwrap();
-}
+static GOSSIP_MESSAGES_SENT: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_gossip_messages_sent_total",
+                              "Total number of gossip messages sent",
+                              &["type", "mode"]).unwrap()
+});
+static GOSSIP_BYTES_SENT: LazyLock<IntGaugeVec> = LazyLock::new(|| {
+    register_int_gauge_vec!("doj_butterfly_gossip_sent_bytes",
+                            "Gossip message size sent in bytes",
+                            &["type", "mode"]).unwrap()
+});
 
 /// The Push server
-#[derive(Debug)]
-pub struct Push {
-    pub server: Server,
-    pub timing: Timing,
-}
-
-impl Push {
-    /// Creates a new Push instance from a Server and Timing
-    pub fn new(server: Server, timing: Timing) -> Push { Push { server, timing } }
-
-    /// Executes the Push thread. Gets a list of members to talk to that are not Confirmed; then
-    /// proceeds to process the list in `FANOUT` sized chunks. If we finish sending the messages to
-    /// all FANOUT targets faster than `Timing::GOSSIP_PERIOD_DEFAULT_MS`, we will block until we
-    /// exceed that time.
-    pub fn run(&mut self) {
-        loop {
-            if self.server.paused() {
-                thread::sleep(Duration::from_millis(100));
-                continue;
-            }
-
-            self.server.update_gossip_round();
-
-            let mut check_list = self.server.member_list.check_list(self.server.member_id());
-            let long_wait = self.timing.gossip_timeout();
-
-            'fanout: loop {
-                let mut thread_list = Vec::with_capacity(FANOUT);
-                if check_list.is_empty() {
-                    break 'fanout;
-                }
-                let drain_length = if check_list.len() >= FANOUT {
-                    FANOUT
-                } else {
-                    check_list.len()
-                };
-                let next_gossip = self.timing.gossip_timeout();
-                for member in check_list.drain(0..drain_length) {
-                    if self.server.is_member_blocked(&member.id) {
-                        debug!("Not sending rumors to {} - it is blocked", member.id);
-
-                        continue;
-                    }
-                    // Unlike the SWIM mechanism, we don't actually want to send gossip traffic to
-                    // persistent members that are confirmed dead. When the failure detector thread
-                    // finds them alive again, we'll go ahead and get back to the business at hand.
-                    if self.server.member_list.pingable(&member)
-                       && !self.server.member_list.persistent_and_confirmed(&member)
-                    {
-                        let rumors = self.server.rumor_heat.currently_hot_rumors(&member.id);
-                        if !rumors.is_empty() {
-                            let sc = self.server.clone();
-
-                            let guard = match thread::Builder::new()
-                                .name(String::from("push-worker"))
-                                .spawn(move || {
-                                    PushWorker::new(sc).send_rumors(&member, &rumors);
-                                }) {
-                                Ok(guard) => guard,
-                                Err(e) => {
-                                    error!("Could not spawn thread: {}", e);
-                                    continue;
-                                }
-                            };
-                            thread_list.push(guard);
-                        }
-                    }
-                }
-                let num_threads = thread_list.len();
-                for guard in thread_list.drain(0..num_threads) {
-                    let _ = guard.join()
-                                 .map_err(|e| error!("Push worker died: {:?}", e));
-                }
-                if SteadyTime::now() < next_gossip {
-                    let wait_time = (next_gossip - SteadyTime::now()).num_milliseconds();
-                    if wait_time > 0 {
-                        thread::sleep(Duration::from_millis(wait_time as u64));
-                    }
-                }
-            }
-            if SteadyTime::now() < long_wait {
-                let wait_time = (long_wait - SteadyTime::now()).num_milliseconds();
-                if wait_time > 0 {
-                    thread::sleep(Duration::from_millis(wait_time as u64));
-                }
-            }
+/// Sends hot rumors to every member each gossip round, until the runtime shuts down. Gets a list of
+/// members to talk to that are not Confirmed, then sends to them in `FANOUT` sized chunks. If a
+/// chunk finishes faster than `Timing::GOSSIP_PERIOD_DEFAULT_MS`, waits out the rest of it.
+pub async fn run(server: Server, timing: Timing) {
+    loop {
+        if server.paused() {
+            time::sleep(Duration::from_millis(100)).await;
+            continue;
         }
+
+        server.update_gossip_round();
+
+        let mut check_list = server.member_list.check_list(server.member_id());
+        let long_wait = timing.gossip_timeout();
+
+        while !check_list.is_empty() {
+            let mut sends = JoinSet::new();
+            let drain_length = check_list.len().min(FANOUT);
+            let next_gossip = timing.gossip_timeout();
+            for member in check_list.drain(0..drain_length) {
+                if server.is_member_blocked(&member.id) {
+                    debug!("Not sending rumors to {} - it is blocked", member.id);
+                    continue;
+                }
+                // Unlike the SWIM mechanism, we don't actually want to send gossip traffic to
+                // persistent members that are confirmed dead. When the failure detector thread
+                // finds them alive again, we'll go ahead and get back to the business at hand.
+                if server.member_list.pingable(&member)
+                   && !server.member_list.persistent_and_confirmed(&member)
+                {
+                    let rumors = server.rumor_heat.currently_hot_rumors(&member.id);
+                    if !rumors.is_empty() {
+                        sends.spawn(PushWorker::new(server.clone()).send_rumors(member, rumors));
+                    }
+                }
+            }
+            while let Some(sent) = sends.join_next().await {
+                if let Err(e) = sent {
+                    error!("Push worker died: {}", e);
+                }
+            }
+            time::sleep_until(next_gossip.into()).await;
+        }
+        time::sleep_until(long_wait.into()).await;
     }
 }
 
-/// A worker thread for pushing messages to a target
+/// Sends rumors to one member
 struct PushWorker {
     pub server: Server,
 }
@@ -150,40 +111,52 @@ impl PushWorker {
     /// Create a new PushWorker.
     pub fn new(server: Server) -> PushWorker { PushWorker { server } }
 
-    /// Send the list of rumors to a given member. This method creates an outbound socket and then
-    /// closes the connection as soon as we are done sending rumors. ZeroMQ may choose to keep the
-    /// connection and socket open for 1 second longer - so it is possible, but unlikely, that this
-    /// method can lose messages.
-    // If we ever need to modify this function, it would be an excellent opportunity to
-    // simplify the redundant aspects and remove this allow(clippy::cyclomatic_complexity),
-    // but changing it in the absence of other necessity seems like too much risk for the
-    // expected reward.
-    #[allow(clippy::cyclomatic_complexity)]
-    fn send_rumors(&self, member: &Member, rumors: &[RumorKey]) {
-        let socket = (**ZMQ_CONTEXT).as_mut()
-                                    .socket(zmq::PUSH)
-                                    .expect("Failure to create the ZMQ push socket");
-        socket.set_linger(1000)
-              .expect("Failure to set the ZMQ push socket to not linger");
-        socket.set_tcp_keepalive(0)
-              .expect("Failure to set the ZMQ push socket to not use keepalive");
-        socket.set_immediate(true)
-              .expect("Failure to set the ZMQ push socket to immediate");
-        socket.set_sndhwm(1000)
-              .expect("Failure to set the ZMQ push socket hwm");
-        socket.set_sndtimeo(500)
-              .expect("Failure to set the ZMQ send timeout");
+    /// Sends the list of rumors to a given member over one connection, then closes it.
+    async fn send_rumors(self, member: Member, rumors: Vec<RumorKey>) {
+        let frames = self.frames(&member, &rumors);
         let to_addr = format!("{}:{}", member.address, member.gossip_port);
-        match socket.connect(&format!("tcp://{}", to_addr)) {
-            Ok(()) => debug!("Connected push socket to {:?}", member),
-            Err(e) => {
-                error!("Cannot connect push socket to {:?}: {:?}", member, e);
-                let label_values = &["socket_connect", "failure"];
-                GOSSIP_MESSAGES_SENT.with_label_values(label_values).inc();
-                GOSSIP_BYTES_SENT.with_label_values(label_values).set(0);
-                return;
+        let stream = match time::timeout(gossip::SEND_TIMEOUT, TcpStream::connect(&to_addr)).await {
+            Ok(Ok(stream)) => stream,
+            Ok(Err(e)) => return Self::connect_failed(&member, &e),
+            Err(e) => return Self::connect_failed(&member, &e),
+        };
+        debug!("Connected to {:?} to send rumors", member);
+        let mut sink = FramedWrite::new(stream, gossip::codec());
+        for (kind, payload) in frames {
+            let len = payload.len().to_i64();
+            match time::timeout(gossip::SEND_TIMEOUT, sink.send(Bytes::from(payload))).await {
+                Ok(Ok(())) => {
+                    GOSSIP_MESSAGES_SENT.with_label_values(&[&kind.to_string(), "success"])
+                                        .inc();
+                    GOSSIP_BYTES_SENT.with_label_values(&[&kind.to_string(), "success"])
+                                     .set(len);
+                    debug!("Sent a {} rumor to {:?}", kind, member);
+                }
+                Ok(Err(e)) => {
+                    warn!("Could not send rumor to {:?} @ {:?}: {}",
+                          member.id, to_addr, e);
+                    break;
+                }
+                Err(e) => {
+                    warn!("Could not send rumor to {:?} @ {:?}: {}",
+                          member.id, to_addr, e);
+                    break;
+                }
             }
         }
+        self.server.rumor_heat.cool_rumors(&member.id, &rumors);
+    }
+
+    fn connect_failed(member: &Member, e: &dyn std::fmt::Display) {
+        error!("Cannot connect to {:?} to send rumors: {}", member, e);
+        let label_values = &["socket_connect", "failure"];
+        GOSSIP_MESSAGES_SENT.with_label_values(label_values).inc();
+        GOSSIP_BYTES_SENT.with_label_values(label_values).set(0);
+    }
+
+    /// Encodes and wraps each rumor for sending, skipping any that cannot be.
+    fn frames(&self, member: &Member, rumors: &[RumorKey]) -> Vec<(RumorType, Vec<u8>)> {
+        let mut frames = Vec::with_capacity(rumors.len());
         'rumorlist: for rumor_key in rumors.iter() {
             let rumor_as_bytes = match rumor_key.kind {
                 RumorType::Member => {
@@ -343,22 +316,9 @@ impl PushWorker {
                     continue 'rumorlist;
                 }
             };
-            match socket.send(&payload, 0) {
-                Ok(()) => {
-                    GOSSIP_MESSAGES_SENT.with_label_values(&[&rumor_key.kind.to_string(),
-                                                             "success"])
-                                        .inc();
-                    GOSSIP_BYTES_SENT.with_label_values(&[&rumor_key.kind.to_string(), "success"])
-                                     .set(payload.len().to_i64());
-                    debug!("Sent rumor {:?} to {:?}", rumor_key, member);
-                }
-                Err(e) => {
-                    warn!("Could not send rumor to {:?} @ {:?}; ZMQ said: {:?}",
-                          member.id, to_addr, e)
-                }
-            }
+            frames.push((rumor_key.kind, payload));
         }
-        self.server.rumor_heat.cool_rumors(&member.id, &rumors);
+        frames
     }
 
     /// Given a rumorkey, creates a protobuf rumor for sharing.

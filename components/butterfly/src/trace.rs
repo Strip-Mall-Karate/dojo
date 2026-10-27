@@ -15,8 +15,6 @@
 //! This module handles the writing of swim trace files, which can later be post-processed to see
 //! whats happening in a network.
 
-use time;
-
 use std::{env,
           fmt,
           fs,
@@ -94,15 +92,8 @@ impl<'a> TraceWrite<'a> {
                line: u32,
                thread_name: &'a str)
                -> TraceWrite<'a> {
-        let now = time::now_utc();
-        let time_string = format!("{}-{}-{}-{}-{}-{}-{}",
-                                  1900 + now.tm_year,
-                                  now.tm_mon + 1,
-                                  now.tm_mday,
-                                  now.tm_hour,
-                                  now.tm_min,
-                                  now.tm_sec,
-                                  now.tm_nsec);
+        // Fixed precision, so sorting trace lines sorts them by time.
+        let time_string = format!("{:.9}", jiff::Timestamp::now());
         TraceWrite { kind,
                      time: time_string,
                      module_path,
@@ -156,8 +147,7 @@ impl Trace {
     /// Initialize the trace object; only happens once.
     pub fn init(&mut self, server: &Server) {
         if self.file.is_none() {
-            let now = time::now_utc();
-            let filename = format!("{}-{}.swimtrace", server.name(), now.rfc3339());
+            let filename = format!("{}-{}.swimtrace", server.name(), jiff::Timestamp::now());
             match fs::create_dir_all(&self.directory) {
                 Ok(_) => {
                     match fs::File::create(self.directory.join(&filename)) {
@@ -214,7 +204,7 @@ macro_rules! trace_it {
             use std::thread;
             let mut trace = $server.trace.write().expect("Trace lock is poisoned");
             trace.init($server);
-            let thread = thread::current();
+            let thread = ::std::thread::current();
             let thread_name = thread.name().unwrap_or("undefined");
             let member_id = $server.member_id();
             let server_name = $server.name();
@@ -237,7 +227,7 @@ macro_rules! trace_it {
                 use std::thread;
                 let mut trace = x.trace.write().expect("Trace lock is poisoned");
                 trace.init(x);
-                let thread = thread::current();
+                let thread = ::std::thread::current();
                 let thread_name = thread.name().unwrap_or("undefined");
                 let member_id = x.member_id();
                 let server_name = x.name();
@@ -259,7 +249,7 @@ macro_rules! trace_it {
             use crate::trace::TraceWrite;
             let mut trace = $server.trace.write().expect("Trace lock is poisoned");
             trace.init($server);
-            let thread = thread::current();
+            let thread = ::std::thread::current();
             let thread_name = thread.name().unwrap_or("undefined");
             let member_id = $server.member_id();
             let server_name = $server.name();
@@ -279,7 +269,7 @@ macro_rules! trace_it {
             use crate::trace::TraceWrite;
             let mut trace = $server.trace.write().expect("Trace lock is poisoned");
             trace.init($server);
-            let thread = thread::current();
+            let thread = ::std::thread::current();
             let thread_name = thread.name().unwrap_or("undefined");
             let listening = format!("{}", $server.swim_addr());
             let to_addr = format!("{}", $to_addr);
@@ -303,7 +293,7 @@ macro_rules! trace_it {
             use crate::trace::TraceWrite;
             let mut trace = $server.trace.write().expect("Trace lock is poisoned");
             trace.init($server);
-            let thread = thread::current();
+            let thread = ::std::thread::current();
             let thread_name = thread.name().unwrap_or("undefined");
             let listening = format!("{}", $server.swim_addr());
             let to_addr = format!("{}", $to_addr);
@@ -335,7 +325,7 @@ macro_rules! trace_it {
             use crate::{rumor,
                         trace::TraceWrite};
             trace.init($server);
-            let thread = thread::current();
+            let thread = ::std::thread::current();
             let thread_name = thread.name().unwrap_or("undefined");
             let listening = format!("{}", $server.gossip_addr());
             let member_id = $server.member_id();

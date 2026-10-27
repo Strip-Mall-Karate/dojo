@@ -19,16 +19,17 @@
 use std::{fmt,
           net::{SocketAddr,
                 UdpSocket},
-          sync::mpsc,
+          sync::{mpsc,
+                 LazyLock},
           thread,
-          time::Duration};
+          time::{Duration,
+                 Instant}};
 
 use dojo_core::util::ToI64;
 use prometheus::{HistogramTimer,
                  HistogramVec,
                  IntCounterVec,
                  IntGaugeVec};
-use time::SteadyTime;
 
 use super::AckReceiver;
 use crate::{member::{Health,
@@ -46,24 +47,26 @@ use crate::{member::{Health,
 /// How long to sleep between calls to `recv`.
 const PING_RECV_QUEUE_EMPTY_SLEEP_MS: u64 = 10;
 
-lazy_static! {
-    static ref SWIM_MESSAGES_SENT: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_swim_messages_sent_total",
-                                  "Total number of SWIM messages sent",
-                                  &["type"]).unwrap();
-    static ref SWIM_BYTES_SENT: IntGaugeVec =
-        register_int_gauge_vec!("doj_butterfly_swim_sent_bytes",
-                                "SWIM message size sent in bytes",
-                                &["type"]).unwrap();
-    static ref SWIM_PROBES_SENT: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_swim_probes_sent_total",
-                                  "Total number of SWIM probes sent",
-                                  &["type"]).unwrap();
-    static ref SWIM_PROBE_DURATION: HistogramVec =
-        register_histogram_vec!("doj_butterfly_swim_probe_duration_seconds",
-                                "SWIM probe round trip time",
-                                &["type"]).unwrap();
-}
+static SWIM_MESSAGES_SENT: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_swim_messages_sent_total",
+                              "Total number of SWIM messages sent",
+                              &["type"]).unwrap()
+});
+static SWIM_BYTES_SENT: LazyLock<IntGaugeVec> = LazyLock::new(|| {
+    register_int_gauge_vec!("doj_butterfly_swim_sent_bytes",
+                            "SWIM message size sent in bytes",
+                            &["type"]).unwrap()
+});
+static SWIM_PROBES_SENT: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_swim_probes_sent_total",
+                              "Total number of SWIM probes sent",
+                              &["type"]).unwrap()
+});
+static SWIM_PROBE_DURATION: LazyLock<HistogramVec> = LazyLock::new(|| {
+    register_histogram_vec!("doj_butterfly_swim_probe_duration_seconds",
+                            "SWIM probe round trip time",
+                            &["type"]).unwrap()
+});
 
 #[derive(Clone, Copy, Debug)]
 enum AckFrom {
@@ -149,23 +152,15 @@ impl Outbound {
 
                     self.probe(member);
 
-                    if SteadyTime::now() <= next_protocol_period {
-                        let wait_time =
-                            (next_protocol_period - SteadyTime::now()).num_milliseconds();
-                        if wait_time > 0 {
-                            debug!("Waiting {} until the next protocol period", wait_time);
-                            thread::sleep(Duration::from_millis(wait_time as u64));
-                        }
+                    let wait_time = next_protocol_period.saturating_duration_since(Instant::now());
+                    if !wait_time.is_zero() {
+                        debug!("Waiting {:?} until the next protocol period", wait_time);
+                        thread::sleep(wait_time);
                     }
                 }
             }
 
-            if SteadyTime::now() <= long_wait {
-                let wait_time = (long_wait - SteadyTime::now()).num_milliseconds();
-                if wait_time > 0 {
-                    thread::sleep(Duration::from_millis(wait_time as u64));
-                }
-            }
+            thread::sleep(long_wait.saturating_duration_since(Instant::now()));
         }
     }
 
@@ -275,7 +270,7 @@ impl Outbound {
                     }
                 }
                 Err(mpsc::TryRecvError::Empty) => {
-                    if SteadyTime::now() > timeout {
+                    if Instant::now() > timeout {
                         warn!("Timed out waiting for Ack from {}@{}", &member.id, addr);
                         return false;
                     }

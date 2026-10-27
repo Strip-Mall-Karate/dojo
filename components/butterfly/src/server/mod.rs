@@ -45,6 +45,7 @@ use std::{collections::{HashMap,
                  mpsc::{self,
                         channel},
                  Arc,
+                 LazyLock,
                  Mutex,
                  RwLock},
           thread,
@@ -90,15 +91,15 @@ use crate::{error::{Error,
 /// down and leave the ring.
 const SELF_DEPARTURE_RUMOR_FANOUT: usize = 10;
 
-lazy_static! {
-    static ref INCARNATION: IntGauge =
-        register_int_gauge!(opts!("doj_butterfly_incarnation_number",
-                                  "Incarnation number of the supervisor")).unwrap();
-    static ref ELECTION_DURATION: HistogramVec =
-        register_histogram_vec!("doj_butterfly_election_duration_seconds",
-                                "How long it takes to complete an election",
-                                &["service_group"]).unwrap();
-}
+static INCARNATION: LazyLock<IntGauge> = LazyLock::new(|| {
+    register_int_gauge!(opts!("doj_butterfly_incarnation_number",
+                              "Incarnation number of the supervisor")).unwrap()
+});
+static ELECTION_DURATION: LazyLock<HistogramVec> = LazyLock::new(|| {
+    register_histogram_vec!("doj_butterfly_election_duration_seconds",
+                            "How long it takes to complete an election",
+                            &["service_group"]).unwrap()
+});
 
 // We need this here to track how long it takes to complete an election. We need to store the timer
 // somehow so we can reference it between separate function invocations, and storing it directly in
@@ -507,18 +508,26 @@ impl Server {
                                           panic!("You should never, ever get here, frank");
                                       });
 
+        // Gossip runs on a runtime of its own until the Supervisor shares one. Bind here, so a
+        // taken port fails start instead of the gossip thread.
+        let listener = std::net::TcpListener::bind(self.gossip_addr).map_err(Error::CannotBind)?;
+        listener.set_nonblocking(true).map_err(Error::CannotBind)?;
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_all()
+                                                                   .build()
+                                                                   .map_err(Error::CannotBind)?;
         let server_d = self.clone();
-        let _ = thread::Builder::new().name(format!("pull-{}", self.name()))
+        let _ = thread::Builder::new().name(format!("gossip-{}", self.name()))
                                       .spawn(move || {
-                                          pull::Pull::new(server_d).run();
+                                          runtime.block_on(async move {
+                                                     let listener =
+                                                         tokio::net::TcpListener::from_std(listener)
+                                                             .expect("A bound listener registers \
+                                                                      with the runtime");
+                                                     tokio::join!(pull::run(server_d.clone(),
+                                                                            listener),
+                                                                  push::run(server_d, timing));
+                                                 });
                                           panic!("You should never, ever get here, davey");
-                                      });
-
-        let server_e = self.clone();
-        let _ = thread::Builder::new().name(format!("push-{}", self.name()))
-                                      .spawn(move || {
-                                          push::Push::new(server_e, timing).run();
-                                          panic!("You should never, ever get here, liu");
                                       });
 
         if self.dat_file.is_some() {
@@ -560,7 +569,7 @@ impl Server {
     }
 
     /// Stop the outbound and inbound threads from processing work.
-    pub fn pause(&mut self) { self.pause.compare_and_swap(false, true, Ordering::Relaxed); }
+    pub fn pause(&mut self) { self.pause.store(true, Ordering::Relaxed); }
 
     /// Whether this server is currently paused.
     pub fn paused(&self) -> bool { self.pause.load(Ordering::Relaxed) }
@@ -757,8 +766,7 @@ impl Server {
     pub fn insert_departure(&self, departure: Departure) {
         let rk = RumorKey::from(&departure);
         if *self.member_id == departure.member_id {
-            self.departed
-                .compare_and_swap(false, true, Ordering::Relaxed);
+            self.departed.store(true, Ordering::Relaxed);
         }
 
         self.member_list.set_departed(&departure.member_id);
@@ -1433,8 +1441,8 @@ mod tests {
     mod myself {
         use super::super::*;
         use crate::member::Member;
-        use mktemp::Temp;
         use std::path::Path;
+        use tempfile::TempDir;
 
         /// Helper function to create an instance of `Myself` for
         /// tests.
@@ -1449,7 +1457,7 @@ mod tests {
 
         #[test]
         fn myself_can_increment_its_incarnation() {
-            let path = Temp::new_dir().expect("Could not create temp file");
+            let path = TempDir::new().expect("Could not create temp file");
             let mut me = myself(path.as_ref().join("INCARNATION"));
 
             assert_eq!(me.incarnation(),
@@ -1464,7 +1472,7 @@ mod tests {
 
         #[test]
         fn refute_an_incarnation() {
-            let path = Temp::new_dir().expect("Could not create temp file");
+            let path = TempDir::new().expect("Could not create temp file");
             let mut me = myself(path.as_ref().join("INCARNATION"));
 
             assert_eq!(me.incarnation(),
@@ -1494,10 +1502,8 @@ mod tests {
                   sync::Mutex};
         use tempfile::TempDir;
 
-        lazy_static! {
-            static ref SWIM_PORT: Mutex<u16> = Mutex::new(6666);
-            static ref GOSSIP_PORT: Mutex<u16> = Mutex::new(7777);
-        }
+        static SWIM_PORT: Mutex<u16> = Mutex::new(6666);
+        static GOSSIP_PORT: Mutex<u16> = Mutex::new(7777);
 
         #[derive(Debug)]
         struct ZeroSuitability;

@@ -25,13 +25,15 @@ use std::{collections::{hash_map,
           str::FromStr,
           sync::{atomic::{AtomicUsize,
                           Ordering},
-                 RwLock}};
+                 LazyLock,
+                 RwLock},
+          time::{Duration,
+                 Instant}};
 
 use dojo_core::util::ToI64;
 use prometheus::IntGaugeVec;
-use rand::{seq::{IteratorRandom,
-                 SliceRandom},
-           thread_rng};
+use rand::seq::{IteratorRandom,
+                SliceRandom};
 use serde::{de,
             ser::{SerializeMap,
                   SerializeStruct},
@@ -39,8 +41,6 @@ use serde::{de,
             Deserializer,
             Serialize,
             Serializer};
-use time::{Duration,
-           SteadyTime};
 use uuid::Uuid;
 
 pub use crate::protocol::swim::Health;
@@ -57,12 +57,11 @@ use crate::{error::{Error,
 /// How many nodes do we target when we need to run PingReq.
 const PINGREQ_TARGETS: usize = 5;
 
-lazy_static! {
-    static ref PEER_HEALTH_COUNT: IntGaugeVec =
-        register_int_gauge_vec!("doj_butterfly_peer_health_total",
-                                "Number of butterfly peers",
-                                &["health"]).unwrap();
-}
+static PEER_HEALTH_COUNT: LazyLock<IntGaugeVec> = LazyLock::new(|| {
+    register_int_gauge_vec!("doj_butterfly_peer_health_total",
+                            "Number of butterfly peers",
+                            &["health"]).unwrap()
+});
 
 /// Wraps a `u64` to represent the "incarnation number" of a
 /// `Member`. Incarnation numbers can only ever be incremented.
@@ -173,7 +172,7 @@ impl Member {
 
 impl Default for Member {
     fn default() -> Self {
-        Member { id:          Uuid::new_v4().to_simple_ref().to_string(),
+        Member { id:          Uuid::new_v4().simple().to_string(),
                  incarnation: Incarnation::default(),
                  // TODO (CM): DANGER DANGER DANGER
                  // This is a lousy default, and suggests that the notion
@@ -241,8 +240,8 @@ impl From<Membership> for proto::Membership {
 /// Since protobuf doesn't have support for 16-bit ints, we need to check that
 /// we haven't received something illegal
 fn as_port(x: i32) -> Option<u16> {
-    const PORT_MIN: i32 = ::std::u16::MIN as i32;
-    const PORT_MAX: i32 = ::std::u16::MAX as i32;
+    const PORT_MIN: i32 = u16::MIN as i32;
+    const PORT_MAX: i32 = u16::MAX as i32;
 
     match x {
         PORT_MIN..=PORT_MAX => Some(x as u16),
@@ -331,12 +330,17 @@ mod member_list {
     pub struct Entry {
         pub member:            super::Member,
         pub health:            super::Health,
-        pub health_updated_at: super::SteadyTime,
+        pub health_updated_at: super::Instant,
     }
 }
 
 /// Tracks lists of members, their health, and how long they have been
 /// suspect or confirmed.
+///
+/// The `with_*` methods copy what they need and release their lock before
+/// calling back, so a callback may use the member list. The locks are not
+/// reentrant: holding a read lock while another read waits behind a writer
+/// deadlocks.
 #[derive(Debug)]
 pub struct MemberList {
     entries:         RwLock<HashMap<UuidSimple, member_list::Entry>>,
@@ -417,7 +421,8 @@ impl MemberList {
     }
 
     pub fn with_initial_members(&self, mut with_closure: impl FnMut(&Member)) {
-        for member in self.initial_members_read().iter() {
+        let members = self.initial_members_read().clone();
+        for member in members.iter() {
             with_closure(member);
         }
     }
@@ -500,7 +505,7 @@ impl MemberList {
                 if incoming.newer_or_less_healthy_than(val.member.incarnation, val.health) {
                     *val = member_list::Entry { member:            incoming.member,
                                                 health:            incoming.health,
-                                                health_updated_at: SteadyTime::now(), };
+                                                health_updated_at: Instant::now(), };
                     true
                 } else {
                     false
@@ -509,7 +514,7 @@ impl MemberList {
             hash_map::Entry::Vacant(entry) => {
                 entry.insert(member_list::Entry { member:            incoming.member,
                                                   health:            incoming.health,
-                                                  health_updated_at: SteadyTime::now(), });
+                                                  health_updated_at: Instant::now(), });
                 true
             }
         };
@@ -604,7 +609,7 @@ impl MemberList {
                                       .filter(|member| member.id != exclude_id)
                                       .cloned()
                                       .collect();
-        members.shuffle(&mut thread_rng());
+        members.shuffle(&mut rand::rng());
         members
     }
 
@@ -613,16 +618,18 @@ impl MemberList {
                                 sending_member_id: &str,
                                 target_member_id: &str,
                                 mut with_closure: impl FnMut(&Member)) {
-        for member_list::Entry { member, .. } in
-            self.read_entries()
-                .values()
-                .filter(|member_list::Entry { member, health, .. }| {
-                    member.id != sending_member_id
-                    && member.id != target_member_id
-                    && *health == Health::Alive
-                })
-                .choose_multiple(&mut thread_rng(), PINGREQ_TARGETS)
-        {
+        let targets: Vec<Member> = self.read_entries()
+                                       .values()
+                                       .filter(|member_list::Entry { member, health, .. }| {
+                                           member.id != sending_member_id
+                                           && member.id != target_member_id
+                                           && *health == Health::Alive
+                                       })
+                                       .sample(&mut rand::rng(), PINGREQ_TARGETS)
+                                       .into_iter()
+                                       .map(|member_list::Entry { member, .. }| member.clone())
+                                       .collect();
+        for member in targets.iter() {
             with_closure(member);
         }
     }
@@ -637,14 +644,16 @@ impl MemberList {
 
     /// Calls a function whose argument is a reference to a membership entry matching the given ID.
     pub fn with_member(&self, member_id: &str, mut with_closure: impl FnMut(Option<&Member>)) {
-        with_closure(self.read_entries()
-                         .get(member_id)
-                         .map(|member_list::Entry { member, .. }| member));
+        with_closure(self.get_cloned(member_id).as_ref());
     }
 
     /// Iterates over the member list, calling the function for each member.
     pub fn with_members(&self, mut with_closure: impl FnMut(&Member)) {
-        for member_list::Entry { member, .. } in self.read_entries().values() {
+        let members: Vec<Member> = self.read_entries()
+                                       .values()
+                                       .map(|member_list::Entry { member, .. }| member.clone())
+                                       .collect();
+        for member in members.iter() {
             with_closure(member);
         }
     }
@@ -653,14 +662,15 @@ impl MemberList {
     pub fn with_memberships(&self,
                             mut with_closure: impl FnMut(Membership) -> Result<u64>)
                             -> Result<u64> {
+        let memberships: Vec<Membership> = self.read_entries()
+                                               .values()
+                                               .map(|member_list::Entry { member, health, .. }| {
+                                                   Membership { member: member.clone(),
+                                                                health: *health, }
+                                               })
+                                               .collect();
         let mut ok: Result<u64> = Ok(0);
-        for membership in self.read_entries()
-                              .values()
-                              .map(|member_list::Entry { member, health, .. }| {
-                                  Membership { member: member.clone(),
-                                               health: *health, }
-                              })
-        {
+        for membership in memberships {
             ok = Ok(with_closure(membership)?);
         }
         ok
@@ -694,7 +704,7 @@ impl MemberList {
     /// The newly-updated health status is recorded properly.
     // TODO (CM): Better return type than Vec<String>
     fn members_expired_to(&self, expiring_to: Health, timeout: Duration) -> Vec<String> {
-        let now = SteadyTime::now();
+        let now = Instant::now();
         let precursor_health = match expiring_to {
             Health::Confirmed => Health::Suspect,
             Health::Departed => Health::Confirmed,
@@ -870,6 +880,40 @@ mod tests {
         fn health_of() {
             let ml = populated_member_list(1);
             ml.with_members(|m| assert_eq!(ml.health_of(m), Some(Health::Alive)));
+        }
+
+        // A callback that writes to the member list would wait forever for the
+        // read lock its caller held.
+        #[test]
+        fn with_members_callback_may_write_the_member_list() {
+            let ml = populated_member_list(3);
+            ml.with_members(|m| {
+                  ml.insert(m.clone(), Health::Suspect);
+              });
+            ml.with_members(|m| assert_eq!(ml.health_of(m), Some(Health::Suspect)));
+        }
+
+        #[test]
+        fn with_pingreq_targets_callback_may_write_the_member_list() {
+            let ml = populated_member_list(10);
+            let (from, target) =
+                ml.with_member_iter(|mut i| (i.nth(0).unwrap().clone(), i.nth(1).unwrap().clone()));
+            let mut written = 0;
+            ml.with_pingreq_targets(&from.id, &target.id, |m| {
+                  ml.insert(m.clone(), Health::Suspect);
+                  written += 1;
+              });
+            assert_eq!(written, PINGREQ_TARGETS);
+        }
+
+        #[test]
+        fn with_member_callback_may_write_the_member_list() {
+            let ml = populated_member_list(1);
+            let id = ml.with_member_iter(|mut i| i.nth(0).unwrap().id.clone());
+            ml.with_member(&id, |m| {
+                  ml.insert(m.unwrap().clone(), Health::Suspect);
+              });
+            assert_eq!(ml.health_of_by_id(&id), Some(Health::Suspect));
         }
 
         #[test]
@@ -1310,8 +1354,7 @@ mod tests {
                                 Member,
                                 MemberList};
             use std::{thread,
-                      time::Duration as StdDuration};
-            use time::Duration;
+                      time::Duration};
 
             #[test]
             fn timing_out_from_suspect_to_confirmed() {
@@ -1320,11 +1363,8 @@ mod tests {
                 let small_seconds = 1;
                 let large_seconds = 100_000;
 
-                // TODO (CM): OMG, use only one kind of Duration, pleeeeeeeease
-                let small_timeout =
-                    Duration::from_std(StdDuration::from_secs(small_seconds)).unwrap();
-                let large_timeout =
-                    Duration::from_std(StdDuration::from_secs(large_seconds)).unwrap();
+                let small_timeout = Duration::from_secs(small_seconds);
+                let large_timeout = Duration::from_secs(large_seconds);
 
                 assert!(ml.members_expired_to_confirmed(small_timeout).is_empty(),
                         "An empty MemberList shouldn't have anything that's timing out to being \
@@ -1341,7 +1381,7 @@ mod tests {
                         "Nothing should have timed out to Confirmed with a large timeout");
 
                 // Allow the Suspect to age
-                thread::sleep(StdDuration::from_secs(small_seconds));
+                thread::sleep(Duration::from_secs(small_seconds));
 
                 let newly_confirmed = ml.members_expired_to_confirmed(small_timeout);
                 assert!(newly_confirmed.contains(&member_one.id),
@@ -1359,11 +1399,8 @@ mod tests {
                 let small_seconds = 1;
                 let large_seconds = 100_000;
 
-                // TODO (CM): OMG, use only one kind of Duration, pleeeeeeeease
-                let small_timeout =
-                    Duration::from_std(StdDuration::from_secs(small_seconds)).unwrap();
-                let large_timeout =
-                    Duration::from_std(StdDuration::from_secs(large_seconds)).unwrap();
+                let small_timeout = Duration::from_secs(small_seconds);
+                let large_timeout = Duration::from_secs(large_seconds);
 
                 assert!(ml.members_expired_to_departed(small_timeout).is_empty(),
                         "An empty MemberList shouldn't have anything that's timing out to being \
@@ -1386,7 +1423,7 @@ mod tests {
                         "Nothing should have timed out to Departed with a large timeout");
 
                 // Allow the Confirmed to age
-                thread::sleep(StdDuration::from_secs(small_seconds));
+                thread::sleep(Duration::from_secs(small_seconds));
 
                 let newly_departed = ml.members_expired_to_departed(small_timeout);
                 assert!(newly_departed.contains(&member_one.id),
@@ -1405,12 +1442,12 @@ mod tests {
                 let member_3 = Member::default();
 
                 assert!(ml.insert(member_1.clone(), Health::Suspect));
-                thread::sleep(StdDuration::from_secs(1));
+                thread::sleep(Duration::from_secs(1));
                 assert!(ml.insert(member_2.clone(), Health::Suspect));
-                thread::sleep(StdDuration::from_secs(2)); // Give us a bit of padding
+                thread::sleep(Duration::from_secs(2)); // Give us a bit of padding
                 assert!(ml.insert(member_3.clone(), Health::Suspect));
 
-                let timeout = Duration::from_std(StdDuration::from_secs(2)).unwrap();
+                let timeout = Duration::from_secs(2);
 
                 let newly_confirmed = ml.members_expired_to_confirmed(timeout);
                 assert!(newly_confirmed.contains(&member_1.id),
@@ -1440,12 +1477,12 @@ mod tests {
                 let member_3 = Member::default();
 
                 assert!(ml.insert(member_1.clone(), Health::Confirmed));
-                thread::sleep(StdDuration::from_secs(1));
+                thread::sleep(Duration::from_secs(1));
                 assert!(ml.insert(member_2.clone(), Health::Confirmed));
-                thread::sleep(StdDuration::from_secs(2)); // Give us a bit of padding
+                thread::sleep(Duration::from_secs(2)); // Give us a bit of padding
                 assert!(ml.insert(member_3.clone(), Health::Confirmed));
 
-                let timeout = Duration::from_std(StdDuration::from_secs(2)).unwrap();
+                let timeout = Duration::from_secs(2);
 
                 let newly_departed = ml.members_expired_to_departed(timeout);
                 assert!(newly_departed.contains(&member_1.id),

@@ -68,3 +68,14 @@ longer story.
   loses its trailing `, `. Two things break: `foo[0]` must be written `foo.[0]` (nothing uses
   it), and pest stays at 2.8 until the Supervisor's actix-web 0.7, whose ring 0.13 holds cc at
   1.0.95, is replaced.
+- **Old dependencies are replaced, not only upgraded.** Where a dependency reflects what Rust
+  offered when the tree was written (zmq, futures 0.1, tokio 0.1, actix-web 0.7), it gives way
+  to what a new project would choose today, at its latest release.
+- **Gossip travels over TCP on tokio, not ZeroMQ.** Each gossip round opens one connection per
+  member and sends each rumor as a frame of a 4-byte big-endian length and its `Wire` message
+  (`tokio_util`'s length-delimited codec), with frames capped at 8 MiB. Gossip runs on a tokio
+  runtime butterfly owns until the Supervisor moves to tokio 1 and shares its own. SWIM stays
+  on its UDP threads: its loops are timers over one socket, and async buys them nothing. A
+  Supervisor with this change cannot exchange rumors with one using ZeroMQ, although SWIM
+  membership still works between them. Nothing is deployed, so nothing is lost. libzmq leaves
+  the build and the payload.
