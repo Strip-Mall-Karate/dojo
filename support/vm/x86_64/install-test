@@ -129,8 +129,8 @@ run_console() {
 
 for t in "${tests[@]}"; do
   case "${t}" in
-    refuse | appliance | ssh | console) "run_${t}" ;;
-    *) usage ;;
+  refuse | appliance | ssh | console) "run_${t}" ;;
+  *) usage ;;
   esac
 done
 echo "install-test: ${tests[*]}: ok"

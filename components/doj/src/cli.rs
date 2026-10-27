@@ -408,9 +408,10 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
             )
             (subcommand: sub_pkg_build())
             (@subcommand env =>
-                (about: "Prints the runtime environment of a specific installed package")
-                (@arg PKG_IDENT: +required +takes_value {valid_ident}
-                    "A package identifier (ex: karate/redis, karate/busybox-static/1.42.2)")
+                (about: "Prints the runtime environment of installed packages as shell exports, \
+                    the first package named taking precedence")
+                (@arg PKG_IDENT: +required +takes_value +multiple {valid_ident}
+                    "Package identifiers (ex: karate/redis, karate/busybox-static/1.42.2)")
             )
             (@subcommand exec =>
                 (about: "Executes a command using the 'PATH' context of an installed package")

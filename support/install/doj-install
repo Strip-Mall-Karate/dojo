@@ -37,21 +37,35 @@ kernel_args=""
 disk=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --erase) erase=true; shift ;;
-    --root-password-hash)
-      [ $# -ge 2 ] || usage
-      password_hash="$2"; shift 2 ;;
-    --root-password-stdin) password_stdin=true; shift ;;
-    --authorized-key)
-      [ $# -ge 2 ] || usage
-      authorized_key="$2"; shift 2 ;;
-    --kernel-args)
-      [ $# -ge 2 ] || usage
-      kernel_args="$2"; shift 2 ;;
-    -*) usage ;;
-    *)
-      [ -z "${disk}" ] || die "one disk at a time: ${disk} and $1"
-      disk="$1"; shift ;;
+  --erase)
+    erase=true
+    shift
+    ;;
+  --root-password-hash)
+    [ $# -ge 2 ] || usage
+    password_hash="$2"
+    shift 2
+    ;;
+  --root-password-stdin)
+    password_stdin=true
+    shift
+    ;;
+  --authorized-key)
+    [ $# -ge 2 ] || usage
+    authorized_key="$2"
+    shift 2
+    ;;
+  --kernel-args)
+    [ $# -ge 2 ] || usage
+    kernel_args="$2"
+    shift 2
+    ;;
+  -*) usage ;;
+  *)
+    [ -z "${disk}" ] || die "one disk at a time: ${disk} and $1"
+    disk="$1"
+    shift
+    ;;
   esac
 done
 [ -n "${disk}" ] || die "name the disk to install on"
@@ -60,8 +74,8 @@ if [ -n "${password_hash}" ] && "${password_stdin}"; then
   die "--root-password-hash and --root-password-stdin are two ways to give one password"
 fi
 case "${password_hash}" in
-  "" | '$'*'$'*) ;;
-  *) die "--root-password-hash takes a crypt(3) hash such as \$6\$..., not a password" ;;
+"" | '$'*'$'*) ;;
+*) die "--root-password-hash takes a crypt(3) hash such as \$6\$..., not a password" ;;
 esac
 if [ -n "${authorized_key}" ] && [ ! -s "${authorized_key}" ]; then
   die "no public key in ${authorized_key}"

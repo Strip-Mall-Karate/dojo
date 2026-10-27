@@ -8,14 +8,16 @@ expects it refused, logs in as root with <password>, runs a command and checks i
 output, then sends SIGTERM to PID 1 so the machine powers off. Everything the console
 says goes to <transcript>. Exits 0 only if every step saw what it expected.
 """
+
 import socket
 import sys
 import time
+from typing import BinaryIO
 
 
 class Console:
-    def __init__(self, port, transcript):
-        self.out = open(transcript, "wb")
+    def __init__(self, port: int, out: BinaryIO) -> None:
+        self.out = out
         self.buf = b""
         deadline = time.monotonic() + 60
         while True:
@@ -27,10 +29,10 @@ class Console:
                     raise
                 time.sleep(1)
 
-    def send(self, text):
+    def send(self, text: str) -> None:
         self.sock.sendall(text.encode())
 
-    def expect(self, text, seconds, poke=False):
+    def expect(self, text: str, seconds: int, poke: bool = False) -> None:
         """Reads until text appears after the last match; pokes Enter now and then."""
         want = text.encode()
         deadline = time.monotonic() + seconds
@@ -45,22 +47,26 @@ class Console:
             self.sock.settimeout(1)
             try:
                 chunk = self.sock.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 continue
             if not chunk:
                 raise EOFError(f"the console closed before {text!r}")
             self.out.write(chunk)
             self.out.flush()
             self.buf += chunk
-        self.buf = self.buf[self.buf.index(want) + len(want):]
+        self.buf = self.buf[self.buf.index(want) + len(want) :]
 
 
-def main():
+def main() -> int:
     if len(sys.argv) != 4:
         print(__doc__, file=sys.stderr)
         return 2
     port, password, transcript = int(sys.argv[1]), sys.argv[2], sys.argv[3]
-    con = Console(port, transcript)
+    with open(transcript, "wb") as out:
+        return log_in(Console(port, out), password)
+
+
+def log_in(con: Console, password: str) -> int:
     step = "boot to a login prompt"
     try:
         con.expect("login:", 540, poke=True)
@@ -84,7 +90,9 @@ def main():
     except (TimeoutError, EOFError) as e:
         print(f"console-login: {step}: {e}", file=sys.stderr)
         return 1
-    print("console-login: refused a wrong password, logged in, ran a command, powered off")
+    print(
+        "console-login: refused a wrong password, logged in, ran a command, powered off"
+    )
     return 0
 
 

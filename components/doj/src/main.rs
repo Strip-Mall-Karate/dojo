@@ -504,9 +504,12 @@ fn sub_pkg_dependencies(m: &ArgMatches<'_>) -> Result<()> {
 }
 
 fn sub_pkg_env(m: &ArgMatches<'_>) -> Result<()> {
-    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+    let idents = m.values_of("PKG_IDENT")
+                  .unwrap() // Required via clap
+                  .map(PackageIdent::from_str)
+                  .collect::<std::result::Result<Vec<_>, _>>()?;
 
-    command::pkg::env::start(&ident, &*FS_ROOT)
+    command::pkg::env::start(&idents, &*FS_ROOT)
 }
 
 fn sub_pkg_exec(m: &ArgMatches<'_>, cmd_args: &[OsString]) -> Result<()> {
