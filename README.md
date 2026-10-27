@@ -124,6 +124,37 @@ for `eth1`, `dojo.peer=<addr>` for the Supervisor and `dojo.members=<n>` for the
 check; `boot` takes them as `--ring`, `--link`, `--peer` and `--members`, and
 `--console <port>` serves the console on TCP instead of the terminal.
 
+## A project's shell
+
+A project names the packages its dev shell needs in `shell.toml`, and the
+packages `doj` installs for them stay the same until someone moves them:
+
+```toml
+packages = ["karate/rust", "karate/git"]
+
+[env]
+RUST_BACKTRACE = "1"
+
+[target.aarch64-darwin]
+packages = ["karate/libiconv"]
+```
+
+`doj shell lock` pins each package to one release in `shell.lock`, for the
+target `doj` runs on, with the BLAKE2b checksum of every archive that release
+and its dependencies install from. Releases come from the archive cache
+(`doj pkg install` puts each archive it installs there), newest first. A package
+already pinned keeps its release; `--update` moves every pin to the newest one.
+Another target's pins are left as they are, so each machine adds its own. The
+lock is text sorted the same way every time, and belongs in the repository.
+
+`doj shell env` installs what the lock pins, from the cache and only after each
+archive's checksum matches, and prints the packages' environment with
+`shell.toml`'s variables over it, as shell exports for `eval` (direnv's
+`.envrc` included). It refuses a lock that no longer pins what `shell.toml`
+asks for. Install progress goes to stderr, so stdout is only the exports.
+
+Resolving from Builder's channels comes when Builder runs.
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

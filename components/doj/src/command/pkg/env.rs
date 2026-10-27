@@ -32,7 +32,7 @@ pub fn start(idents: &[PackageIdent], fs_root_path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn render_environment(env: &BTreeMap<String, String>) -> Result<String> {
+pub(crate) fn render_environment(env: &BTreeMap<String, String>) -> Result<String> {
     let mut text = String::new();
     for (name, value) in env {
         if !is_shell_name(name) {

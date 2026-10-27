@@ -677,6 +677,22 @@ pub fn get(feature_flags: FeatureFlag) -> App<'static, 'static> {
                 )
             )
         )
+        (@subcommand shell =>
+            (about: "Commands relating to a project's dev shell: the packages its shell.toml \
+                names, pinned in its shell.lock")
+            (@setting ArgRequiredElseHelp)
+            (@subcommand lock =>
+                (about: "Pins each package shell.toml names to a release in the archive cache, \
+                    for this machine's target, in shell.lock. A package already pinned keeps its \
+                    release")
+                (@arg UPDATE: --update "Pins each package to the newest release in the cache, \
+                    even one already pinned")
+            )
+            (@subcommand env =>
+                (about: "Installs what shell.lock pins, from the archive cache, and prints the \
+                    shell's environment as shell exports")
+            )
+        )
         (subcommand: sup_commands())
         (@subcommand svc =>
             (about: "Commands relating to Dojo services")
