@@ -91,7 +91,6 @@ bitflags::bitflags! {
         const TEST_EXIT       = 0b0000_0000_0010;
         const TEST_BOOT_FAIL  = 0b0000_0000_0100;
         const REDACT_HTTP     = 0b0000_0000_1000;
-        const IGNORE_SIGNALS  = 0b0000_0001_0000;
         const INSTALL_HOOK    = 0b0000_0010_0000;
         const OFFLINE_INSTALL = 0b0000_0100_0000;
         const IGNORE_LOCAL    = 0b0000_1000_0000;
@@ -105,7 +104,6 @@ lazy_static! {
                            (FeatureFlag::TEST_EXIT, "DOJ_FEAT_TEST_EXIT"),
                            (FeatureFlag::TEST_BOOT_FAIL, "DOJ_FEAT_BOOT_FAIL"),
                            (FeatureFlag::REDACT_HTTP, "DOJ_FEAT_REDACT_HTTP"),
-                           (FeatureFlag::IGNORE_SIGNALS, "DOJ_FEAT_IGNORE_SIGNALS"),
                            (FeatureFlag::INSTALL_HOOK, "DOJ_FEAT_INSTALL_HOOK"),
                            (FeatureFlag::OFFLINE_INSTALL, "DOJ_FEAT_OFFLINE_INSTALL"),
                            (FeatureFlag::IGNORE_LOCAL, "DOJ_FEAT_IGNORE_LOCAL"),

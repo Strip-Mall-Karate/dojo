@@ -49,3 +49,8 @@ longer story.
   `doj`, and ipc-channel's Windows platform.
 - **macOS is a package platform**, Apple silicon included. Homebrew and Nix are the models for how
   macOS packages are built and relocated.
+- **The Supervisor always handles its signals.** `DOJ_FEAT_IGNORE_SIGNALS` is removed: only the
+  Windows service set it, and with the Launcher as PID 1 the Supervisor must answer SIGHUP.
+- **Real `karate` base packages come before the Launcher proof.** The Fennel-built Launcher is
+  compared with the bash-built one using real dependencies (`karate/glibc`, `karate/rust` and the
+  rest), not stubs over nixpkgs, so the stage-0 bootstrap of the base packages comes first.
