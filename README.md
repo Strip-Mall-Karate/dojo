@@ -22,8 +22,9 @@ another.
 | `components/sup` | `doj-sup`, the Supervisor |
 | `components/butterfly` | The gossip protocol between Supervisors |
 | `components/core` | Packages, keys, identities and paths shared by everything |
-| `components/plan-build` | Builds a package from a plan |
-| `components/plan` | `doj-plan-build`, which loads plans written in Fennel and will replace `plan-build` (its own crate on Rust 1.99.1: `cargo test` there) |
+| `components/plan-build` | The bash builder `components/plan` replaces; its package plan is gone |
+| `components/plan` | `doj-plan-build`, which builds packages from plans written in Fennel, packaged as `karate/doj-plan-build` (its own crate on Rust 1.99.1: `cargo test` there) |
+| `components/backline` | `karate/doj-backline`, what a studio puts on PATH |
 | `components/studio` | The clean-room build environment |
 | `components/pkg-export-docker`, `pkg-export-tar` | Exporters |
 | `support/vm` | The Dojo VM for Apple silicon Macs |
