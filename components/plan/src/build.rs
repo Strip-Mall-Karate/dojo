@@ -102,6 +102,16 @@ pub struct Options {
     /// Whether a Linux package that names files outside the root (a dynamic
     /// linker, a RUNPATH entry, a script's interpreter) fails the build.
     pub refuse_host_paths: bool,
+    /// Whether the build's programs see only what its dependencies provide:
+    /// `PATH` holds only their directories, and of the builder's environment
+    /// only a few variables pass (see `env::isolated`). Packaging still uses
+    /// the builder's own tools.
+    pub isolate: bool,
+    /// A package every build takes as its last build dependency, the base
+    /// tools (a shell, sed, grep, awk) plans use without declaring them; an
+    /// isolated build has no others. The backline's own plan builds without
+    /// it.
+    pub backline: Option<String>,
     /// Parallel jobs, `b.jobs`.
     pub jobs:     usize,
     /// The environment the build starts from.
@@ -140,6 +150,8 @@ impl Options {
                   context: context.to_path_buf(),
                   check: false,
                   refuse_host_paths: false,
+                  isolate: false,
+                  backline: None,
                   jobs: thread::available_parallelism().map_or(1, usize::from),
                   env: env::vars().collect() }
     }
@@ -230,6 +242,17 @@ impl State {
     }
 
     pub fn prefix_text(&self) -> Result<String, String> { text(&self.prefix()?) }
+
+    /// The `PATH` the builder was started with, for the programs Dojo runs
+    /// itself (curl, tar, unzip, strip) rather than the plan: a dependency's
+    /// tools are the build's, and an isolated build has none of the
+    /// builder's.
+    pub fn builder_env(&self) -> Vec<(String, String)> {
+        self.builder_path
+            .iter()
+            .map(|path| ("PATH".to_string(), path.clone()))
+            .collect()
+    }
 
     /// The directory a program runs in unless told otherwise: the plan's
     /// source directory while computing the version, the cache while
@@ -718,8 +741,11 @@ impl Plan {
                                      &scaffolding_settings,
                                      &[("src", &options.context), ("plan", &options.plan_dir)])?;
         }
+        let build_deps = with_backline(strings(&json["build_deps"]),
+                                       options.backline.as_deref(),
+                                       &format!("{origin}/{name}"));
         let deps = Resolved::resolve(&strings(&json["deps"]),
-                                     &strings(&json["build_deps"]),
+                                     &build_deps,
                                      scaffolding_ident.as_deref(),
                                      &options.root.join("pkgs"),
                                      packages).map_err(Error::Build)?;
@@ -741,7 +767,11 @@ impl Plan {
 
         let runtime = Inherited::from_deps(deps.deps.iter().map(|dep| dep.path.as_path()));
         let buildtime = Inherited::from_deps(deps.build_deps.iter().map(|dep| dep.path.as_path()));
-        let mut env = Env::new(options.env.iter().cloned());
+        let mut env = if options.isolate {
+            Env::new(build_env::isolated(&options.env))
+        } else {
+            Env::new(options.env.iter().cloned())
+        };
         build_env::layer(&mut env, &runtime, &buildtime);
         let initial_path = env.get("PATH").unwrap_or_default().to_string();
         build_env::set_path(&mut env, &initial_path, &[], &deps, SEPARATOR);
@@ -850,6 +880,18 @@ fn call_level(state: &Rc<State>, b: &Table, phase: &'static str, from: usize) ->
         }
     }
     builtin::run(state, phase).map_err(mlua::Error::runtime)
+}
+
+/// `build_deps` with the backline last, unless the plan is the backline
+/// (`origin/name` is `plan`) or already declares it.
+fn with_backline(mut build_deps: Vec<String>, backline: Option<&str>, plan: &str) -> Vec<String> {
+    if let Some(backline) = backline
+       && backline != plan
+       && !build_deps.iter().any(|dep| dep == backline)
+    {
+        build_deps.push(backline.to_string());
+    }
+    build_deps
 }
 
 /// Compiles and runs a scaffolding package's module in an environment of

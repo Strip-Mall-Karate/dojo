@@ -285,6 +285,8 @@ fn packaging_uses_the_builders_tools_not_a_dependencys() {
                "the build itself sees the dependency's xz");
 }
 
+// The check reads ELF files and the copied /bin/true is one only on Linux.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_package_naming_host_paths_is_refused_when_asked() {
     let sandbox = Sandbox::new("host-paths");
@@ -667,6 +669,95 @@ fn dependencies_set_path_and_compiler_flags() {
     let include = format!("-I{}/include", tool.display());
     assert_eq!(read(&built.prefix.join("flags")),
                format!("{include}|{include}|{}", built.prefix.display()));
+}
+
+#[test]
+fn an_isolated_build_sees_only_its_dependencies() {
+    let mut sandbox = Sandbox::new("isolated");
+    let tool = sandbox.package("test/tool");
+    fs::create_dir_all(tool.join("bin")).unwrap();
+    fs::write(tool.join("bin/greet"),
+              "#!/bin/sh\necho greetings from the tool\n").unwrap();
+    fs::set_permissions(tool.join("bin/greet"), fs::Permissions::from_mode(0o755)).unwrap();
+    fs::write(tool.join("PATH"), format!("{}\n", tool.join("bin").display())).unwrap();
+    let mut options = sandbox.options();
+    options.isolate = true;
+    options.env.extend([("HOME".to_string(), "/home/builder".to_string()),
+                        ("DOJ_SETTING".to_string(), "kept".to_string()),
+                        ("LEAKY".to_string(), "dropped".to_string())]);
+
+    let source = plan("isolated",
+                      r#":build_deps ["test/tool"]"#,
+                      r#" :build (fn [b]
+                                   (b:write "greet" (b:capture ["greet"]))
+                                   (b:write "env" (b:capture ["/bin/sh" "-c" "echo \"$PATH|$HOME|$DOJ_SETTING|$LEAKY\""])))"#);
+    let built = sandbox.build_with(&source, &options).expect("builds and packages");
+    assert_eq!(read(&built.prefix.join("greet")), "greetings from the tool");
+    assert_eq!(read(&built.prefix.join("env")),
+               format!("{}|/home/builder|kept|", tool.join("bin").display()));
+}
+
+#[test]
+fn an_isolated_build_fetches_and_unpacks_with_the_builders_tools() {
+    let sandbox = Sandbox::new("isolated-source");
+    let upstream = sandbox.dir.join("upstream");
+    fs::create_dir_all(upstream.join("hello-2.0")).unwrap();
+    fs::write(upstream.join("hello-2.0/hello.txt"), "hi from the tarball").unwrap();
+    let status = Command::new("tar").args(["cJf", "hello-2.0.tar.xz", "hello-2.0"])
+                                    .current_dir(&upstream)
+                                    .status()
+                                    .expect("run tar");
+    assert!(status.success());
+    let tarball = upstream.join("hello-2.0.tar.xz");
+    let sha = hex(&Sha256::digest(fs::read(&tarball).unwrap()));
+    let mut options = sandbox.options();
+    options.isolate = true;
+    let source = plan("hello",
+                      &format!(r#":version "2.0" :source {{:url "file://{}" :sha256 "{sha}"}}"#,
+                               tarball.display()),
+                      r#" :build (fn [b] (b:copy (b:join b.src "hello.txt") (b:join b.prefix "hello.txt")))"#);
+    let built = sandbox.build_with(&source, &options).expect("curl, tar and xz are the builder's");
+    assert_eq!(read(&built.prefix.join("hello.txt")), "hi from the tarball");
+}
+
+#[test]
+fn the_backline_is_every_builds_last_build_dependency_but_its_own() {
+    let mut sandbox = Sandbox::new("backline");
+    let tool = sandbox.package("test/tool");
+    fs::create_dir_all(tool.join("bin")).unwrap();
+    fs::write(tool.join("bin/greet"), "#!/bin/sh\necho greetings from the backline\n").unwrap();
+    fs::set_permissions(tool.join("bin/greet"), fs::Permissions::from_mode(0o755)).unwrap();
+    fs::write(tool.join("PATH"), format!("{}\n", tool.join("bin").display())).unwrap();
+    // The backline ships nothing; its run dependencies are the tools.
+    let backline = sandbox.package("test/backline");
+    fs::write(backline.join("TDEPS"), format!("test/tool/1.0/{RELEASE}\n")).unwrap();
+    let mut options = sandbox.options();
+    options.isolate = true;
+    options.backline = Some("test/backline".to_string());
+
+    let source = plan("greeter", "", r#" :build (fn [b] (b:write "greet" (b:capture ["greet"])))"#);
+    let built = sandbox.build_with(&source, &options).expect("greet comes from the backline");
+    assert_eq!(read(&built.prefix.join("greet")), "greetings from the backline");
+    assert_eq!(read(&built.prefix.join("BUILD_DEPS")).trim(), format!("test/backline/1.0/{RELEASE}"));
+
+    // The backline's own plan does not depend on itself.
+    let own = plan("backline", "", "");
+    let built = sandbox.build_with(&own, &options).expect("builds without itself");
+    let own = fs::read_to_string(built.prefix.join("BUILD_DEPS")).unwrap_or_default();
+    assert_eq!(own.trim(), "");
+}
+
+#[test]
+fn an_isolated_build_cannot_run_the_builders_programs() {
+    let sandbox = Sandbox::new("isolated-host-tools");
+    let mut options = sandbox.options();
+    options.isolate = true;
+    let source = plan("hosttools", "", r#" :build (fn [b] (b:run ["true"]))"#);
+    let error = sandbox.build_with(&source, &options).expect_err("true is the builder's");
+    assert!(error.contains("true"), "{error}");
+
+    // The same plan builds when not isolated.
+    sandbox.build(&source).expect("finds the builder's true");
 }
 
 #[test]
