@@ -17,6 +17,7 @@ use crate::{error::{Error,
             generated};
 use prost::Message;
 use std::{collections::HashMap,
+          convert::TryFrom,
           fmt};
 
 pub trait LauncherMessage
@@ -33,10 +34,7 @@ pub trait LauncherMessage
     }
 
     fn to_bytes(&self) -> Result<Vec<u8>> {
-        let envelope = Self::Generated::from(self.clone());
-        let mut buf = bytes::BytesMut::with_capacity(envelope.encoded_len());
-        envelope.encode(&mut buf)?;
-        Ok(buf.to_vec())
+        Ok(Self::Generated::from(self.clone()).encode_to_vec())
     }
 }
 
@@ -58,11 +56,10 @@ impl LauncherMessage for NetErr {
     const MESSAGE_ID: &'static str = "NetErr";
 
     fn from_proto(proto: generated::NetErr) -> Result<Self> {
-        Ok(NetErr {
-            code: generated::ErrCode::from_i32(proto.code.ok_or(Error::ProtocolMismatch("code"))?)
-                .ok_or(Error::ProtocolMismatch("code"))?,
-            msg: proto.msg.ok_or(Error::ProtocolMismatch("msg"))?,
-        })
+        let code = proto.code.ok_or(Error::ProtocolMismatch("code"))?;
+        let code = generated::ErrCode::try_from(code).map_err(|_| Error::ProtocolMismatch("code"))?;
+        Ok(NetErr { code,
+                    msg: proto.msg.ok_or(Error::ProtocolMismatch("msg"))? })
     }
 }
 
@@ -225,16 +222,14 @@ impl LauncherMessage for TerminateOk {
     const MESSAGE_ID: &'static str = "TerminateOk";
 
     fn from_proto(proto: generated::TerminateOk) -> Result<Self> {
+        let shutdown_method = proto.shutdown_method
+                                   .ok_or(Error::ProtocolMismatch("shutdown_method"))?;
         Ok(TerminateOk {
             exit_code: proto
                 .exit_code
                 .ok_or(Error::ProtocolMismatch("exit_code"))?,
-            shutdown_method: generated::ShutdownMethod::from_i32(
-                proto
-                    .shutdown_method
-                    .ok_or(Error::ProtocolMismatch("shutdown_method"))?,
-            )
-            .ok_or(Error::ProtocolMismatch("shutdown_method"))?,
+            shutdown_method: generated::ShutdownMethod::try_from(shutdown_method)
+                .map_err(|_| Error::ProtocolMismatch("shutdown_method"))?,
         })
     }
 }

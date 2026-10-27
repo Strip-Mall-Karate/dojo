@@ -15,7 +15,6 @@
 pub mod newscast;
 pub mod swim;
 
-use bytes::BytesMut;
 use prost::Message as ProstMessage;
 use serde::Serialize;
 
@@ -31,9 +30,7 @@ pub trait Message<T: ProstMessage + Default>: FromProto<T> + Clone + Into<T> + S
 
     fn write_to_bytes(&self) -> Result<Vec<u8>> {
         let envelope = self.clone().into();
-        let mut buf = BytesMut::with_capacity(envelope.encoded_len());
-        envelope.encode(&mut buf)?;
-        Ok(buf.to_vec())
+        Ok(envelope.encode_to_vec())
     }
 }
 

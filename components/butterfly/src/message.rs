@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bytes::BytesMut;
 use dojo_core::crypto::SymKey;
 use prost::Message;
 
@@ -30,9 +29,7 @@ pub fn generate_wire(payload: Vec<u8>, ring_key: Option<&SymKey>) -> Result<Vec<
     } else {
         wire.payload = Some(payload);
     }
-    let mut buf = BytesMut::with_capacity(wire.encoded_len());
-    wire.encode(&mut buf)?;
-    Ok(buf.to_vec())
+    Ok(wire.encode_to_vec())
 }
 
 pub fn unwrap_wire(payload: &[u8], ring_key: Option<&SymKey>) -> Result<Vec<u8>> {

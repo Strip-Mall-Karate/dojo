@@ -32,6 +32,7 @@ use dojo_sup_protocol;
 use serde::{self,
             Deserialize};
 use std::{collections::HashSet,
+          convert::TryFrom,
           fmt,
           fs::{self,
                File},
@@ -123,10 +124,10 @@ impl IntoServiceSpec for dojo_sup_protocol::ctl::SvcLoad {
             spec.channel = channel.clone().into();
         }
         if let Some(topology) = self.topology {
-            spec.topology = Topology::from_i32(topology).unwrap_or_default();
+            spec.topology = Topology::try_from(topology).unwrap_or_default();
         }
         if let Some(update_strategy) = self.update_strategy {
-            spec.update_strategy = UpdateStrategy::from_i32(update_strategy).unwrap_or_default();
+            spec.update_strategy = UpdateStrategy::try_from(update_strategy).unwrap_or_default();
         }
         if let Some(ref list) = self.binds {
             spec.binds =
@@ -139,7 +140,7 @@ impl IntoServiceSpec for dojo_sup_protocol::ctl::SvcLoad {
                     .collect();
         }
         if let Some(binding_mode) = self.binding_mode {
-            spec.binding_mode = BindingMode::from_i32(binding_mode).unwrap_or_default();
+            spec.binding_mode = BindingMode::try_from(binding_mode).unwrap_or_default();
         }
         if let Some(ref config_from) = self.config_from {
             spec.config_from = Some(PathBuf::from(config_from));

@@ -22,8 +22,9 @@
 //! devolve to a single, universal rumor, which when it is received by the winner will result in
 //! the election finishing. There can, in the end, be only one.
 
-use std::ops::{Deref,
-               DerefMut};
+use std::{convert::TryFrom,
+          ops::{Deref,
+                DerefMut}};
 
 pub use crate::protocol::newscast::{election::Status as ElectionStatus,
                                     Election as ProtoElection};
@@ -140,7 +141,7 @@ impl FromProto<ProtoRumor> for Election {
                       term:          payload.term.unwrap_or(0),
                       suitability:   payload.suitability.unwrap_or(0),
                       status:        payload.status
-                                            .and_then(ElectionStatus::from_i32)
+                                            .and_then(|v| ElectionStatus::try_from(v).ok())
                                             .unwrap_or(ElectionStatus::Running),
                       votes:         payload.votes, })
     }

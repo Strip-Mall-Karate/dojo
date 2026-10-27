@@ -80,7 +80,8 @@ use dojo_sup_protocol as protocol;
 use env_logger;
 use futures::prelude::*;
 use pbr;
-use std::{env,
+use std::{convert::TryFrom,
+          env,
           ffi::OsString,
           fs::File,
           io::{self,
@@ -917,7 +918,7 @@ fn sub_svc_set(m: &ArgMatches<'_>) -> Result<()> {
                         let m = reply
                             .parse::<protocol::net::NetErr>()
                             .map_err(SrvClientError::Decode)?;
-                        match ErrCode::from_i32(m.code) {
+                        match ErrCode::try_from(m.code).ok() {
                             Some(ErrCode::InvalidPayload) => {
                                 ui.warn(m)?;
                                 Ok(())
@@ -1145,7 +1146,7 @@ fn sub_file_put(m: &ArgMatches<'_>) -> Result<()> {
                     let m = reply
                         .parse::<protocol::net::NetErr>()
                         .map_err(SrvClientError::Decode)?;
-                    match ErrCode::from_i32(m.code) {
+                    match ErrCode::try_from(m.code).ok() {
                         Some(ErrCode::InvalidPayload) => {
                             ui.warn(m)?;
                             Ok(())

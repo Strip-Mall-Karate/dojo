@@ -20,7 +20,8 @@
 include!("generated/sup.net.rs");
 include!("generated/sup.net.impl.rs");
 
-use std::{error,
+use std::{convert::TryFrom,
+          error,
           fmt,
           io};
 
@@ -41,7 +42,7 @@ pub fn ok() -> NetOk { NetOk::default() }
 
 impl error::Error for NetErr {
     fn description(&self) -> &str {
-        match ErrCode::from_i32(self.code).unwrap_or_default() {
+        match ErrCode::try_from(self.code).unwrap_or_default() {
             ErrCode::Internal => "Internal error",
             ErrCode::Io => "IO error",
             ErrCode::NotFound => "Entity not found",
