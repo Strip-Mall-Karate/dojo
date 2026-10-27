@@ -1,6 +1,6 @@
 # Sourced by build.sh and test.sh inside the builder VM: the build environment
-# for the 0.79.1 tree (Rust 1.33.0, OpenSSL 1.0.2) and run(), which runs a
-# command in it.
+# for the tree (the Rust its rust-toolchain names, OpenSSL 1.0.2) and run(),
+# which runs a command in it.
 base=$HOME/dojo-build
 np=github:NixOS/nixpkgs/nixos-24.05
 export NIX_CONFIG="extra-experimental-features = nix-command flakes"
@@ -21,9 +21,14 @@ libpath=$ssl_lib/lib:$(nix build --impure --no-link --print-out-paths "${np}#lib
   "${np}#libarchive.lib" "${np}#zeromq" "${np}#zlib.out" | sed 's|$|/lib|' | paste -sd:)
 # prost-build's bundled protoc is a generic Linux binary, which NixOS can't run.
 protoc=$(nix build --impure --no-link --print-out-paths "${np}#protobuf" | head -1)/bin/protoc
+# libcrypto 1.0.2 finds libdl.so.2 through its own RUNPATH, which is glibc
+# 2.27, and that libdl cannot run beside glibc 2.39: a test binary that loads
+# libcrypto dies at load. Preloading glibc 2.39's libdl makes libcrypto reuse
+# it. build.sh's payload binaries name it with patchelf instead.
+libdl=$(nix build --impure --no-link --print-out-paths "${np}#glibc.out")/lib/libdl.so.2
 
 run() {
   nix shell --impure "${pkgs[@]}" -c env PROTOC="$protoc" PKG_CONFIG_PATH="$pcpath" \
     LIBRARY_PATH="$libpath" LD_LIBRARY_PATH="$libpath" OPENSSL_LIB_DIR="$ssl_lib/lib" \
-    OPENSSL_INCLUDE_DIR="$ssl_dev/include" "$@"
+    OPENSSL_INCLUDE_DIR="$ssl_dev/include" LD_PRELOAD="$libdl" "$@"
 }
