@@ -44,34 +44,61 @@ log=""
 deadline=600
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --check) mode=check; shift ;;
-    --install | --refuse-install)
-      [[ $# -ge 2 ]] || usage
-      mode="${1#--}"; install_args="$2"; shift 2 ;;
-    --file)
-      [[ $# -ge 2 && "$2" == *:/* ]] || usage
-      files+=("$2"); shift 2 ;;
-    --disk)
-      [[ $# -ge 2 ]] || usage
-      disk="$2"; shift 2 ;;
-    --from-disk) from_disk=true; shift ;;
-    --uefi) uefi=true; shift ;;
-    --console)
-      [[ $# -ge 2 ]] || usage
-      console="$2"; shift 2 ;;
-    --ssh-port)
-      [[ $# -ge 2 ]] || usage
-      ssh_port="$2"; shift 2 ;;
-    --log)
-      [[ $# -ge 2 ]] || usage
-      log="$2"; shift 2 ;;
-    --timeout)
-      [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || usage
-      deadline="$2"; shift 2 ;;
-    *) usage ;;
+  --check)
+    mode=check
+    shift
+    ;;
+  --install | --refuse-install)
+    [[ $# -ge 2 ]] || usage
+    mode="${1#--}"
+    install_args="$2"
+    shift 2
+    ;;
+  --file)
+    [[ $# -ge 2 && "$2" == *:/* ]] || usage
+    files+=("$2")
+    shift 2
+    ;;
+  --disk)
+    [[ $# -ge 2 ]] || usage
+    disk="$2"
+    shift 2
+    ;;
+  --from-disk)
+    from_disk=true
+    shift
+    ;;
+  --uefi)
+    uefi=true
+    shift
+    ;;
+  --console)
+    [[ $# -ge 2 ]] || usage
+    console="$2"
+    shift 2
+    ;;
+  --ssh-port)
+    [[ $# -ge 2 ]] || usage
+    ssh_port="$2"
+    shift 2
+    ;;
+  --log)
+    [[ $# -ge 2 ]] || usage
+    log="$2"
+    shift 2
+    ;;
+  --timeout)
+    [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || usage
+    deadline="$2"
+    shift 2
+    ;;
+  *) usage ;;
   esac
 done
-[[ -d "${pkgs}" ]] || { echo "boot: no package directory at ${pkgs}" >&2; exit 2; }
+[[ -d "${pkgs}" ]] || {
+  echo "boot: no package directory at ${pkgs}" >&2
+  exit 2
+}
 if "${from_disk}" && [[ -z "${disk}" ]]; then
   echo "boot: --from-disk needs --disk" >&2
   exit 2
@@ -120,7 +147,10 @@ if ! "${from_disk}"; then
   newest() {
     local release
     release="$(printf '%s\n' "${pkgs}/$1"/*/* | sort | tail -n 1)"
-    [[ -d "${release}" ]] || { echo "boot: no karate/$1 in ${pkgs}" >&2; exit 1; }
+    [[ -d "${release}" ]] || {
+      echo "boot: no karate/$1 in ${pkgs}" >&2
+      exit 1
+    }
     echo "${release}"
   }
   kernel="$(newest linux)/boot/bzImage"
@@ -146,11 +176,11 @@ if ! "${from_disk}"; then
   done
   append="console=ttyS0 panic=-1"
   case "${mode}" in
-    check) append+=" dojo.check" ;;
-    install | refuse-install)
-      echo "${install_args}" >"${root}/etc/doj-install.args"
-      append+=" dojo.install"
-      ;;
+  check) append+=" dojo.check" ;;
+  install | refuse-install)
+    echo "${install_args}" >"${root}/etc/doj-install.args"
+    append+=" dojo.install"
+    ;;
   esac
   initrd="${work}/initrd.cpio.gz"
   (cd "${root}" && find . | "${cpio}/bin/cpio" --quiet -o -H newc -R 0:0) | gzip -6 >"${initrd}"
@@ -173,9 +203,9 @@ if [[ "${status}" -ne 0 ]]; then
 fi
 expect=""
 case "${mode}" in
-  check) expect="dojo: check ok" ;;
-  install) expect="dojo: install ok" ;;
-  refuse-install) expect="dojo: install failed" ;;
+check) expect="dojo: check ok" ;;
+install) expect="dojo: install ok" ;;
+refuse-install) expect="dojo: install failed" ;;
 esac
 if [[ -n "${expect}" ]] && ! grep -q "${expect}" "${log}"; then
   echo "boot: the VM shut down without \"${expect}\"" >&2
