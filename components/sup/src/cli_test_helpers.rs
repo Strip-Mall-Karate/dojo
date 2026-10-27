@@ -1,5 +1,5 @@
-use clap::{App,
-           ArgMatches};
+use clap::{ArgMatches,
+           Command};
 use std::{fmt,
           iter::FromIterator};
 
@@ -66,13 +66,13 @@ Command Parse error:
     }
 }
 
-pub fn assert_command(app: App<'_, '_>, cmd: &str, assertions: Vec<(&str, Expectation<'_>)>) {
+pub fn assert_command(app: Command, cmd: &str, assertions: Vec<(&str, Expectation<'_>)>) {
     let cmd_vec = Vec::from_iter(cmd.split_whitespace());
-    let errors = match app.get_matches_from_safe(cmd_vec) {
+    let errors = match app.try_get_matches_from(cmd_vec) {
         Ok(matches) => {
             match matches.subcommand() {
-                (_, Some(matches)) => assert_matches(matches, assertions),
-                (_, None) => vec![CliTestError::MissingSubcmd()],
+                Some((_, matches)) => assert_matches(matches, assertions),
+                None => vec![CliTestError::MissingSubcmd()],
             }
         }
         Err(err) => vec![CliTestError::ClapError(err.to_string())],
@@ -97,7 +97,7 @@ Failed assertions for command: '{}'
     }
 }
 
-fn assert_matches(matches: &ArgMatches<'_>,
+fn assert_matches(matches: &ArgMatches,
                   assertions: Vec<(&str, Expectation<'_>)>)
                   -> Vec<CliTestError> {
     let mut errs = Vec::new();
@@ -105,7 +105,7 @@ fn assert_matches(matches: &ArgMatches<'_>,
     for (flag, expected_value) in assertions {
         match expected_value {
             Value(expected) => {
-                match matches.value_of(flag) {
+                match matches.get_one::<String>(flag).map(String::as_str) {
                     Some(actual) => {
                         if actual != expected {
                             errs.push(CliTestError::ValueMismatch(flag.to_string(),
@@ -119,7 +119,7 @@ fn assert_matches(matches: &ArgMatches<'_>,
                 }
             }
             Values(expected) => {
-                match matches.values_of(flag) {
+                match matches.get_many::<String>(flag) {
                     Some(actual_values) => {
                         let actual = actual_values.map(|v| v.to_string()).collect();
                         if actual != expected {
@@ -134,7 +134,7 @@ fn assert_matches(matches: &ArgMatches<'_>,
                 }
             }
             Boolean(expected) => {
-                if matches.is_present(flag) != expected {
+                if matches.get_flag(flag) != expected {
                     errs.push(CliTestError::ValueMismatch(flag.to_string(),
                                                           expected.to_string(),
                                                           (!expected).to_string()));

@@ -714,7 +714,9 @@ mod tests {
 
         world.declare("packages = [\"acme/tool\", \"acme/other\"]\n");
         let error = world.env().unwrap_err().to_string();
-        assert!(error.contains("does not pin what shell.toml asks for"), "{}", error);
+        assert!(error.contains("does not pin what shell.toml asks for"),
+                "{}",
+                error);
     }
 
     #[test]

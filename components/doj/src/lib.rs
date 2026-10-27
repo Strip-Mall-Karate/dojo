@@ -22,9 +22,6 @@ use dojo_sup_client as sup_client;
 use dojo_sup_protocol as protocol;
 
 #[macro_use]
-extern crate clap;
-
-#[macro_use]
 extern crate log;
 
 #[macro_use]

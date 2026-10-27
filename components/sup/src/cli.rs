@@ -1,12 +1,12 @@
-use clap::App;
+use clap::Command;
 use doj::cli::sup_commands;
 
-pub fn cli<'a, 'b>() -> App<'a, 'b> { sup_commands() }
+pub fn cli() -> Command { sup_commands() }
 
 #[cfg(test)]
 mod test {
     use super::cli;
-    use clap::ErrorKind;
+    use clap::error::ErrorKind;
 
     macro_rules! assert_cli_cmd {
         ($test:ident, $cmd:expr, $( $key:expr => $value:tt ),+) => {
@@ -19,10 +19,10 @@ mod test {
 
     #[test]
     fn sup_help_on_run_subcommand() {
-        let r = cli().get_matches_from_safe(vec!["doj-sup", "run", "--help"]);
+        let r = cli().try_get_matches_from(vec!["doj-sup", "run", "--help"]);
         assert!(r.is_err());
         // not `ErrorKind::InvalidSubcommand`
-        assert_eq!(r.unwrap_err().kind, ErrorKind::HelpDisplayed);
+        assert_eq!(r.unwrap_err().kind(), ErrorKind::DisplayHelp);
     }
 
     mod sup_run {
@@ -60,7 +60,7 @@ mod test {
             let cmd_vec = Vec::from_iter("doj-sup run --listen-gossip 1.1.1.1:1111 \
                                           --local-gossip-mode"
                                                               .split_whitespace());
-            assert!(cli().get_matches_from_safe(cmd_vec).is_err());
+            assert!(cli().try_get_matches_from(cmd_vec).is_err());
         }
 
         #[test]
@@ -68,7 +68,7 @@ mod test {
             let cmd_vec = Vec::from_iter(
                 "doj-sup run --peer 1.1.1.1:1111 --local-gossip-mode".split_whitespace(),
             );
-            assert!(cli().get_matches_from_safe(cmd_vec).is_err());
+            assert!(cli().try_get_matches_from(cmd_vec).is_err());
         }
 
         #[test]
@@ -76,7 +76,7 @@ mod test {
             let cmd_vec = Vec::from_iter("doj-sup run --local-gossip-mode --peer-watch-file \
                                           foobar"
                                                  .split_whitespace());
-            assert!(cli().get_matches_from_safe(cmd_vec).is_err());
+            assert!(cli().try_get_matches_from(cmd_vec).is_err());
         }
 
         #[test]
@@ -84,7 +84,7 @@ mod test {
             let cmd_vec = Vec::from_iter("doj-sup run --peer 1.1.1.1:1111 --peer-watch-file \
                                           foobar"
                                                  .split_whitespace());
-            assert!(cli().get_matches_from_safe(cmd_vec).is_err());
+            assert!(cli().try_get_matches_from(cmd_vec).is_err());
         }
     }
 }
