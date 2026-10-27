@@ -9,7 +9,7 @@ use crate::{common::{ui::{UIWriter,
                      PROGRAM_NAME},
             export_tar::{Cli,
                          Result}};
-use clap::App;
+use clap::Command;
 
 fn main() {
     let mut ui = UI::default_with_env();
@@ -28,11 +28,34 @@ fn start(ui: &mut UI) -> Result<()> {
     export_tar::export_for_cli_matches(ui, &m)
 }
 
-fn cli<'a, 'b>() -> App<'a, 'b> {
+fn cli() -> Command {
     let name: &str = &*PROGRAM_NAME;
     let about = "Creates a tar package from a Dojo package";
     Cli::new(name, about).add_base_packages_args()
                          .add_builder_args()
                          .add_pkg_ident_arg()
                          .app
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn the_cli_is_well_formed() { super::cli().debug_assert(); }
+
+    #[test]
+    fn the_package_and_builder_are_read() {
+        let m = super::cli().try_get_matches_from(["export",
+                                                   "--url",
+                                                   "https://bldr.example.com",
+                                                   "--channel",
+                                                   "unstable",
+                                                   "core/redis"])
+                            .unwrap();
+        assert_eq!(m.get_one::<String>("PKG_IDENT_OR_ARTIFACT").unwrap(),
+                   "core/redis");
+        assert_eq!(m.get_one::<String>("BLDR_URL").unwrap(),
+                   "https://bldr.example.com");
+        assert!(super::cli().try_get_matches_from(["export", "--url", "not a url", "core/redis"])
+                            .is_err());
+    }
 }

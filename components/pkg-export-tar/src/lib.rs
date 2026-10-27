@@ -1,10 +1,5 @@
-#[macro_use]
-extern crate clap;
 use dojo_common as common;
 use dojo_core as hcore;
-
-#[macro_use]
-extern crate failure_derive;
 
 #[macro_use]
 extern crate log;
@@ -36,7 +31,7 @@ pub const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 /// The Dojo Package Identifier string for a Busybox package.
 const BUSYBOX_IDENT: &str = "karate/busybox-static";
 
-pub fn export_for_cli_matches(ui: &mut UI, matches: &clap::ArgMatches<'_>) -> Result<()> {
+pub fn export_for_cli_matches(ui: &mut UI, matches: &clap::ArgMatches) -> Result<()> {
     let default_url = hurl::default_bldr_url();
     let spec = BuildSpec::new_from_cli_matches(&matches, &default_url);
     export(ui, spec)?;

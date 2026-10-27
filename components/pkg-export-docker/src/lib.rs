@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[macro_use]
-extern crate clap;
 use dojo_common as common;
 use dojo_core as hcore;
 
@@ -22,14 +20,8 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
-use rusoto_credential as aws_creds;
-
 #[macro_use]
 extern crate serde_json;
-
-use failure;
-#[macro_use]
-extern crate failure_derive;
 
 mod accounts;
 mod build;
@@ -42,11 +34,6 @@ mod error;
 pub mod rootfs;
 mod util;
 
-use crate::{aws_creds::StaticProvider,
-            common::{ui::{UIWriter,
-                          UI},
-                     PROGRAM_NAME},
-            hcore::url as hurl};
 pub use crate::{build::BuildSpec,
                 cli::{Cli,
                       PkgIdentArgOptions},
@@ -54,12 +41,15 @@ pub use crate::{build::BuildSpec,
                          DockerImage},
                 error::{Error,
                         Result}};
-use clap::App;
-use rusoto_core::{request::*,
-                  Region};
-use rusoto_ecr::{Ecr,
-                 EcrClient,
-                 GetAuthorizationTokenRequest};
+use crate::{common::{ui::{UIWriter,
+                          UI},
+                     PROGRAM_NAME},
+            hcore::url as hurl};
+use aws_sdk_ecr::config::{BehaviorVersion,
+                          Credentials as AwsCredentials,
+                          Region};
+use base64::Engine;
+use clap::Command;
 use std::{env,
           fmt,
           result,
@@ -99,16 +89,17 @@ pub struct Naming<'a> {
 
 impl<'a> Naming<'a> {
     /// Creates a `Naming` from cli arguments.
-    pub fn new_from_cli_matches(m: &'a clap::ArgMatches<'_>) -> Self {
-        let registry_type =
-            value_t!(m.value_of("REGISTRY_TYPE"), RegistryType).unwrap_or(RegistryType::Docker);
-        let registry_url = m.value_of("REGISTRY_URL");
+    pub fn new_from_cli_matches(m: &'a clap::ArgMatches) -> Self {
+        let registry_type = m.get_one::<String>("REGISTRY_TYPE")
+                             .and_then(|t| t.parse().ok())
+                             .unwrap_or(RegistryType::Docker);
+        let registry_url = m.get_one::<String>("REGISTRY_URL").map(String::as_str);
 
-        Naming { custom_image_name: m.value_of("IMAGE_NAME"),
-                 latest_tag: !m.is_present("NO_TAG_LATEST"),
-                 version_tag: !m.is_present("NO_TAG_VERSION"),
-                 version_release_tag: !m.is_present("NO_TAG_VERSION_RELEASE"),
-                 custom_tag: m.value_of("TAG_CUSTOM"),
+        Naming { custom_image_name: m.get_one::<String>("IMAGE_NAME").map(String::as_str),
+                 latest_tag: !m.get_flag("NO_TAG_LATEST"),
+                 version_tag: !m.get_flag("NO_TAG_VERSION"),
+                 version_release_tag: !m.get_flag("NO_TAG_VERSION_RELEASE"),
+                 custom_tag: m.get_one::<String>("TAG_CUSTOM").map(String::as_str),
                  registry_url,
                  registry_type }
     }
@@ -162,28 +153,31 @@ impl Credentials {
         match registry_type {
             RegistryType::Amazon => {
                 // The username and password should be valid IAM credentials
-                let provider =
-                    StaticProvider::new_minimal(username.to_string(), password.to_string());
+                let credentials =
+                    AwsCredentials::new(username, password, None, None, "doj-pkg-export-docker");
                 // TODO TED: Make the region configurable
-                let client = EcrClient::new_with(HttpClient::new()?, provider, Region::UsWest2);
-                let auth_token_req = GetAuthorizationTokenRequest { registry_ids: None };
-                let token = client.get_authorization_token(auth_token_req)
-                                  .sync()
-                                  .map_err(Error::TokenFetchFailed)
-                                  .and_then(|resp| {
-                                      resp.authorization_data
-                                          .ok_or(Error::NoECRTokensReturned)
-                                          .and_then(|auth_data| {
-                                              auth_data[0].clone()
-                                                          .authorization_token
-                                                          .ok_or(Error::NoECRTokensReturned)
-                                          })
-                                  })?;
+                let config =
+                    aws_sdk_ecr::Config::builder().behavior_version(BehaviorVersion::latest())
+                                                  .region(Region::new("us-west-2"))
+                                                  .credentials_provider(credentials)
+                                                  .build();
+                let client = aws_sdk_ecr::Client::from_conf(config);
+                // One request, so a runtime of its own for it.
+                let runtime = tokio::runtime::Builder::new_current_thread().enable_all()
+                                                                           .build()?;
+                let response =
+                    runtime.block_on(client.get_authorization_token().send())
+                           .map_err(|e| Error::TokenFetchFailed(aws_sdk_ecr::Error::from(e)))?;
+                let token = response.authorization_data()
+                                    .first()
+                                    .and_then(|data| data.authorization_token())
+                                    .ok_or(Error::NoECRTokensReturned)?
+                                    .to_string();
 
                 Ok(Credentials { token })
             }
             RegistryType::Docker | RegistryType::Azure => {
-                Ok(Credentials { token: base64::encode(&format!("{}:{}",
+                Ok(Credentials { token: base64::engine::general_purpose::STANDARD.encode(format!("{}:{}",
                                                                 username.to_string(),
                                                                 password.to_string())), })
             }
@@ -229,24 +223,30 @@ pub fn export(ui: &mut UI,
 /// * Parsing of credentials fails.
 /// * The image (tags) cannot be removed.
 pub fn export_for_cli_matches(ui: &mut UI,
-                              matches: &clap::ArgMatches<'_>)
+                              matches: &clap::ArgMatches)
                               -> Result<Option<DockerImage>> {
     let default_url = hurl::default_bldr_url();
     let spec = BuildSpec::new_from_cli_matches(&matches, &default_url);
     let naming = Naming::new_from_cli_matches(&matches);
 
-    let docker_image = export(ui, spec, &naming, matches.value_of("MEMORY_LIMIT"))?;
+    let docker_image = export(ui,
+                              spec,
+                              &naming,
+                              matches.get_one::<String>("MEMORY_LIMIT")
+                                     .map(String::as_str))?;
     docker_image.create_report(ui, env::current_dir()?.join("results"))?;
 
-    if matches.is_present("PUSH_IMAGE") {
+    if matches.get_flag("PUSH_IMAGE") {
         let credentials = Credentials::new(naming.registry_type,
-                                           matches.value_of("REGISTRY_USERNAME")
+                                           matches.get_one::<String>("REGISTRY_USERNAME")
+                                                  .map(String::as_str)
                                                   .expect("Username not specified"),
-                                           matches.value_of("REGISTRY_PASSWORD")
+                                           matches.get_one::<String>("REGISTRY_PASSWORD")
+                                                  .map(String::as_str)
                                                   .expect("Password not specified"))?;
         docker_image.push(ui, &credentials, naming.registry_url)?;
     }
-    if matches.is_present("RM_IMAGE") {
+    if matches.get_flag("RM_IMAGE") {
         docker_image.rm(ui)?;
 
         Ok(None)
@@ -256,7 +256,7 @@ pub fn export_for_cli_matches(ui: &mut UI,
 }
 
 /// Create the Clap CLI for the Docker exporter
-pub fn cli<'a, 'b>() -> App<'a, 'b> {
+pub fn cli() -> Command {
     let name: &str = &*PROGRAM_NAME;
     let about = "Creates (and optionally pushes) a Docker image from a set of Dojo packages";
 
@@ -267,4 +267,54 @@ pub fn cli<'a, 'b>() -> App<'a, 'b> {
                          .add_memory_arg()
                          .add_pkg_ident_arg(PkgIdentArgOptions { multiple: true })
                          .app
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_cli_is_well_formed() { cli().debug_assert(); }
+
+    #[test]
+    fn switches_and_the_registry_type_are_read() {
+        let m = cli().try_get_matches_from(["export",
+                                            "--no-tag-latest",
+                                            "--push-image",
+                                            "--username",
+                                            "u",
+                                            "--password",
+                                            "p",
+                                            "--registry-type",
+                                            "amazon",
+                                            "--registry-url",
+                                            "123.dkr.ecr.us-west-2.amazonaws.com",
+                                            "core/redis",
+                                            "core/nginx"])
+                     .unwrap();
+        let naming = Naming::new_from_cli_matches(&m);
+        assert!(!naming.latest_tag);
+        assert!(naming.version_tag);
+        assert!(matches!(naming.registry_type, RegistryType::Amazon));
+        assert!(m.get_flag("PUSH_IMAGE"));
+        assert!(!m.get_flag("RM_IMAGE"));
+        assert_eq!(m.get_many::<String>("PKG_IDENT_OR_ARTIFACT")
+                    .unwrap()
+                    .count(),
+                   2);
+    }
+
+    #[test]
+    fn an_amazon_registry_needs_its_url() {
+        let err = cli().try_get_matches_from(["export", "--registry-type", "amazon", "core/redis"])
+                       .unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
+    }
+
+    #[test]
+    fn an_unknown_registry_type_is_refused() {
+        let err = cli().try_get_matches_from(["export", "--registry-type", "quay", "core/redis"])
+                       .unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::InvalidValue);
+    }
 }

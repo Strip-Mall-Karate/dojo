@@ -17,8 +17,11 @@ use std::{path::Path,
           str::FromStr};
 
 use crate::hcore::package::PackageIdent;
-use clap::{App,
-           Arg};
+use clap::{builder::ValueRange,
+           Arg,
+           ArgAction,
+           Command};
+use dojo_common::cli::HELP_TEMPLATE;
 use url::Url;
 
 use crate::RegistryType;
@@ -28,10 +31,8 @@ pub const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 
 /// A Docker-specific clap:App wrapper
 #[derive(Clone)]
-pub struct Cli<'a, 'b>
-    where 'a: 'b
-{
-    pub app: App<'a, 'b>,
+pub struct Cli {
+    pub app: Command,
 }
 
 #[derive(Clone, Copy)]
@@ -39,27 +40,30 @@ pub struct PkgIdentArgOptions {
     pub multiple: bool,
 }
 
-impl<'a, 'b> Cli<'a, 'b> {
-    pub fn new(name: &str, about: &'a str) -> Self {
-        Cli { app: clap_app!(
-              (name) =>
-              (about: about)
-              (version: VERSION)
-              (author: "\nMaintainer: Strip Mall Karate Company\n\n")
-              (@arg IMAGE_NAME: --("image-name") -i +takes_value
-                  "Image name (default: \"{{pkg_origin}}/{{pkg_name}}\" supports: \
-                   {{pkg_origin}}, {{pkg_name}}, {{pkg_version}}, {{pkg_release}}, {{channel}})")
-              ), }
+impl Cli {
+    pub fn new(name: &str, about: &str) -> Self {
+        let image_name =
+            Arg::new("IMAGE_NAME").long("image-name")
+                                  .short('i')
+                                  .value_name("IMAGE_NAME")
+                                  .help("Image name (default: \"{{pkg_origin}}/{{pkg_name}}\" supports: \
+                                         {{pkg_origin}}, {{pkg_name}}, {{pkg_version}}, \
+                                         {{pkg_release}}, {{channel}})");
+        Cli { app: Command::new(name.to_string()).about(about.to_string())
+                                                 .version(VERSION)
+                                                 .author("Maintainer: Strip Mall Karate Company")
+                                                 .help_template(HELP_TEMPLATE)
+                                                 .arg(image_name), }
     }
 
     pub fn add_base_packages_args(self) -> Self {
         let app = self
             .app
             .arg(
-                Arg::with_name("DOJ_PKG")
+                Arg::new("DOJ_PKG")
                     .long("doj-pkg")
                     .value_name("DOJ_PKG")
-                    .validator(valid_ident_or_hart)
+                    .value_parser(valid_ident_or_hart)
                     .help(
                         "Dojo CLI package identifier (ex: acme/redis) or filepath to a Dojo \
                          artifact (ex: /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart) \
@@ -67,10 +71,10 @@ impl<'a, 'b> Cli<'a, 'b> {
                     ),
             )
             .arg(
-                Arg::with_name("DOJ_LAUNCHER_PKG")
+                Arg::new("DOJ_LAUNCHER_PKG")
                     .long("launcher-pkg")
                     .value_name("DOJ_LAUNCHER_PKG")
-                    .validator(valid_ident_or_hart)
+                    .value_parser(valid_ident_or_hart)
                     .help(
                         "Launcher package identifier (ex: karate/doj-launcher) or filepath to a \
                          Dojo artifact (ex: \
@@ -79,10 +83,10 @@ impl<'a, 'b> Cli<'a, 'b> {
                     ),
             )
             .arg(
-                Arg::with_name("DOJ_SUP_PKG")
+                Arg::new("DOJ_SUP_PKG")
                     .long("sup-pkg")
                     .value_name("DOJ_SUP_PKG")
-                    .validator(valid_ident_or_hart)
+                    .value_parser(valid_ident_or_hart)
                     .help(
                         "Supervisor package identifier (ex: karate/doj-sup) or filepath to a \
                          Dojo artifact (ex: \
@@ -98,35 +102,35 @@ impl<'a, 'b> Cli<'a, 'b> {
         let app = self
             .app
             .arg(
-                Arg::with_name("BLDR_URL")
+                Arg::new("BLDR_URL")
                     .long("url")
-                    .short("u")
+                    .short('u')
                     .value_name("BLDR_URL")
-                    .validator(valid_url)
+                    .value_parser(valid_url)
                     .help(
                         "Install packages from Builder at the specified URL \
                          (default: https://bldr.karate.company)",
                     ),
             )
             .arg(
-                Arg::with_name("CHANNEL")
+                Arg::new("CHANNEL")
                     .long("channel")
-                    .short("c")
+                    .short('c')
                     .value_name("CHANNEL")
                     .help("Install packages from the specified release channel (default: stable)"),
             )
             .arg(
-                Arg::with_name("BASE_PKGS_BLDR_URL")
+                Arg::new("BASE_PKGS_BLDR_URL")
                     .long("base-pkgs-url")
                     .value_name("BASE_PKGS_BLDR_URL")
-                    .validator(valid_url)
+                    .value_parser(valid_url)
                     .help(
                         "Install base packages from Builder at the specified URL \
                          (default: https://bldr.karate.company)",
                     ),
             )
             .arg(
-                Arg::with_name("BASE_PKGS_CHANNEL")
+                Arg::new("BASE_PKGS_CHANNEL")
                     .long("base-pkgs-channel")
                     .value_name("BASE_PKGS_CHANNEL")
                     .help(
@@ -135,9 +139,9 @@ impl<'a, 'b> Cli<'a, 'b> {
                     ),
             )
             .arg(
-                Arg::with_name("BLDR_AUTH_TOKEN")
+                Arg::new("BLDR_AUTH_TOKEN")
                     .long("auth")
-                    .short("z")
+                    .short('z')
                     .value_name("BLDR_AUTH_TOKEN")
                     .help("Provide a Builder auth token for private pkg export"),
             );
@@ -149,13 +153,15 @@ impl<'a, 'b> Cli<'a, 'b> {
         let app = self
             .app
             .arg(
-                Arg::with_name("TAG_VERSION_RELEASE")
+                Arg::new("TAG_VERSION_RELEASE")
+                    .action(ArgAction::SetTrue)
                     .long("tag-version-release")
                     .conflicts_with("NO_TAG_VERSION_RELEASE")
                     .help("Tag image with :\"{{pkg_version}}-{{pkg_release}}\" (default: yes)"),
             )
             .arg(
-                Arg::with_name("NO_TAG_VERSION_RELEASE")
+                Arg::new("NO_TAG_VERSION_RELEASE")
+                    .action(ArgAction::SetTrue)
                     .long("no-tag-version-release")
                     .conflicts_with("TAG_VERSION_RELEASE")
                     .help(
@@ -163,31 +169,35 @@ impl<'a, 'b> Cli<'a, 'b> {
                     ),
             )
             .arg(
-                Arg::with_name("TAG_VERSION")
+                Arg::new("TAG_VERSION")
+                    .action(ArgAction::SetTrue)
                     .long("tag-version")
                     .conflicts_with("NO_TAG_VERSION")
                     .help("Tag image with :\"{{pkg_version}}\" (default: yes)"),
             )
             .arg(
-                Arg::with_name("NO_TAG_VERSION")
+                Arg::new("NO_TAG_VERSION")
+                    .action(ArgAction::SetTrue)
                     .long("no-tag-version")
                     .conflicts_with("TAG_VERSION")
                     .help("Do not tag image with :\"{{pkg_version}}\" (default: no)"),
             )
             .arg(
-                Arg::with_name("TAG_LATEST")
+                Arg::new("TAG_LATEST")
+                    .action(ArgAction::SetTrue)
                     .long("tag-latest")
                     .conflicts_with("NO_TAG_LATEST")
                     .help("Tag image with :\"latest\" (default: yes)"),
             )
             .arg(
-                Arg::with_name("NO_TAG_LATEST")
+                Arg::new("NO_TAG_LATEST")
+                    .action(ArgAction::SetTrue)
                     .long("no-tag-latest")
                     .conflicts_with("TAG_LATEST")
                     .help("Do not tag image with :\"latest\" (default: no)"),
             )
             .arg(
-                Arg::with_name("TAG_CUSTOM")
+                Arg::new("TAG_CUSTOM")
                     .long("tag-custom")
                     .value_name("TAG_CUSTOM")
                     .help(
@@ -203,22 +213,25 @@ impl<'a, 'b> Cli<'a, 'b> {
         let app = self
             .app
             .arg(
-                Arg::with_name("PUSH_IMAGE")
+                Arg::new("PUSH_IMAGE")
+                    .action(ArgAction::SetTrue)
                     .long("push-image")
                     .conflicts_with("NO_PUSH_IMAGE")
-                    .requires_all(&["REGISTRY_USERNAME", "REGISTRY_PASSWORD"])
+                    .requires("REGISTRY_USERNAME")
+                    .requires("REGISTRY_PASSWORD")
                     .help("Push image to remote registry (default: no)"),
             )
             .arg(
-                Arg::with_name("NO_PUSH_IMAGE")
+                Arg::new("NO_PUSH_IMAGE")
+                    .action(ArgAction::SetTrue)
                     .long("no-push-image")
                     .conflicts_with("PUSH_IMAGE")
                     .help("Do not push image to remote registry (default: yes)"),
             )
             .arg(
-                Arg::with_name("REGISTRY_USERNAME")
+                Arg::new("REGISTRY_USERNAME")
                     .long("username")
-                    .short("U")
+                    .short('U')
                     .value_name("REGISTRY_USERNAME")
                     .requires("REGISTRY_PASSWORD")
                     .help(
@@ -226,9 +239,9 @@ impl<'a, 'b> Cli<'a, 'b> {
                     ),
             )
             .arg(
-                Arg::with_name("REGISTRY_PASSWORD")
+                Arg::new("REGISTRY_PASSWORD")
                     .long("password")
-                    .short("P")
+                    .short('P')
                     .value_name("REGISTRY_PASSWORD")
                     .requires("REGISTRY_USERNAME")
                     .help(
@@ -236,27 +249,27 @@ impl<'a, 'b> Cli<'a, 'b> {
                     ),
             )
             .arg(
-                Arg::with_name("REGISTRY_TYPE")
-                    .possible_values(RegistryType::variants())
+                Arg::new("REGISTRY_TYPE")
+                    .value_parser(clap::builder::PossibleValuesParser::new(RegistryType::variants()))
                     .long("registry-type")
-                    .short("R")
+                    .short('R')
                     .value_name("REGISTRY_TYPE")
                     .help("Remote registry type (default: docker)"),
             )
             .arg(
-                Arg::with_name("REGISTRY_URL")
+                Arg::new("REGISTRY_URL")
                     // This is not strictly a requirement but will keep someone from
                     // making a mistake when inputing an ECR URL
-                    .required_if("REGISTRY_TYPE", "amazon")
-                    .required_if("REGISTRY_TYPE", "azure")
+                    .required_if_eq_any([("REGISTRY_TYPE", "amazon"), ("REGISTRY_TYPE", "azure")])
                     .long("registry-url")
-                    .short("G")
+                    .short('G')
                     .value_name("REGISTRY_URL")
                     .help("Remote registry url"),
             )
             // Cleanup
             .arg(
-                Arg::with_name("RM_IMAGE")
+                Arg::new("RM_IMAGE")
+                    .action(ArgAction::SetTrue)
                     .long("rm-image")
                     .help("Remove local image from engine after build and/or push (default: no)"),
             );
@@ -273,11 +286,14 @@ impl<'a, 'b> Cli<'a, 'b> {
              /home/acme-redis-3.0.7-21120102031201-x86_64-linux.hart)"
         };
 
-        let app =
-            self.app
-                .arg(Arg::with_name("PKG_IDENT_OR_ARTIFACT").value_name("PKG_IDENT_OR_ARTIFACT")
+        let app = self.app
+                      .arg(Arg::new("PKG_IDENT_OR_ARTIFACT").value_name("PKG_IDENT_OR_ARTIFACT")
                                                             .required(true)
-                                                            .multiple(options.multiple)
+                                                            .num_args(if options.multiple {
+                                                                          ValueRange::new(1..)
+                                                                      } else {
+                                                                          ValueRange::SINGLE
+                                                                      })
                                                             .help(help));
 
         Cli { app }
@@ -285,34 +301,32 @@ impl<'a, 'b> Cli<'a, 'b> {
 
     pub fn add_memory_arg(self) -> Self {
         let app = self.app
-                      .arg(Arg::with_name("MEMORY_LIMIT").value_name("MEMORY_LIMIT")
-                                                         .long("memory")
-                                                         .short("m")
-                                                         .help("Memory limit passed to docker \
+                      .arg(Arg::new("MEMORY_LIMIT").value_name("MEMORY_LIMIT")
+                                                   .long("memory")
+                                                   .short('m')
+                                                   .help("Memory limit passed to docker \
                                                                 build's --memory arg (ex: 2bg)"));
 
         Cli { app }
     }
 }
 
-#[allow(clippy::needless_pass_by_value)] // Signature required by CLAP
-fn valid_ident_or_hart(val: String) -> result::Result<(), String> {
-    if Path::new(&val).is_file() {
-        Ok(())
+fn valid_ident_or_hart(val: &str) -> result::Result<String, String> {
+    if Path::new(val).is_file() {
+        Ok(val.to_string())
     } else if val.ends_with(".hart") {
-        Err(format!("Dojo artifact file: '{}' not found", &val))
+        Err(format!("Dojo artifact file: '{}' not found", val))
     } else {
-        match PackageIdent::from_str(&val) {
-            Ok(_) => Ok(()),
+        match PackageIdent::from_str(val) {
+            Ok(_) => Ok(val.to_string()),
             Err(e) => Err(format!("{}", e)),
         }
     }
 }
 
-#[allow(clippy::needless_pass_by_value)] // Signature required by CLAP
-fn valid_url(val: String) -> result::Result<(), String> {
-    match Url::parse(&val) {
-        Ok(_) => Ok(()),
+fn valid_url(val: &str) -> result::Result<String, String> {
+    match Url::parse(val) {
+        Ok(_) => Ok(val.to_string()),
         Err(_) => Err(format!("URL: '{}' is not valid", &val)),
     }
 }

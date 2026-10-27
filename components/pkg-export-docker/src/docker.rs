@@ -18,13 +18,12 @@ use std::{fs,
           process::Command,
           str::FromStr};
 
-use crate::{common::ui::{Status,
-                         UIWriter,
-                         UI},
+use crate::{common::{templating::TemplateRenderer,
+                     ui::{Status,
+                          UIWriter,
+                          UI}},
             hcore::{fs as hfs,
                     package::PackageIdent}};
-use failure::SyncFailure;
-use handlebars::Handlebars;
 
 use super::{Credentials,
             Naming};
@@ -231,9 +230,7 @@ impl<'a> DockerImage {
             "tags": self.tags.join(","),
             "name_tags": name_tags.join(","),
         });
-        util::write_file(&report,
-                         &Handlebars::new().template_render(BUILD_REPORT, &json)
-                                           .map_err(SyncFailure::new)?)?;
+        util::write_file(&report, &render(BUILD_REPORT, &json)?)?;
         Ok(())
     }
 
@@ -391,9 +388,7 @@ impl DockerBuildRoot {
             "primary_svc_ident": ctx.primary_svc_ident().to_string(),
         });
         let init = ctx.rootfs().join("init.sh");
-        util::write_file(&init,
-                         &Handlebars::new().template_render(INIT_SH, &json)
-                                           .map_err(SyncFailure::new)?)?;
+        util::write_file(&init, &render(INIT_SH, &json)?)?;
         posix_perm::set_permissions(init.to_string_lossy().as_ref(), 0o0755)?;
         Ok(())
     }
@@ -418,8 +413,7 @@ impl DockerBuildRoot {
             "environment": ctx.environment,
         });
         util::write_file(self.0.workdir().join("Dockerfile"),
-                         &Handlebars::new().template_render(DOCKERFILE, &json)
-                                           .map_err(SyncFailure::new)?)?;
+                         &render(DOCKERFILE, &json)?)?;
         Ok(())
     }
 
@@ -440,10 +434,7 @@ impl DockerBuildRoot {
             "channel": self.0.ctx().channel().as_str(),
         });
         let image_name = match naming.custom_image_name {
-                             Some(ref custom) => {
-                                 Handlebars::new().template_render(custom, &json)
-                                                  .map_err(SyncFailure::new)?
-                             }
+                             Some(ref custom) => render(custom, &json)?,
                              None => format!("{}/{}", ident.origin, ident.name),
                          }.to_lowercase();
 
@@ -466,9 +457,7 @@ impl DockerBuildRoot {
             builder = builder.memory(memory);
         }
         if let Some(ref custom) = naming.custom_tag {
-            builder = builder.tag(Handlebars::new().template_render(custom, &json)
-                                                   .map_err(SyncFailure::new)?
-                                                   .to_lowercase());
+            builder = builder.tag(render(custom, &json)?.to_lowercase());
         }
         builder.build()
     }
@@ -476,3 +465,85 @@ impl DockerBuildRoot {
 
 /// Returns a `Command` for the Docker program.
 fn docker_cmd() -> Command { Command::new(&*DOCKER_PROGRAM) }
+
+/// Renders a template as Dojo's other templates render: a block tag alone on its line with a
+/// tilde on one side keeps the output handlebars 0.29 gave it, and values are not HTML-escaped,
+/// since the output is a Dockerfile, a shell script or an env file.
+fn render(template: &str, json: &serde_json::Value) -> Result<String> {
+    let mut renderer = TemplateRenderer::new();
+    renderer.register_template_string("template", template)?;
+    Ok(renderer.render("template", json)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Each expected text is what handlebars 0.29.1, the renderer before TemplateRenderer, made of
+    // the same template and values.
+
+    #[test]
+    fn dockerfile_with_the_install_hook_renders_as_before() {
+        let json = json!({"path": "/bin:/usr/bin", "rootfs": "rootfs", "exposes": "80 443",
+                          "install_hook_feat": true,
+                          "environment": {"HTTP_PROXY": "http://proxy:3128", "NO_PROXY": "localhost"},
+                          "doj_path": "/bin/doj",
+                          "installed_primary_svc_ident": "core/redis/4.0.14/20190319155852",
+                          "primary_svc_ident": "core/redis"});
+        assert_eq!(render(DOCKERFILE, &json).unwrap(),
+                   "FROM scratch\n\
+                    ENV PATH /bin:/usr/bin\n\
+                    ADD rootfs /\n\
+                    \n\
+                    EXPOSE 9631 80 443\n    \
+                    RUN DOJ_FEAT_OFFLINE_INSTALL=ON \\\n        \
+                    DOJ_FEAT_INSTALL_HOOK=ON \\\n            \
+                    HTTP_PROXY=http://proxy:3128 \\\n            \
+                    NO_PROXY=localhost \\\n        \
+                    /bin/doj pkg install core/redis/4.0.14/20190319155852\n\
+                    ENTRYPOINT [\"/init.sh\"]\n\
+                    CMD [\"run\", \"core/redis\"]\n");
+    }
+
+    #[test]
+    fn dockerfile_without_the_install_hook_renders_as_before() {
+        let json = json!({"path": "/bin:/usr/bin", "rootfs": "rootfs", "exposes": "",
+                          "install_hook_feat": false, "environment": {}, "doj_path": "/bin/doj",
+                          "installed_primary_svc_ident": "core/redis/4.0.14/20190319155852",
+                          "primary_svc_ident": "core/redis"});
+        assert_eq!(render(DOCKERFILE, &json).unwrap(),
+                   "FROM scratch\n\
+                    ENV PATH /bin:/usr/bin\n\
+                    ADD rootfs /\n\
+                    \n\
+                    EXPOSE 9631 \n\
+                    ENTRYPOINT [\"/init.sh\"]\n\
+                    CMD [\"run\", \"core/redis\"]\n");
+    }
+
+    #[test]
+    fn init_sh_renders_as_before() {
+        const INIT_SH: &str = include_str!("../defaults/init.sh.hbs");
+        let json = json!({"busybox_shell": "/bin/sh", "path": "/bin:/usr/bin",
+                          "sup_bin": "/bin/doj sup", "primary_svc_ident": "core/redis"});
+        assert_eq!(render(INIT_SH, &json).unwrap(),
+                   "#!/bin/sh\n\
+                    export PATH=\"/bin:/usr/bin\"\n\
+                    case \"$1\" in\n  \
+                    -h|--help|help|-V|--version) exec /bin/doj sup \"$@\";;\n  \
+                    -*) exec /bin/doj sup run core/redis \"$@\";;\n  \
+                    *) exec /bin/doj sup \"$@\";;\n\
+                    esac\n");
+    }
+
+    #[test]
+    fn the_build_report_renders_as_before() {
+        let json = json!({"id": "sha256:abc", "name": "core/redis", "tags": "4.0.14,latest",
+                          "name_tags": "core/redis:4.0.14,core/redis:latest"});
+        assert_eq!(render(BUILD_REPORT, &json).unwrap(),
+                   "id=sha256:abc\n\
+                    name=core/redis\n\
+                    tags=4.0.14,latest\n\
+                    name_tags=core/redis:4.0.14,core/redis:latest\n");
+    }
+}
