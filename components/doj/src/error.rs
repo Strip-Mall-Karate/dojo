@@ -58,6 +58,7 @@ pub enum Error {
     DojoCore(hcore::Error),
     // Boxed due to clippy::large_enum_variant
     HandlebarsRenderError(Box<handlebars::TemplateRenderError>),
+    InvalidEnvironmentName(String),
     IO(io::Error),
     JobGroupPromoteOrDemote(api_client::Error, bool /* promote */),
     JobGroupCancel(api_client::Error),
@@ -138,6 +139,10 @@ impl fmt::Display for Error {
             Error::DojoCommon(ref e) => e.to_string(),
             Error::DojoCore(ref e) => e.to_string(),
             Error::HandlebarsRenderError(ref e) => e.to_string(),
+            Error::InvalidEnvironmentName(ref name) => {
+                format!("`{}' is not a shell variable name, so it cannot be exported",
+                        name)
+            }
             Error::IO(ref err) => format!("{}", err),
             Error::JobGroupPromoteOrDemoteUnprocessable(true) => {
                 "Failed to promote job group, the build job is still in progress".to_string()
@@ -214,6 +219,7 @@ impl error::Error for Error {
             Error::DojoCommon(ref err) => err.description(),
             Error::DojoCore(ref err) => err.description(),
             Error::HandlebarsRenderError(ref err) => err.description(),
+            Error::InvalidEnvironmentName(_) => "An environment variable is not a shell name",
             Error::IO(ref err) => err.description(),
             Error::JobGroupPromoteOrDemoteUnprocessable(true) => {
                 "Failed to promote job group, the build job is still in progress"

@@ -14,7 +14,8 @@
 
 use std::{cmp::{Ordering,
                 PartialOrd},
-          collections::{HashMap,
+          collections::{BTreeMap,
+                        HashMap,
                         HashSet},
           env,
           fmt,
@@ -49,6 +50,37 @@ use std;
 
 pub const DEFAULT_CFG_FILE: &str = "default.toml";
 const PATH_KEY: &str = "PATH";
+
+/// Variables whose values are lists, and their separators: the plan builder's own list
+/// (`components/plan/src/env.rs`), which joins a dependency's value with the rest instead of
+/// replacing it. The two lists change together.
+const LIST_VARIABLES: &[(&str, &str)] = &[(PATH_KEY, ":"),
+                                          ("GOPATH", ":"),
+                                          ("CLASSPATH", ";"),
+                                          ("NODE_PATH", ":"),
+                                          ("PYTHONPATH", ":"),
+                                          ("BUNDLE_PATH", ":"),
+                                          ("BUNDLE_WITHOUT", ":"),
+                                          ("GEM_PATH", ":"),
+                                          ("RUBYLIB", ":"),
+                                          ("RUBYPATH", ":")];
+
+fn list_separator(name: &str) -> Option<&'static str> {
+    LIST_VARIABLES.iter()
+                  .find(|(n, _)| *n == name)
+                  .map(|(_, separator)| *separator)
+}
+
+/// `current`'s entries, then those of `more` not already among them.
+fn join_entries(current: &str, more: &str, separator: &str) -> String {
+    let mut entries: Vec<&str> = Vec::new();
+    for entry in current.split(separator).chain(more.split(separator)) {
+        if !entry.is_empty() && !entries.contains(&entry) {
+            entries.push(entry);
+        }
+    }
+    entries.join(separator)
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageInstall {
@@ -248,6 +280,29 @@ impl PackageInstall {
         }
 
         Ok(env)
+    }
+
+    /// The environment of several packages together, as `environment_for_command` gives each
+    /// one: the first package named takes precedence. `PATH` and the other list variables hold
+    /// each package's entries in the order the packages are named, each entry once, and any other
+    /// variable keeps the value of the first package that sets it.
+    pub fn environment_for_commands(installs: &[PackageInstall])
+                                    -> Result<BTreeMap<String, String>> {
+        let mut layered: BTreeMap<String, String> = BTreeMap::new();
+        for install in installs {
+            for (name, value) in install.environment_for_command()? {
+                match (layered.get_mut(&name), list_separator(&name)) {
+                    (Some(current), Some(separator)) => {
+                        *current = join_entries(current, &value, separator)
+                    }
+                    (Some(_), None) => {}
+                    (None, _) => {
+                        layered.insert(name, value);
+                    }
+                }
+            }
+        }
+        Ok(layered)
     }
 
     /// Returns all the package's binds, required and then optional
@@ -1304,5 +1359,58 @@ karate/bar=pub:karate/publish sub:karate/subscribe
                         .into_owned());
 
         assert_eq!(expected, pkg_install.environment_for_command().unwrap());
+    }
+
+    #[test]
+    fn environment_for_commands_of_no_packages_is_empty() {
+        assert!(PackageInstall::environment_for_commands(&[]).unwrap()
+                                                             .is_empty());
+    }
+
+    #[test]
+    fn environment_for_commands_puts_path_in_the_order_named() {
+        let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
+
+        let shared = testing_package_install("acme/shared", fs_root.path());
+        set_path_for(&shared, &["sbin"]);
+        let first = testing_package_install("acme/first", fs_root.path());
+        set_path_for(&first, &["bin"]);
+        set_runtime_path_for(&first, vec![&first, &shared]);
+        let second = testing_package_install("acme/second", fs_root.path());
+        set_path_for(&second, &["bin"]);
+        set_runtime_path_for(&second, vec![&second, &shared]);
+
+        let layered =
+            PackageInstall::environment_for_commands(&[first.clone(), second.clone()]).unwrap();
+
+        let expected = env::join_paths(vec![pkg_prefix_for(&first).join("bin"),
+                                            pkg_prefix_for(&shared).join("sbin"),
+                                            pkg_prefix_for(&second).join("bin")]).unwrap()
+                                                                                 .into_string()
+                                                                                 .unwrap();
+        assert_eq!(Some(&expected), layered.get("PATH"));
+    }
+
+    #[test]
+    fn environment_for_commands_joins_lists_and_keeps_the_first_value() {
+        let fs_root = Builder::new().prefix("fs-root").tempdir().unwrap();
+
+        let first = testing_package_install("acme/first", fs_root.path());
+        write_metafile(&first,
+                       MetaFile::RuntimeEnvironment,
+                       "JAVA_HOME=/first/java\nPYTHONPATH=/first/lib:/shared/lib\n");
+        let second = testing_package_install("acme/second", fs_root.path());
+        write_metafile(&second,
+                       MetaFile::RuntimeEnvironment,
+                       "JAVA_HOME=/second/java\nPYTHONPATH=/shared/lib:/second/lib\nONLY=second\n");
+
+        let layered = PackageInstall::environment_for_commands(&[first, second]).unwrap();
+
+        let mut expected = BTreeMap::new();
+        expected.insert("JAVA_HOME".to_string(), "/first/java".to_string());
+        expected.insert("ONLY".to_string(), "second".to_string());
+        expected.insert("PYTHONPATH".to_string(),
+                        "/first/lib:/shared/lib:/second/lib".to_string());
+        assert_eq!(expected, layered);
     }
 }
