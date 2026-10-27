@@ -32,24 +32,24 @@ main() {
   # Parse command line flags and options.
   while getopts "c:hv:t:" opt; do
     case "${opt}" in
-      c)
-        channel="${OPTARG}"
-        ;;
-      h)
-        print_help
-        exit 0
-        ;;
-      v)
-        version="${OPTARG}"
-        ;;
-      t)
-        target="${OPTARG}"
-        ;;
-      \?)
-        echo "" >&2
-        print_help >&2
-        exit_with "Invalid option" 1
-        ;;
+    c)
+      channel="${OPTARG}"
+      ;;
+    h)
+      print_help
+      exit 0
+      ;;
+    v)
+      version="${OPTARG}"
+      ;;
+    t)
+      target="${OPTARG}"
+      ;;
+    \?)
+      echo "" >&2
+      print_help >&2
+      exit_with "Invalid option" 1
+      ;;
     esac
   done
 
@@ -109,7 +109,7 @@ create_workdir() {
   else
     local _tmp=/tmp
   fi
-  workdir="$(mktemp -d -p "$_tmp" 2> /dev/null || mktemp -d "${_tmp}/doj.XXXX")"
+  workdir="$(mktemp -d -p "$_tmp" 2>/dev/null || mktemp -d "${_tmp}/doj.XXXX")"
   # Add a trap to clean up any interrupted file downloads
   # shellcheck disable=SC2154
   trap 'code=$?; rm -rf $workdir; exit $code' INT TERM EXIT
@@ -124,34 +124,34 @@ get_platform() {
   _ostype="$(uname -s)"
 
   case "${_ostype}" in
-    Darwin|Linux)
-      sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
-      arch="$(uname -m | tr '[:upper:]' '[:lower:]')"
-      ;;
-    *)
-      exit_with "Unrecognized OS type when determining platform: ${_ostype}" 2
-      ;;
+  Darwin | Linux)
+    sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    arch="$(uname -m | tr '[:upper:]' '[:lower:]')"
+    ;;
+  *)
+    exit_with "Unrecognized OS type when determining platform: ${_ostype}" 2
+    ;;
   esac
 
   case "${sys}" in
-    darwin)
-      need_cmd shasum
+  darwin)
+    need_cmd shasum
 
-      ext=zip
-      shasum_cmd="shasum -a 256"
-      ;;
-    linux)
-      need_cmd sha256sum
+    ext=zip
+    shasum_cmd="shasum -a 256"
+    ;;
+  linux)
+    need_cmd sha256sum
 
-      ext=tar.gz
-      shasum_cmd="sha256sum"
-      ;;
-    *)
-      exit_with "Unrecognized sys type when determining platform: ${sys}" 3
-      ;;
+    ext=tar.gz
+    shasum_cmd="sha256sum"
+    ;;
+  *)
+    exit_with "Unrecognized sys type when determining platform: ${sys}" 3
+    ;;
   esac
 
-  if [ -z "${target:-}" ]; then 
+  if [ -z "${target:-}" ]; then
     target="${arch}-${sys}"
   fi
 }
@@ -176,10 +176,10 @@ get_version() {
     # work its likely related to this here sed command. We have to pull
     # versions out of minified json. So if this ever stops working its likely
     # BT api output is no longer minified.
-    _rev="$(sed -e 's/^.*"versions":\[\([^]]*\)\].*$/\1/' -e 's/"//g' "${_j}" \
-      | tr ',' '\n' \
-      | grep "^${_btv}" \
-      | head -1)"
+    _rev="$(sed -e 's/^.*"versions":\[\([^]]*\)\].*$/\1/' -e 's/"//g' "${_j}" |
+      tr ',' '\n' |
+      grep "^${_btv}" |
+      head -1)"
     if [ -z "${_rev}" ]; then
       _e="Version \`${version}' could not used or version doesn't exist."
       _e="$_e Please provide a simple version like: \"0.15.0\""
@@ -193,20 +193,20 @@ get_version() {
 }
 
 # Validate the CLI Target requested.  In most cases ${arch}-${sys}
-# for the current system is the only valid Target.  In the case of 
+# for the current system is the only valid Target.  In the case of
 # x86_64-linux systems we also need to support the x86_64-linux-kernel2
 # Target. Creates an array of valid Targets for the current system,
-# adding any valid alternate Targets, and checks if the requested 
+# adding any valid alternate Targets, and checks if the requested
 # Target is present in the array.
 validate_target() {
   local valid_targets=("${arch}-${sys}")
   case "${sys}" in
-   linux)
+  linux)
     valid_targets+=("x86_64-linux-kernel2")
     ;;
   esac
 
-  if ! (_array_contains "${target}" "${valid_targets[@]}") ; then
+  if ! (_array_contains "${target}" "${valid_targets[@]}"); then
     local _vts
     printf -v _vts "%s, " "${valid_targets[@]}"
     _e="${target} is not a valid target for this system. Please specify one of: [${_vts%, }]"
@@ -260,55 +260,55 @@ extract_archive() {
 
   info "Extracting ${archive}"
   case "${ext}" in
-    tar.gz)
-      need_cmd zcat
-      need_cmd tar
+  tar.gz)
+    need_cmd zcat
+    need_cmd tar
 
-      zcat "${archive}" | tar x -C "${workdir}"
-      archive_dir="${archive%.tar.gz}"
-      ;;
-    zip)
-      need_cmd unzip
+    zcat "${archive}" | tar x -C "${workdir}"
+    archive_dir="${archive%.tar.gz}"
+    ;;
+  zip)
+    need_cmd unzip
 
-      unzip "${archive}" -d "${workdir}"
-      archive_dir="${archive%.zip}"
-      ;;
-    *)
-      exit_with "Unrecognized file extension when extracting: ${ext}" 4
-      ;;
+    unzip "${archive}" -d "${workdir}"
+    archive_dir="${archive%.zip}"
+    ;;
+  *)
+    exit_with "Unrecognized file extension when extracting: ${ext}" 4
+    ;;
   esac
 }
 
 install_doj() {
   case "${sys}" in
-    darwin)
-      need_cmd mkdir
-      need_cmd install
+  darwin)
+    need_cmd mkdir
+    need_cmd install
 
-      info "Installing doj into /usr/local/bin"
-      mkdir -pv /usr/local/bin
-      install -v "${archive_dir}"/doj /usr/local/bin/doj
-      ;;
-    linux)
-      local _ident="karate/doj"
-      if [ -n "${version-}" ]; then
-        _ident+="/$version";
-      fi
-      info "Installing Dojo package using temporarily downloaded doj"
-      # Install doj release using the extracted version and add/update symlink
-      "${archive_dir}/doj" install --channel "$channel" "$_ident"
-      # TODO fn: The updated binlink behavior is to skip targets that already
-      # exist so we want to use the `--force` flag. Unfortunetly, old versions
-      # of `doj` don't have this flag. For now, we'll run with the new flag and
-      # fall back to running the older behavior. This can be removed at a
-      # future date when we no lnger are worrying about Dojo versions 0.33.2
-      # and older. (2017-09-29)
-      "${archive_dir}/doj" pkg binlink "$_ident" doj --force \
-        || "${archive_dir}/doj" pkg binlink "$_ident" doj
-      ;;
-    *)
-      exit_with "Unrecognized sys when installing: ${sys}" 5
-      ;;
+    info "Installing doj into /usr/local/bin"
+    mkdir -pv /usr/local/bin
+    install -v "${archive_dir}"/doj /usr/local/bin/doj
+    ;;
+  linux)
+    local _ident="karate/doj"
+    if [ -n "${version-}" ]; then
+      _ident+="/$version"
+    fi
+    info "Installing Dojo package using temporarily downloaded doj"
+    # Install doj release using the extracted version and add/update symlink
+    "${archive_dir}/doj" install --channel "$channel" "$_ident"
+    # TODO fn: The updated binlink behavior is to skip targets that already
+    # exist so we want to use the `--force` flag. Unfortunetly, old versions
+    # of `doj` don't have this flag. For now, we'll run with the new flag and
+    # fall back to running the older behavior. This can be removed at a
+    # future date when we no lnger are worrying about Dojo versions 0.33.2
+    # and older. (2017-09-29)
+    "${archive_dir}/doj" pkg binlink "$_ident" doj --force ||
+      "${archive_dir}/doj" pkg binlink "$_ident" doj
+    ;;
+  *)
+    exit_with "Unrecognized sys when installing: ${sys}" 5
+    ;;
   esac
 }
 
@@ -320,7 +320,7 @@ print_doj_version() {
 }
 
 need_cmd() {
-  if ! command -v "$1" > /dev/null 2>&1; then
+  if ! command -v "$1" >/dev/null 2>&1; then
     exit_with "Required command '$1' not found on PATH" 127
   fi
 }
@@ -356,7 +356,7 @@ dl_file() {
   local _curl_extra_args=""
 
   # Attempt to download with wget, if found. If successful, quick return
-  if command -v wget > /dev/null; then
+  if command -v wget >/dev/null; then
     info "Downloading via wget: ${_url}"
     if [ -n "${SSL_CERT_FILE:-}" ]; then
       wget ${_wget_extra_args:+"--ca-certificate=${SSL_CERT_FILE}"} -q -O "${_dst}" "${_url}"
@@ -374,7 +374,7 @@ dl_file() {
   fi
 
   # Attempt to download with curl, if found. If successful, quick return
-  if command -v curl > /dev/null; then
+  if command -v curl >/dev/null; then
     info "Downloading via curl: ${_url}"
     if [ -n "${SSL_CERT_FILE:-}" ]; then
       curl ${_curl_extra_args:+"--cacert ${SSL_CERT_FILE}"} -sSfL "${_url}" -o "${_dst}"

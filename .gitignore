@@ -1,24 +1,101 @@
+# smk { overwrite: true }
+#########################################################################
+#
+#                 -- Generated with smk --
+#      (do not edit unless you know what you're doing)
+#
+#########################################################################
+
+# git automatically ignores the git directory, but ripgrep needs this hint
+.git
+
+# Default output dirs
+tmp/
+out/
+pkg/
+
+# Environment config
+**/env/.env
+.vscode.env
+
+# Login secrets
+.tokens
+
+# runtime data
+.pid
+*.pid
+
+# Logs
+logs
+*.log
+
+# What smk proj writes beside a file the repository owns
+*.example
+
+# Nix
+.cache
+.local
+.direnv
+
+# Terraform
+.terraform
+*.tfstate*
+*.tfvars
+*.secrets
+.vagrant
+
+# localstack
+.localstack
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.history/
+.vs/
+.vsconfig
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Emacs
+.#*
+
+# OS created files
+.DS_Store
+Thumbs.db
+
+# Each language's rules follow, one block per language in smkproj.toml's Languages: listing a language adds its
+# block, dropping it removes the block, and neither touches another language's.
+# smk: each language's lines follow
+
+# smk lang: Rust
+# Rust: what cargo builds. Cargo.lock is tracked: a binary's dependencies resolve once.
+/target/
+# smk end
+
+# Everything above is smk's, rewritten on every render. The lines below the next one are this repository's,
+# and every render keeps them; a `!` line there re-includes what smk ignores above.
+# smk: this repository's own lines follow
 *.box.key
-*.rustfmt
 *.sig.key
 *.sym.key
-.DS_Store
-.envrc
+*.rustfmt
 .secrets
 .tags*
-.vagrant/
-.vscode
+tags
 /target
+/components/plan/target
+/support/vm/out/
+result
 dump.rdb
 log/
 results/
-result
-tags
 terraform.tfstate*
 test/builder-api/built/*
 test/builder-api/node_modules
 test/builder-api/services.log
-tmp/
-/support/vm/out/
-/components/plan/target
 __pycache__/

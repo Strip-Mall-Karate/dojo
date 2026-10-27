@@ -1,3 +1,9 @@
+# smk { overwrite: false }
+
+# smk's checks: format, lint, types and the commit hook, rewritten on every render. ci runs them
+# through `checks`, which smkproj.toml's Checks chooses.
+include .smk/checks.mk
+
 UNAME_S := $(shell uname -s)
 HAS_DOCKER := $(shell command -v docker 2> /dev/null)
 TESTING_FS_ROOT := $(shell mktemp -d /tmp/testing-fs-root-XXXXXX)
@@ -189,12 +195,13 @@ build-launcher-for-supervisor-tests:
 unit-sup: build-launcher-for-supervisor-tests
 .PHONY: build-launcher-for-supervisor-tests
 
-lint: image ## executes the $1 component's linter checks
+# The inherited clippy run in the old Docker image; `lint` is smk's, from .smk/checks.mk.
+lint-docker: image ## executes the $1 component's linter checks
 	$(run) test/run_clippy.sh stable test/unexamined_lints.txt \
 	                                 test/allowed_lints.txt \
 	                                 test/lints_to_fix.txt \
 	                                 test/denied_lints.txt
-.PHONY: lint
+.PHONY: lint-docker
 
 define FUNCTIONAL
 functional-$1: image ## executes the $1 component's functional test suite

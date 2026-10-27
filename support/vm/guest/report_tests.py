@@ -68,7 +68,10 @@ def expected_failures(lines: Iterable[str]) -> set[str]:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 4:
-        print("usage: report_tests.py <built log> <test log> <expected failures>", file=sys.stderr)
+        print(
+            "usage: report_tests.py <built log> <test log> <expected failures>",
+            file=sys.stderr,
+        )
         return 2
     built = built_binaries(read_lines(argv[1]))
     finished, unfinished, failed, loader_errors = scan_run(read_lines(argv[2]))
@@ -79,7 +82,9 @@ def main(argv: list[str]) -> int:
     passing = sorted(expected - failed)
     doc_tests = sum(1 for name in finished if name.startswith("doc-tests "))
 
-    print(f"test binaries: {len(built)} built, {len(built) - len(not_run)} ran to a result")
+    print(
+        f"test binaries: {len(built)} built, {len(built) - len(not_run)} ran to a result"
+    )
     for binary in not_run:
         print(f"  did not run to a result: {binary}")
     for binary in unfinished:

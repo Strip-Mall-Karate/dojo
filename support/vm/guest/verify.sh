@@ -15,6 +15,7 @@ tree=$(realpath "$1")
 mkdir -p "$2"
 logs=$(realpath "$2")
 
+# shellcheck source=env.sh
 . "${here}/env.sh"
 cd "$tree"
 

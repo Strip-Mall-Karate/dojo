@@ -14,7 +14,10 @@ doc = false
 [dependencies]
 bytes = "1.12.1"
 env_logger = "0.11.11"
-futures-util = { version = "0.3.34", default-features = false, features = ["sink", "std"] }
+futures-util = { version = "0.3.34", default-features = false, features = [
+  "sink",
+  "std",
+] }
 dojo_core = { path = "../core" }
 dojo_common = { path = "../common" }
 jiff = "0.2.38"

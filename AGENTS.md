@@ -39,6 +39,10 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
 
 ## Toolchain and building
 
+- The tree is an smk project (`smkproj.toml`): `direnv allow` loads its dev shell, and `make checks`
+  (`smk format --check`, `smk lint`, `smk typecheck`) passes before a PR opens; `smk format` fixes
+  formatting. Rust and the code on its way out are excluded, and `smkproj.toml` says why; Rust is
+  formatted with `builder fmt` and tested in the VM.
 - `rust-toolchain` at the root pins the Rust the tree builds with; `support/vm/guest/env.sh` supplies
   the C libraries through Nix. Read both before changing a dependency; the lock is built `--locked`.
 - The Dojo VM (`support/vm`, README "The Dojo VM") is the development loop: an arm64 Linux guest
@@ -63,7 +67,7 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
   confirm no processes remain). The VM proves arm64.
 - **A test run is only as good as the binaries that started.** While the tree linked OpenSSL
   1.0.2 from an old nixpkgs, every test binary that loaded libcrypto died at load (`libdl.so.2:
-  undefined symbol: _dl_catch_error`, exit 127), so seven test binaries silently never ran for the
+undefined symbol: _dl_catch_error`, exit 127), so seven test binaries silently never ran for the
   first months of this fork. A loader error is not counted as a failed test: count the binaries
   that ran against the ones cargo built before calling a run green. `builder verify` does that
   count, and it is the run a PR body reports.
@@ -76,6 +80,6 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
 ## Landing
 
 The repository is `StripMallKarateCompany/dojo` on GitHub. Finished work opens a pull request against
-`main` (`gh pr create -R StripMallKarateCompany/dojo`) whose body states what changed and the evidence.
+`main` (`smk pr create`) whose body states what changed and the evidence.
 Merging needs the owner's explicit go-ahead for each pull request; there is no CI, so the PR body
 carries the checks that ran.

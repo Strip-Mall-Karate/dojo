@@ -2,19 +2,20 @@
 # Applies a DHCP lease. busybox's udhcpc only negotiates: it runs this script
 # with the event in $1 and the lease in its environment, and the static
 # busybox ships no default script.
+# shellcheck disable=SC2154 # interface, ip, mask, router and dns come from udhcpc.
 
 case "$1" in
-  deconfig)
-    ip addr flush dev "${interface}"
-    ;;
-  bound | renew)
-    ip addr flush dev "${interface}"
-    ip addr add "${ip}/${mask}" dev "${interface}"
-    if [ -n "${router}" ]; then
-      ip route replace default via "${router%% *}" dev "${interface}"
-    fi
-    for server in ${dns}; do
-      echo "nameserver ${server}"
-    done > /etc/resolv.conf
-    ;;
+deconfig)
+  ip addr flush dev "${interface}"
+  ;;
+bound | renew)
+  ip addr flush dev "${interface}"
+  ip addr add "${ip}/${mask}" dev "${interface}"
+  if [ -n "${router}" ]; then
+    ip route replace default via "${router%% *}" dev "${interface}"
+  fi
+  for server in ${dns}; do
+    echo "nameserver ${server}"
+  done >/etc/resolv.conf
+  ;;
 esac

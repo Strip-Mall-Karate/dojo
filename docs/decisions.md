@@ -65,7 +65,7 @@ longer story.
   produced, and plan authors keep writing templates as they do now. Rendered against every
   template in `dojo-plans`, output is byte-identical or differs only in blank lines, except that
   `toYaml` writes plain YAML without a leading `---` (same data) and an array printed directly
-  loses its trailing `, `. Two things break: `foo[0]` must be written `foo.[0]` (nothing uses
+  loses the comma and space after its last element. Two things break: `foo[0]` must be written `foo.[0]` (nothing uses
   it), and pest stays at 2.8 until the Supervisor's actix-web 0.7, whose ring 0.13 holds cc at
   1.0.95, is replaced.
 - **Old dependencies are replaced, not only upgraded.** Where a dependency reflects what Rust

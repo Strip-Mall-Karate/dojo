@@ -25,7 +25,7 @@ simply 'doj'). In the latter case when just passing the binary name, the shell w
 "
 }
 
-if [[ $# -eq 0 ]] ; then
+if [[ $# -eq 0 ]]; then
   print_help
   echo
   echo "<path-to-doj-binary> must be specified!"

@@ -4,13 +4,13 @@ set -eu
 
 output="/tmp/account-creation-report.csv"
 
-if [ "$#" -ne 1  ]; then
+if [ "$#" -ne 1 ]; then
   echo "Please pass the initial date as the argument to this script, e.g. 2017-09-01"
   exit 1
 fi
 
 # Note that although the query below specifies shard_0, the function itself queries and aggregates results across all shards
-if command -v doj > /dev/null 2>&1; then
+if command -v doj >/dev/null 2>&1; then
   if doj pkg exec karate/postgresql psql -U doj -q -c "COPY (SELECT * FROM shard_0.account_creation_report('$1')) TO '$output' WITH (FORMAT CSV, HEADER TRUE, FORCE_QUOTE *)" builder_sessionsrv; then
     echo "The report ran successfully. The CSV file can be found at $output"
   else
@@ -20,4 +20,3 @@ else
   echo "Dojo not installed. Aborting."
   exit 1
 fi
-

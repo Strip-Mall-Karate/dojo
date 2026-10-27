@@ -10,9 +10,11 @@ the commands and facts the skills need.
 - Acceptance: `support/vm/boot --check --payload support/vm/out/payload.cpio.gz` and
   `--check-reboot`. `boot --check` without a payload checks the base image.
 - Tracker: workq, project SMK, label `dojo`. The record is the wiki page "Dojo"
-  (`smk wiki list --match Dojo`); `docs/decisions.md` in the tree is the dated log. This tree has
-  no dev shell, so `smk issue` and `smk wiki` need the workq credential from a shell that loads
-  it (the smk-cli dev shell does); without it they fail with HTTP 401.
+  (`smk wiki list --match Dojo`); `docs/decisions.md` in the tree is the dated log. The tree's dev
+  shell (`direnv allow`) loads the workq credential `smk issue` and `smk wiki` need; without it they
+  fail with HTTP 401.
+- Checks: `make checks` runs `smk format --check`, `smk lint` and `smk typecheck` on the Mac. Rust
+  is not in them yet (`smkproj.toml` says why): the builder VM formats and tests it.
 - Host: GitHub, `StripMallKarateCompany/dojo`. Pull requests target `main` and land with merge
   commits; no CI runs, and every merge needs the owner's go-ahead.
 - Proof: the Dojo VM (hardware virtualization on the Mac) for arm64; smk-1 for x86_64 under the

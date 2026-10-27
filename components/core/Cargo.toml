@@ -33,4 +33,3 @@ uzers = "0.12.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 caps = "0.5.6"
-

@@ -11,6 +11,7 @@ fi
 tree=$(realpath "$1")
 shift
 
+# shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 cd "$tree"
 packages=()

@@ -34,8 +34,8 @@ main() {
 
   # Determine the number of pages to fetch. It sort of sucks that jq's `ceil`
   # doesn't work...going to do this the hard way...
-  num_pages=$(curl -s "$url" \
-    | jq "if ((.total_count / $npp) - ((.total_count / $npp) | floor)) > 0 then
+  num_pages=$(curl -s "$url" |
+    jq "if ((.total_count / $npp) - ((.total_count / $npp) | floor)) > 0 then
           ((.total_count / $npp) | floor) + 1
         else
           ((.total_count / $npp) | floor)
@@ -43,14 +43,14 @@ main() {
 
   # Fetch each page and output a fully qualified package identifier, one per
   # line
-  for (( n=0; n<num_pages; n+=1 )) do
-    curl -s "${url}?range=$(( n * npp ))" \
-      | jq --raw-output '.data[] | "\(.origin)/\(.name)/\(.version)/\(.release)"'
+  for ((n = 0; n < num_pages; n += 1)); do
+    curl -s "${url}?range=$((n * npp))" |
+      jq --raw-output '.data[] | "\(.origin)/\(.name)/\(.version)/\(.release)"'
   done
 }
 
 need_cmd() {
-  if ! command -v "$1" > /dev/null 2>&1; then
+  if ! command -v "$1" >/dev/null 2>&1; then
     echo "Required command '$1' not found on PATH" >&2
     exit 127
   fi

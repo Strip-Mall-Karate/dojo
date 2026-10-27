@@ -1,0 +1,3 @@
+# The guest scripts source env.sh beside them; let shellcheck follow it.
+external-sources=true
+source-path=SCRIPTDIR
