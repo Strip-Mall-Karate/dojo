@@ -44,7 +44,7 @@ use crate::{common::{command::package::install::{self,
             VERSION};
 use termcolor::ColorChoice;
 
-use super::pkg::env::render_environment;
+use super::pkg::env::render_overlay;
 use crate::error::{Error,
                    Result};
 
@@ -368,7 +368,8 @@ fn locked(dir: &Path, store: &Store<'_>, update: bool) -> Result<Lock> {
 
 /// Installs what the lock pins for the target `doj` runs on, from the archive cache after
 /// checking each archive's checksum, and prints the packages' environment, the declaration's
-/// variables over it, as `export` lines.
+/// variables over it, as `export` lines that lay it over the shell's own: a list variable's
+/// entries go in front of what the shell already has.
 pub fn env(dir: &Path, fs_root: &Path, bldr_url: &str) -> Result<()> {
     let text = environment(dir, &Store::local(fs_root), bldr_url)?;
     print!("{}", text);
@@ -430,7 +431,7 @@ fn environment(dir: &Path, store: &Store<'_>, bldr_url: &str) -> Result<String> 
                            .collect::<std::result::Result<Vec<_>, _>>()?;
     let mut env = PackageInstall::environment_for_commands(&installs)?;
     env.extend(declaration.env.clone());
-    render_environment(&env)
+    render_overlay(&env)
 }
 
 /// The lock's pins for the store's target, when they still pin what the declaration asks for,
@@ -698,7 +699,7 @@ mod tests {
 
         assert_eq!("export GREETING='from shell.toml'\nexport \
                     PATH='/doj/pkgs/acme/tool/1.0.0/20260101000000/bin:/doj/pkgs/acme/dep/1.0.\
-                    0/20260101000000/bin'\n",
+                    0/20260101000000/bin'\"${PATH:+:${PATH}}\"\n",
                    text);
     }
 

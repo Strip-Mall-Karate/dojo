@@ -65,7 +65,8 @@ const LIST_VARIABLES: &[(&str, &str)] = &[(PATH_KEY, ":"),
                                           ("RUBYLIB", ":"),
                                           ("RUBYPATH", ":")];
 
-fn list_separator(name: &str) -> Option<&'static str> {
+/// The separator of `name`'s entries, when it is a list variable.
+pub fn list_separator(name: &str) -> Option<&'static str> {
     LIST_VARIABLES.iter()
                   .find(|(n, _)| *n == name)
                   .map(|(_, separator)| *separator)
