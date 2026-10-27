@@ -25,6 +25,11 @@ use dojo_core::{env as henv,
 use std::{path::PathBuf,
           sync::LazyLock};
 
+/// The help layout of Dojo's programs: clap's own, with the author line clap 4 no longer shows.
+pub const HELP_TEMPLATE: &str =
+    "{before-help}{name} {version}{author-with-newline}{about-with-newline}\n\
+                                 {usage-heading} {usage}\n\n{all-args}{after-help}";
+
 pub const GOSSIP_DEFAULT_IP: &str = "0.0.0.0";
 pub const GOSSIP_DEFAULT_PORT: u16 = 9638;
 pub static GOSSIP_DEFAULT_ADDR: LazyLock<String> =

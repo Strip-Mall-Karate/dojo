@@ -12,42 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use base64::DecodeError;
-use rusoto_ecr::GetAuthorizationTokenError;
 use std::{process::ExitStatus,
-          result,
-          string::FromUtf8Error};
+          result};
 
-use failure;
+pub type Result<T> = result::Result<T, anyhow::Error>;
 
-pub type Result<T> = result::Result<T, failure::Error>;
-
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[fail(display = "{}", _0)]
-    Base64DecodeError(DecodeError),
-    #[fail(display = "Docker build failed with exit code: {}", _0)]
+    #[error("Docker build failed with exit code: {0}")]
     BuildFailed(ExitStatus),
-    #[fail(display = "Could not determine Docker image ID for image: {}", _0)]
+    #[error("Could not determine Docker image ID for image: {0}")]
     DockerImageIdNotFound(String),
-    #[fail(display = "Invalid registry type: {}", _0)]
+    #[error("Invalid registry type: {0}")]
     InvalidRegistryType(String),
-    #[fail(display = "{}", _0)]
-    InvalidToken(FromUtf8Error),
-    #[fail(display = "Docker login failed with exit code: {}", _0)]
+    #[error("Docker login failed with exit code: {0}")]
     LoginFailed(ExitStatus),
-    #[fail(display = "Docker logout failed with exit code: {}", _0)]
+    #[error("Docker logout failed with exit code: {0}")]
     LogoutFailed(ExitStatus),
-    #[fail(display = "No ECR Tokens returned")]
+    #[error("No ECR Tokens returned")]
     NoECRTokensReturned,
-    #[fail(display = "{}", _0)]
-    TokenFetchFailed(GetAuthorizationTokenError),
-    #[fail(display = "A primary service package could not be determined from: {:?}. At least \
-                      one package with a run hook must be provided.",
-           _0)]
+    #[error("Could not fetch an ECR authorization token: {0}")]
+    TokenFetchFailed(#[source] aws_sdk_ecr::Error),
+    #[error("A primary service package could not be determined from: {0:?}. At least one \
+             package with a run hook must be provided.")]
     PrimaryServicePackageNotFound(Vec<String>),
-    #[fail(display = "Docker image push failed with exit code: {}", _0)]
+    #[error("Docker image push failed with exit code: {0}")]
     PushImageFailed(ExitStatus),
-    #[fail(display = "Removing Docker local images failed with exit code: {}", _0)]
+    #[error("Removing Docker local images failed with exit code: {0}")]
     RemoveImageFailed(ExitStatus),
 }

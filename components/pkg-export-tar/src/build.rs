@@ -75,20 +75,33 @@ pub struct BuildSpec<'a> {
 
 impl<'a> BuildSpec<'a> {
     /// Creates a `BuildSpec` from cli arguments.
-    pub fn new_from_cli_matches(m: &'a clap::ArgMatches<'_>, default_url: &'a str) -> Self {
-        BuildSpec { doj:               m.value_of("DOJ_PKG").unwrap_or(DEFAULT_DOJ_IDENT),
-                    doj_launcher:      m.value_of("DOJ_LAUNCHER_PKG")
+    pub fn new_from_cli_matches(m: &'a clap::ArgMatches, default_url: &'a str) -> Self {
+        BuildSpec { doj:               m.get_one::<String>("DOJ_PKG")
+                                        .map(String::as_str)
+                                        .unwrap_or(DEFAULT_DOJ_IDENT),
+                    doj_launcher:      m.get_one::<String>("DOJ_LAUNCHER_PKG")
+                                        .map(String::as_str)
                                         .unwrap_or(DEFAULT_LAUNCHER_IDENT),
-                    doj_sup:           m.value_of("DOJ_SUP_PKG").unwrap_or(DEFAULT_SUP_IDENT),
-                    url:               m.value_of("BLDR_URL").unwrap_or(&default_url),
-                    channel:           m.value_of("CHANNEL")
+                    doj_sup:           m.get_one::<String>("DOJ_SUP_PKG")
+                                        .map(String::as_str)
+                                        .unwrap_or(DEFAULT_SUP_IDENT),
+                    url:               m.get_one::<String>("BLDR_URL")
+                                        .map(String::as_str)
+                                        .unwrap_or(&default_url),
+                    channel:           m.get_one::<String>("CHANNEL")
+                                        .map(String::as_str)
                                         .map(ChannelIdent::from)
                                         .unwrap_or_default(),
-                    base_pkgs_url:     m.value_of("BASE_PKGS_BLDR_URL").unwrap_or(&default_url),
-                    base_pkgs_channel: m.value_of("BASE_PKGS_CHANNEL")
+                    base_pkgs_url:     m.get_one::<String>("BASE_PKGS_BLDR_URL")
+                                        .map(String::as_str)
+                                        .unwrap_or(&default_url),
+                    base_pkgs_channel: m.get_one::<String>("BASE_PKGS_CHANNEL")
+                                        .map(String::as_str)
                                         .map(ChannelIdent::from)
                                         .unwrap_or_default(),
-                    ident_or_archive:  m.value_of("PKG_IDENT_OR_ARTIFACT").unwrap(), }
+                    ident_or_archive:  m.get_one::<String>("PKG_IDENT_OR_ARTIFACT")
+                                        .map(String::as_str)
+                                        .unwrap(), }
     }
 
     /// Creates a `BuildRoot` for the given specification.

@@ -44,7 +44,6 @@ use clap;
 #[cfg(unix)]
 use doj;
 #[cfg(unix)]
-use failure::SyncFailure;
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
 use std::{collections::HashMap,
@@ -96,22 +95,34 @@ pub struct BuildSpec<'a> {
 
 impl<'a> BuildSpec<'a> {
     /// Creates a `BuildSpec` from cli arguments.
-    pub fn new_from_cli_matches(m: &'a clap::ArgMatches<'_>, default_url: &'a str) -> Self {
-        BuildSpec { doj:                m.value_of("DOJ_PKG").unwrap_or(DEFAULT_DOJ_IDENT),
-                    doj_launcher:       m.value_of("DOJ_LAUNCHER_PKG")
+    pub fn new_from_cli_matches(m: &'a clap::ArgMatches, default_url: &'a str) -> Self {
+        BuildSpec { doj:                m.get_one::<String>("DOJ_PKG")
+                                         .map(String::as_str)
+                                         .unwrap_or(DEFAULT_DOJ_IDENT),
+                    doj_launcher:       m.get_one::<String>("DOJ_LAUNCHER_PKG")
+                                         .map(String::as_str)
                                          .unwrap_or(DEFAULT_LAUNCHER_IDENT),
-                    doj_sup:            m.value_of("DOJ_SUP_PKG").unwrap_or(DEFAULT_SUP_IDENT),
-                    url:                m.value_of("BLDR_URL").unwrap_or(&default_url),
-                    channel:            m.value_of("CHANNEL")
+                    doj_sup:            m.get_one::<String>("DOJ_SUP_PKG")
+                                         .map(String::as_str)
+                                         .unwrap_or(DEFAULT_SUP_IDENT),
+                    url:                m.get_one::<String>("BLDR_URL")
+                                         .map(String::as_str)
+                                         .unwrap_or(&default_url),
+                    channel:            m.get_one::<String>("CHANNEL")
+                                         .map(String::as_str)
                                          .map(ChannelIdent::from)
                                          .unwrap_or_default(),
-                    base_pkgs_url:      m.value_of("BASE_PKGS_BLDR_URL").unwrap_or(&default_url),
-                    base_pkgs_channel:  m.value_of("BASE_PKGS_CHANNEL")
+                    base_pkgs_url:      m.get_one::<String>("BASE_PKGS_BLDR_URL")
+                                         .map(String::as_str)
+                                         .unwrap_or(&default_url),
+                    base_pkgs_channel:  m.get_one::<String>("BASE_PKGS_CHANNEL")
+                                         .map(String::as_str)
                                          .map(ChannelIdent::from)
                                          .unwrap_or_default(),
-                    auth:               m.value_of("BLDR_AUTH_TOKEN"),
-                    idents_or_archives: m.values_of("PKG_IDENT_OR_ARTIFACT")
+                    auth:               m.get_one::<String>("BLDR_AUTH_TOKEN").map(String::as_str),
+                    idents_or_archives: m.get_many::<String>("PKG_IDENT_OR_ARTIFACT")
                                          .expect("No package specified")
+                                         .map(String::as_str)
                                          .collect(), }
     }
 
@@ -210,7 +221,7 @@ impl<'a> BuildSpec<'a> {
         let dst = util::bin_path();
         for pkg in user_pkgs.iter() {
             doj::command::pkg::binlink::binlink_all_in_pkg(ui, &pkg, &dst, rootfs, true)
-                .map_err(SyncFailure::new)?;
+                .map_err(unshared)?;
         }
         Ok(())
     }
@@ -224,9 +235,9 @@ impl<'a> BuildSpec<'a> {
                                                                  .expect("No busybox in idents"),
                                                        &dst,
                                                        rootfs,
-                                                       true).map_err(SyncFailure::new)?;
+                                                       true).map_err(unshared)?;
         doj::command::pkg::binlink::start(ui, &base_pkgs.doj, "doj", &dst, rootfs, true)
-            .map_err(SyncFailure::new)?;
+            .map_err(unshared)?;
         Ok(())
     }
 
@@ -706,6 +717,11 @@ impl PkgIdentType {
     }
 }
 
+/// doj's error holds a boxed error that is not `Sync`, which `anyhow` needs, so it travels as its
+/// message.
+#[cfg(unix)]
+fn unshared(err: doj::error::Error) -> anyhow::Error { anyhow::anyhow!("{}", err) }
+
 #[cfg(test)]
 mod test {
     use crate::hcore::{self,
@@ -716,7 +732,7 @@ mod test {
     use super::*;
 
     /// Generate Clap ArgMatches for the exporter from a vector of arguments.
-    fn arg_matches<'a>(args: &[&str]) -> ArgMatches<'a> {
+    fn arg_matches(args: &[&str]) -> ArgMatches {
         let app = crate::cli();
         app.get_matches_from(args)
     }
