@@ -566,16 +566,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ctrlc"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "630391922b1b893692c6334369ff528dcc3a9d8061ccf4c803aa8f83cb13db5e"
-dependencies = [
- "nix",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "darling"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -690,9 +680,6 @@ dependencies = [
  "url",
  "uuid 0.7.4",
  "walkdir",
- "widestring 0.4.0",
- "winapi 0.3.9",
- "winreg 0.6.0",
 ]
 
 [[package]]
@@ -709,7 +696,6 @@ dependencies = [
  "prost 0.5.0",
  "semver",
  "time",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -874,7 +860,6 @@ dependencies = [
  "toml 0.5.0",
  "uuid 0.7.4",
  "valico",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -883,11 +868,8 @@ version = "0.0.0"
 dependencies = [
  "base64 0.10.1",
  "caps",
- "ctrlc",
  "dirs",
- "dojo_win_users",
  "errno",
- "gcc",
  "hex",
  "hyper 0.10.15",
  "lazy_static 1.3.0",
@@ -907,9 +889,6 @@ dependencies = [
  "typemap",
  "url",
  "users",
- "widestring 0.4.0",
- "winapi 0.3.9",
- "windows-acl",
 ]
 
 [[package]]
@@ -989,7 +968,6 @@ dependencies = [
  "caps",
  "clap",
  "cpu-time",
- "ctrlc",
  "doj",
  "dojo-launcher-client",
  "dojo-sup-protocol",
@@ -1032,17 +1010,6 @@ dependencies = [
  "toml 0.5.0",
  "url",
  "valico",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "dojo_win_users"
-version = "0.0.0"
-dependencies = [
- "gcc",
- "log 0.4.6",
- "widestring 0.3.0",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -1218,12 +1185,6 @@ name = "fake-simd"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
-
-[[package]]
-name = "field-offset"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64e9bc339e426139e02601fa69d101e96a92aee71b58bc01697ec2a63a5c9e68"
 
 [[package]]
 name = "filetime"
@@ -1619,14 +1580,12 @@ dependencies = [
  "crossbeam",
  "fnv",
  "futures",
- "kernel32-sys",
  "lazy_static 0.2.11",
  "libc",
  "mio",
  "rand 0.3.23",
  "serde",
  "uuid 0.5.1",
- "winapi 0.2.8",
 ]
 
 [[package]]
@@ -1637,9 +1596,9 @@ checksum = "08f7eadeaf4b52700de180d147c4805f199854600b36faa963d91114827b2ffc"
 dependencies = [
  "error-chain 0.8.1",
  "socket2",
- "widestring 0.2.2",
+ "widestring",
  "winapi 0.3.9",
- "winreg 0.5.1",
+ "winreg",
 ]
 
 [[package]]
@@ -3922,18 +3881,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7157704c2e12e3d2189c507b7482c52820a16dfa4465ba91add92f266667cadb"
 
 [[package]]
-name = "widestring"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a212922ea58fbf5044f83663aa4fc6281ff890f1fd7546c0c3f52f5290831781"
-
-[[package]]
-name = "widestring"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "effc0e4ff8085673ea7b9b2e3c73f6bd4d118810c9009ed8f1e16bd96c331db6"
-
-[[package]]
 name = "winapi"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3987,31 +3934,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "windows-acl"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a082309ae30f649180d223a7fac9673ada3b132acbec4037f1f4a2546230afa0"
-dependencies = [
- "field-offset",
- "libc",
- "widestring 0.3.0",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "winreg"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a27a759395c1195c4cc5cda607ef6f8f6498f64e78f7900f5de0a127a424704a"
-dependencies = [
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "winreg"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daf67b95d0b1bf421c4f11048d63110ca3719977169eec86396b614c8942b6e0"
 dependencies = [
  "winapi 0.3.9",
 ]

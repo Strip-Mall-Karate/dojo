@@ -340,7 +340,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Corrupt payload, can\\'t read format version")]
+    #[should_panic(expected = "Corrupt payload, can't read format version")]
     fn verify_empty_format_version() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let dst = cache.path().join("signed.dat");
@@ -384,7 +384,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Corrupt payload, can\\'t read hash type")]
+    #[should_panic(expected = "Corrupt payload, can't read hash type")]
     fn verify_empty_hash_type() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let pair = SigKeyPair::generate_pair_for_origin("unicorn").unwrap();
@@ -412,7 +412,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Corrupt payload, can\\'t read signature")]
+    #[should_panic(expected = "Corrupt payload, can't read signature")]
     fn verify_empty_signature() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let pair = SigKeyPair::generate_pair_for_origin("unicorn").unwrap();
@@ -426,7 +426,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Can\\'t decode signature")]
+    #[should_panic(expected = "Can't decode signature")]
     fn verify_invalid_signature_decode() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let pair = SigKeyPair::generate_pair_for_origin("unicorn").unwrap();
@@ -441,7 +441,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Corrupt payload, can\\'t find end of header")]
+    #[should_panic(expected = "Corrupt payload, can't find end of header")]
     fn verify_missing_end_of_header() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let pair = SigKeyPair::generate_pair_for_origin("unicorn").unwrap();
