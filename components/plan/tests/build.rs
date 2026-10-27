@@ -1193,6 +1193,24 @@ fn a_plan_passes_its_own_environment_on() {
 }
 
 #[test]
+fn a_build_dependency_passes_on_its_build_time_environment() {
+    let mut sandbox = Sandbox::new("buildtime-exports");
+    let tool = sandbox.package("test/tool");
+    fs::write(tool.join("BUILDTIME_ENVIRONMENT"), "ACLOCAL_PATH=/tool/share/aclocal\n").unwrap();
+    fs::write(tool.join("IDENT"), "test/tool/1.0/20261025000000\n").unwrap();
+    // A run dependency's build-time environment is not passed on.
+    let lib = sandbox.package("test/lib");
+    fs::write(lib.join("BUILDTIME_ENVIRONMENT"), "LIB_ONLY=set\n").unwrap();
+    fs::write(lib.join("IDENT"), "test/lib/1.0/20261025000000\n").unwrap();
+    let source = plan("consumer",
+                      r#":deps ["test/lib"] :build_deps ["test/tool"]"#,
+                      r#" :build (fn [b]
+                                   (b:write "seen" (b:capture ["sh" "-c" "echo \"$ACLOCAL_PATH|$LIB_ONLY\""])))"#);
+    let built = sandbox.build(&source).expect("builds");
+    assert_eq!(read(&built.prefix.join("seen")), "/tool/share/aclocal|");
+}
+
+#[test]
 fn getenv_reads_the_build_environment() {
     let sandbox = Sandbox::new("getenv");
     let source = plan("getenv",
