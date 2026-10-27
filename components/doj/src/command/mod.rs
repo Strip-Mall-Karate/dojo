@@ -20,6 +20,7 @@ pub mod pkg;
 pub mod plan;
 pub mod ring;
 pub mod service;
+pub mod shell;
 pub mod studio;
 pub mod sup;
 pub mod supportbundle;

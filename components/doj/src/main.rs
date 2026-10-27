@@ -263,6 +263,13 @@ fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
                 _ => unreachable!(),
             }
         }
+        ("shell", Some(matches)) => {
+            match matches.subcommand() {
+                ("lock", Some(m)) => sub_shell_lock(m)?,
+                ("env", Some(m)) => sub_shell_env(m)?,
+                _ => unreachable!(),
+            }
+        }
         ("svc", Some(matches)) => {
             match matches.subcommand() {
                 ("key", Some(m)) => {
@@ -501,6 +508,15 @@ fn sub_pkg_dependencies(m: &ArgMatches<'_>) -> Result<()> {
         command::pkg::DependencyRelation::Requires
     };
     command::pkg::dependencies::start(&ident, scope, direction, &*FS_ROOT)
+}
+
+fn sub_shell_lock(m: &ArgMatches<'_>) -> Result<()> {
+    command::shell::lock(&env::current_dir()?, &*FS_ROOT, m.is_present("UPDATE"))
+}
+
+fn sub_shell_env(m: &ArgMatches<'_>) -> Result<()> {
+    let url = bldr_url_from_matches(m)?;
+    command::shell::env(&env::current_dir()?, &*FS_ROOT, &url)
 }
 
 fn sub_pkg_env(m: &ArgMatches<'_>) -> Result<()> {

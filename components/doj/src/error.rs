@@ -72,6 +72,7 @@ pub enum Error {
     ProvidesError(String),
     RemoteSupResolutionError(String, io::Error),
     RootRequired,
+    ShellError(String),
     ScheduleStatus(api_client::Error),
     SubcommandNotSupported(String),
     UnsupportedExportFormat(String),
@@ -173,6 +174,7 @@ impl fmt::Display for Error {
             Error::RootRequired => {
                 "Root or administrator permissions required to complete operation".to_string()
             }
+            Error::ShellError(ref e) => e.to_string(),
             Error::ScheduleStatus(ref e) => format!("Failed to retrieve job group status: {:?}", e),
             Error::SubcommandNotSupported(ref e) => {
                 format!("Subcommand `{}' not supported on this operating system", e)
@@ -244,6 +246,7 @@ impl error::Error for Error {
             Error::RootRequired => {
                 "Root or administrator permissions required to complete operation"
             }
+            Error::ShellError(_) => "The project's shell could not be locked or loaded",
             Error::ScheduleStatus(ref err) => err.description(),
             Error::SubcommandNotSupported(_) => "Subcommand not supported on this operating system",
             Error::UnsupportedExportFormat(_) => "Unsupported export format",
