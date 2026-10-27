@@ -44,14 +44,21 @@ const SCM_RIGHTS: c_int = 0x01;
 const RESERVED_SIZE: usize = 32;
 
 #[cfg(target_os = "linux")]
-type IovLen = usize;
-#[cfg(target_os = "linux")]
 type MsgControlLen = size_t;
 
 #[cfg(target_os = "freebsd")]
-type IovLen = i32;
-#[cfg(target_os = "freebsd")]
 type MsgControlLen = socklen_t;
+
+// musl's msghdr has private padding and narrower length fields than glibc's, so it is built
+// from zeroes and each field set with the type the target's libc declares.
+unsafe fn new_msghdr(iov: *mut iovec, iovlen: usize, control: *mut c_void, controllen: usize) -> msghdr {
+    let mut msghdr: msghdr = mem::zeroed();
+    msghdr.msg_iov = iov;
+    msghdr.msg_iovlen = iovlen as _;
+    msghdr.msg_control = control;
+    msghdr.msg_controllen = controllen as _;
+    msghdr
+}
 
 unsafe fn new_sockaddr_un(path: *const c_char) -> (sockaddr_un, usize) {
     let mut sockaddr: sockaddr_un = mem::zeroed();
@@ -272,15 +279,7 @@ impl OsIpcSender {
                     },
                 ];
 
-                let msghdr = msghdr {
-                    msg_name: ptr::null_mut(),
-                    msg_namelen: 0,
-                    msg_iov: iovec.as_mut_ptr(),
-                    msg_iovlen: iovec.len() as IovLen,
-                    msg_control: cmsg_buffer as *mut c_void,
-                    msg_controllen: cmsg_space as MsgControlLen,
-                    msg_flags: 0,
-                };
+                let msghdr = new_msghdr(iovec.as_mut_ptr(), iovec.len(), cmsg_buffer as *mut c_void, cmsg_space);
 
                 let result = sendmsg(sender_fd, &msghdr, 0);
                 libc::free(cmsg_buffer as *mut c_void);
@@ -993,15 +992,7 @@ impl UnixCmsg {
         let cmsg_buffer = libc::malloc(cmsg_length) as *mut cmsghdr;
         UnixCmsg {
             cmsg_buffer: cmsg_buffer,
-            msghdr: msghdr {
-                msg_name: ptr::null_mut(),
-                msg_namelen: 0,
-                msg_iov: iovec.as_mut_ptr(),
-                msg_iovlen: iovec.len() as IovLen,
-                msg_control: cmsg_buffer as *mut c_void,
-                msg_controllen: cmsg_length as MsgControlLen,
-                msg_flags: 0,
-            },
+            msghdr: new_msghdr(iovec.as_mut_ptr(), iovec.len(), cmsg_buffer as *mut c_void, cmsg_length),
         }
     }
 

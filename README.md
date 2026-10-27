@@ -66,6 +66,17 @@ against `support/vm/expected-failures`, the payload and both boot checks), and
 `support/vm/builder stop` stops it. `support/vm/builder` with no arguments lists
 the rest.
 
+### x86_64 from karate packages
+
+`support/vm/x86_64/boot <pkgs>` boots the same init on x86_64 with nothing from
+nixpkgs in the guest: the `karate/linux` kernel and an initramfs of
+`busybox-static`, `doj-launcher`, `doj-sup-static` and `doj`, the newest release
+of each in `<pkgs>`, a copy of a builder's `/doj/pkgs/karate`. QEMU emulates the
+machine, so it runs on any Mac or Linux host with Nix and is a development loop,
+not proof that a machine boots. `--check` runs the checks above with a 600
+second deadline, `--initrd <file>` keeps the initramfs and `--log <file>` the
+serial console.
+
 ### A ring
 
 A dojo is a ring of machines whose Supervisors gossip with each other.

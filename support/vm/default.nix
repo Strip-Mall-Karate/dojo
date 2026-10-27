@@ -15,7 +15,7 @@ let
   busybox = guest.pkgsStatic.busybox;
 in
 {
-  inherit (host) qemu coreutils;
+  inherit (host) qemu coreutils cpio;
   inherit kernel;
 
   # nixpkgs' Linux builder: a NixOS VM that builds Dojo's binaries for arm64.

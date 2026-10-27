@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# Boots Dojo on x86_64 from Dojo's own karate packages: the karate/linux kernel
+# and an initramfs of busybox-static, doj-launch, doj-sup-static and doj, with
+# the arm64 VM's init, check and lease scripts. QEMU emulates the machine (TCG),
+# so this runs on any Mac or Linux host and proves nothing about hardware.
+#
+# <pkgs> is a copy of a builder's /doj/pkgs/karate holding those five packages;
+# the newest release of each is used. --check boots with dojo.check and exits 0
+# only if init reported success and the VM then powered off cleanly. --initrd
+# also keeps the assembled initramfs at the given path.
+set -euo pipefail
+
+usage() {
+  echo "usage: support/vm/x86_64/boot <pkgs> [--check] [--initrd <out.cpio.gz>] [--log <file>]" >&2
+  exit 2
+}
+[[ $# -ge 1 ]] || usage
+pkgs="$1"
+shift
+check=false
+keep_initrd=""
+log=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check) check=true; shift ;;
+    --initrd)
+      [[ $# -ge 2 ]] || usage
+      keep_initrd="$2"; shift 2 ;;
+    --log)
+      [[ $# -ge 2 ]] || usage
+      log="$2"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+[[ -d "${pkgs}" ]] || { echo "boot: no package directory at ${pkgs}" >&2; exit 2; }
+
+# The newest release of a package: <pkgs>/<name>/<version>/<release>.
+newest() {
+  local release
+  release="$(printf '%s\n' "${pkgs}/$1"/*/* | sort | tail -n 1)"
+  [[ -d "${release}" ]] || { echo "boot: no karate/$1 in ${pkgs}" >&2; exit 1; }
+  echo "${release}"
+}
+busybox="$(newest busybox-static)/bin/busybox"
+launch="$(newest doj-launcher)/bin/doj-launch"
+sup="$(newest doj-sup-static)/bin/doj-sup"
+doj="$(newest doj)/bin/doj"
+kernel="$(newest linux)/boot/bzImage"
+
+vm="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+{
+  read -r qemu
+  read -r coreutils
+  read -r cpio
+} < <(nix-build --no-out-link "${vm}" -A qemu -A coreutils -A cpio)
+qemu="${qemu}/bin/qemu-system-x86_64"
+
+work="$(mktemp -d -t dojo-vm-x86_64)"
+trap 'chmod -R u+w "${work}"; rm -rf "${work}"' EXIT
+
+# The same root as the arm64 initrd in default.nix, with the karate binaries in
+# /bin where init and check expect them.
+root="${work}/root"
+mkdir -p "${root}"/{bin,root,dev,proc,sys,run,tmp,etc}
+cp "${busybox}" "${root}/bin/busybox"
+while read -r applet; do
+  ln -s busybox "${root}/bin/${applet}"
+done <"${vm}/applets"
+cp "${launch}" "${sup}" "${doj}" "${root}/bin/"
+cp "${vm}/init" "${root}/init"
+cp "${vm}/check" "${root}/bin/check"
+cp "${vm}/lease" "${root}/bin/lease"
+chmod 0755 "${root}/init" "${root}"/bin/{check,lease,busybox,doj-launch,doj-sup,doj}
+echo "root:x:0:0:root:/root:/bin/sh" >"${root}/etc/passwd"
+echo "root:x:0:" >"${root}/etc/group"
+initrd="${work}/initrd.cpio.gz"
+(cd "${root}" && find . | "${cpio}/bin/cpio" --quiet -o -H newc -R 0:0) | gzip -9 >"${initrd}"
+if [[ -n "${keep_initrd}" ]]; then
+  cp "${initrd}" "${keep_initrd}"
+fi
+
+append="console=ttyS0 panic=-1"
+# QEMU options are comma lists inside one word.
+# shellcheck disable=SC2054
+args=(
+  -machine q35 -accel tcg -cpu max -smp 2 -m 2048
+  -kernel "${kernel}" -initrd "${initrd}"
+  -no-reboot
+  -netdev user,id=net0 -device virtio-net-pci,netdev=net0
+)
+
+if ! "${check}"; then
+  exec "${qemu}" "${args[@]}" -append "${append}" -nographic
+fi
+
+# Emulation is several times slower than the arm64 VM's hypervisor, so the
+# deadline is longer than its 120 seconds.
+log="${log:-${work}/check.log}"
+status=0
+"${coreutils}/bin/timeout" 600 "${qemu}" "${args[@]}" -nographic -append "${append} dojo.check" \
+  </dev/null >"${log}" 2>&1 || status=$?
+cat "${log}"
+if [[ "${status}" -ne 0 ]]; then
+  echo "boot: QEMU exited ${status} (124 is the 600 second deadline)" >&2
+  exit 1
+fi
+if ! grep -q 'dojo: check ok' "${log}"; then
+  echo "boot: the VM shut down without reporting success" >&2
+  exit 1
+fi
+if grep -q 'IP Address lookup failed' "${log}"; then
+  echo "boot: the Supervisor did not find its own address" >&2
+  exit 1
+fi
+if grep -q 'Kernel panic' "${log}" || ! grep -q 'reboot: Power down' "${log}"; then
+  echo "boot: the VM did not end cleanly (expected \"reboot: Power down\")" >&2
+  exit 1
+fi
