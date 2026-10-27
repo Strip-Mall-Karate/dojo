@@ -107,6 +107,11 @@ pub struct Options {
     /// only a few variables pass (see `env::isolated`). Packaging still uses
     /// the builder's own tools.
     pub isolate: bool,
+    /// A package every build takes as its last build dependency, the base
+    /// tools (a shell, sed, grep, awk) plans use without declaring them; an
+    /// isolated build has no others. The backline's own plan builds without
+    /// it.
+    pub backline: Option<String>,
     /// Parallel jobs, `b.jobs`.
     pub jobs:     usize,
     /// The environment the build starts from.
@@ -146,6 +151,7 @@ impl Options {
                   check: false,
                   refuse_host_paths: false,
                   isolate: false,
+                  backline: None,
                   jobs: thread::available_parallelism().map_or(1, usize::from),
                   env: env::vars().collect() }
     }
@@ -735,8 +741,11 @@ impl Plan {
                                      &scaffolding_settings,
                                      &[("src", &options.context), ("plan", &options.plan_dir)])?;
         }
+        let build_deps = with_backline(strings(&json["build_deps"]),
+                                       options.backline.as_deref(),
+                                       &format!("{origin}/{name}"));
         let deps = Resolved::resolve(&strings(&json["deps"]),
-                                     &strings(&json["build_deps"]),
+                                     &build_deps,
                                      scaffolding_ident.as_deref(),
                                      &options.root.join("pkgs"),
                                      packages).map_err(Error::Build)?;
@@ -871,6 +880,18 @@ fn call_level(state: &Rc<State>, b: &Table, phase: &'static str, from: usize) ->
         }
     }
     builtin::run(state, phase).map_err(mlua::Error::runtime)
+}
+
+/// `build_deps` with the backline last, unless the plan is the backline
+/// (`origin/name` is `plan`) or already declares it.
+fn with_backline(mut build_deps: Vec<String>, backline: Option<&str>, plan: &str) -> Vec<String> {
+    if let Some(backline) = backline
+       && backline != plan
+       && !build_deps.iter().any(|dep| dep == backline)
+    {
+        build_deps.push(backline.to_string());
+    }
+    build_deps
 }
 
 /// Compiles and runs a scaffolding package's module in an environment of

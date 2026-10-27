@@ -721,6 +721,33 @@ fn an_isolated_build_fetches_and_unpacks_with_the_builders_tools() {
 }
 
 #[test]
+fn the_backline_is_every_builds_last_build_dependency_but_its_own() {
+    let mut sandbox = Sandbox::new("backline");
+    let tool = sandbox.package("test/tool");
+    fs::create_dir_all(tool.join("bin")).unwrap();
+    fs::write(tool.join("bin/greet"), "#!/bin/sh\necho greetings from the backline\n").unwrap();
+    fs::set_permissions(tool.join("bin/greet"), fs::Permissions::from_mode(0o755)).unwrap();
+    fs::write(tool.join("PATH"), format!("{}\n", tool.join("bin").display())).unwrap();
+    // The backline ships nothing; its run dependencies are the tools.
+    let backline = sandbox.package("test/backline");
+    fs::write(backline.join("TDEPS"), format!("test/tool/1.0/{RELEASE}\n")).unwrap();
+    let mut options = sandbox.options();
+    options.isolate = true;
+    options.backline = Some("test/backline".to_string());
+
+    let source = plan("greeter", "", r#" :build (fn [b] (b:write "greet" (b:capture ["greet"])))"#);
+    let built = sandbox.build_with(&source, &options).expect("greet comes from the backline");
+    assert_eq!(read(&built.prefix.join("greet")), "greetings from the backline");
+    assert_eq!(read(&built.prefix.join("BUILD_DEPS")).trim(), format!("test/backline/1.0/{RELEASE}"));
+
+    // The backline's own plan does not depend on itself.
+    let own = plan("backline", "", "");
+    let built = sandbox.build_with(&own, &options).expect("builds without itself");
+    let own = fs::read_to_string(built.prefix.join("BUILD_DEPS")).unwrap_or_default();
+    assert_eq!(own.trim(), "");
+}
+
+#[test]
 fn an_isolated_build_cannot_run_the_builders_programs() {
     let sandbox = Sandbox::new("isolated-host-tools");
     let mut options = sandbox.options();
