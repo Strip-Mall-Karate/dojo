@@ -29,8 +29,8 @@ Workspace = "smk"
 [Format]
 Exclude = [
   # Rust is formatted and tested in the builder VM (support/vm/builder fmt, test, verify) with the tree's
-  # nightly rustfmt. smk lint cannot check it yet: clippy builds the workspace for this Mac, and nix 0.11
-  # does not build against current macOS libc. It joins when the old crates are replaced (SMK-423).
+  # nightly rustfmt. smk lint cannot check it yet: the workspace builds on this Mac, but clippy finds some
+  # 1,500 problems in the inherited code. It joins when those are worked off (SMK-423).
   "**/*.rs", "vendor/**", "components/plan/vendor/**",
   # Languages smk has no formatter for.
   "**/*.fnl", "**/*.proto", "**/*.bats",
