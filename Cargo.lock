@@ -91,7 +91,7 @@ dependencies = [
  "http 0.1.17",
  "httparse",
  "language-tags",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "lazycell",
  "log 0.4.34",
  "mime",
@@ -220,10 +220,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstream"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
+dependencies = [
+ "anstyle",
+ "anstyle-parse",
+ "anstyle-query",
+ "anstyle-wincon",
+ "colorchoice",
+ "is_terminal_polyfill",
+ "utf8parse",
+]
+
+[[package]]
 name = "anstyle"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
+
+[[package]]
+name = "anstyle-parse"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
+dependencies = [
+ "utf8parse",
+]
+
+[[package]]
+name = "anstyle-query"
+version = "1.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
+dependencies = [
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "anstyle-wincon"
+version = "3.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
+dependencies = [
+ "anstyle",
+ "once_cell_polyfill",
+ "windows-sys 0.61.2",
+]
 
 [[package]]
 name = "anyhow"
@@ -558,6 +602,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
+name = "chacha20"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
+dependencies = [
+ "cfg-if 1.0.5",
+ "cpufeatures 0.3.1",
+ "rand_core 0.10.1",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -611,6 +666,12 @@ name = "cmov"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
+
+[[package]]
+name = "colorchoice"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
 name = "combine"
@@ -772,7 +833,7 @@ dependencies = [
  "arrayvec",
  "cfg-if 0.1.7",
  "crossbeam-utils",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "memoffset",
  "scopeguard 0.3.3",
 ]
@@ -793,7 +854,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8306fcef4a7b563b76b7dd949ca48f52bc1141aa067d2ea09565f3e2652aa5c"
 dependencies = [
  "cfg-if 0.1.7",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
 ]
 
 [[package]]
@@ -1010,7 +1071,7 @@ version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71958f69fb2de856c5dd51ac9377e986ca1aa5919f931bf5395a807277f889a0"
 dependencies = [
- "thiserror",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -1161,7 +1222,7 @@ dependencies = [
  "flate2",
  "futures",
  "handlebars 0.29.1",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "libc",
  "log 0.4.34",
  "pbr",
@@ -1248,7 +1309,7 @@ dependencies = [
  "dojo_core",
  "futures",
  "heck 0.5.0",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "prost 0.14.4",
  "prost-build 0.14.4",
@@ -1275,7 +1336,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "thiserror",
+ "thiserror 2.0.21",
  "url 2.5.8",
 ]
 
@@ -1283,30 +1344,26 @@ dependencies = [
 name = "dojo_butterfly"
 version = "0.1.0"
 dependencies = [
- "byteorder",
  "bytes 1.12.1",
  "dojo_butterfly_test",
  "dojo_common",
  "dojo_core",
- "env_logger 0.6.1",
+ "env_logger 0.11.11",
  "futures-util",
- "lazy_static 1.3.0",
+ "jiff",
  "log 0.4.34",
- "mktemp",
  "prometheus",
  "prost 0.14.4",
  "prost-build 0.14.4",
- "rand 0.6.5",
+ "rand 0.10.3",
  "serde",
  "serde_derive",
  "serde_json",
  "tempfile",
- "threadpool",
- "time",
  "tokio 1.54.1",
  "tokio-util",
  "toml",
- "uuid 0.7.4",
+ "uuid 1.29.0",
 ]
 
 [[package]]
@@ -1315,8 +1372,6 @@ version = "0.1.0"
 dependencies = [
  "dojo_butterfly",
  "dojo_core",
- "lazy_static 1.3.0",
- "time",
 ]
 
 [[package]]
@@ -1384,7 +1439,7 @@ dependencies = [
  "rustls-pki-types",
  "serde",
  "serde_json",
- "thiserror",
+ "thiserror 2.0.21",
  "url 2.5.8",
  "webpki-roots 1.0.11",
 ]
@@ -1403,7 +1458,7 @@ dependencies = [
  "failure",
  "failure_derive",
  "handlebars 0.29.1",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "rusoto_core",
  "rusoto_credential",
@@ -1429,7 +1484,7 @@ dependencies = [
  "failure_derive",
  "flate2",
  "handlebars 0.29.1",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "mktemp",
  "serde",
@@ -1463,7 +1518,7 @@ dependencies = [
  "jemalloc-ctl",
  "jemallocator",
  "json",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "libc",
  "log 0.4.34",
  "nitox",
@@ -1630,6 +1685,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_filter"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "900d271a03799a1ee8d1ca9b19893b48ca674a9284fefcfb85f05e74ed314217"
+dependencies = [
+ "log 0.4.34",
+ "regex 1.13.1",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1652,6 +1717,19 @@ dependencies = [
  "log 0.4.34",
  "regex 1.13.1",
  "termcolor",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.11.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de671bd27a75a797dc9ae289ba1e77276e75e2026408aab65185384e2d5cd3f6"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "env_filter",
+ "jiff",
+ "log 0.4.34",
 ]
 
 [[package]]
@@ -2036,6 +2114,7 @@ dependencies = [
  "cfg-if 1.0.5",
  "libc",
  "r-efi 6.0.0",
+ "rand_core 0.10.1",
 ]
 
 [[package]]
@@ -2100,7 +2179,7 @@ dependencies = [
  "pest_derive",
  "serde",
  "serde_json",
- "thiserror",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2586,6 +2665,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "791930b43c0d5973160d90a8f3894509f2b273430f5c5c73b668636d0287c5c0"
 
 [[package]]
+name = "is_terminal_polyfill"
+version = "1.70.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
+
+[[package]]
 name = "itertools"
 version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2712,7 +2797,7 @@ dependencies = [
  "jni-sys",
  "log 0.4.34",
  "simd_cesu8",
- "thiserror",
+ "thiserror 2.0.21",
  "walkdir",
  "windows-link",
 ]
@@ -2864,9 +2949,9 @@ checksum = "76f033c7ad61445c5b347c7382dd1237847eb1bce590fe50365dcb33d546be73"
 
 [[package]]
 name = "lazy_static"
-version = "1.3.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc5729f27f159ddd61f4df6228e827e86643d4d3e7c32183cb30a1c08f604a14"
+checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "lazycell"
@@ -3172,7 +3257,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff8e08de0070bbf4c31f452ea2a70db092f36f6f2e4d897adf5674477d488fb2"
 dependencies = [
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "libc",
  "log 0.4.34",
  "openssl",
@@ -3383,6 +3468,12 @@ name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+
+[[package]]
+name = "once_cell_polyfill"
+version = "1.70.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "opaque-debug"
@@ -3725,16 +3816,17 @@ dependencies = [
 
 [[package]]
 name = "prometheus"
-version = "0.5.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48e3f33ff50a88c73ad8458fa6c22931aa7a6e19bb4a95d62816618c153b3f02"
+checksum = "3ca5326d8d0b950a9acd87e6a3f94745394f62e4dae1b1ee22b2bc0c394af43a"
 dependencies = [
- "cfg-if 0.1.7",
+ "cfg-if 1.0.5",
  "fnv",
- "lazy_static 1.3.0",
- "protobuf 2.4.2",
- "quick-error",
- "spin 0.4.10",
+ "lazy_static 1.5.1",
+ "memchr",
+ "parking_lot 0.12.5",
+ "protobuf 3.7.2",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -3852,9 +3944,23 @@ dependencies = [
 
 [[package]]
 name = "protobuf"
-version = "2.4.2"
+version = "3.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "524d165d95627ddebba768db728216c4429bbb62882f7e6ab1a6c3c54a7ed830"
+checksum = "d65a1d4ddae7d8b5de68153b48f6aa3bba8cb002b243dbdbc55a5afbc98f99f4"
+dependencies = [
+ "once_cell",
+ "protobuf-support",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "protobuf-support"
+version = "3.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e36c2f31e0a47f9280fb347ef5e461ffcd2c52dd520d8e216b52f93b0b0d7d6"
+dependencies = [
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "protoc"
@@ -3884,7 +3990,7 @@ checksum = "5afecba86dcf1e4fd610246f89899d1924fe12e1e89f555eb7c7f710f3c5ad1d"
 dependencies = [
  "error-chain 0.12.0",
  "idna 0.1.5",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "regex 1.13.1",
  "url 1.7.2",
 ]
@@ -3981,6 +4087,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65c9fb96cbc91e3478eaae79a69fcd3f1ae4ad052e471fe6732fff548984b4af"
+dependencies = [
+ "chacha20",
+ "getrandom 0.4.3",
+ "rand_core 0.10.1",
+]
+
+[[package]]
 name = "rand_chacha"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4013,6 +4130,12 @@ checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom 0.2.17",
 ]
+
+[[package]]
+name = "rand_core"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rand_hc"
@@ -4128,7 +4251,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60dc65c0ff1a7ae1294b0c67b9f14baf70b644404010370171787bfac1038fc0"
 dependencies = [
  "libredox",
- "thiserror",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4290,7 +4413,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c4db68a2e35f3497146b7e4563df7d4773a2433230c5e4b448328e31740458a"
 dependencies = [
  "cc",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "libc",
  "untrusted 0.6.2",
 ]
@@ -4305,7 +4428,7 @@ dependencies = [
  "cfg-if 1.0.5",
  "getrandom 0.2.17",
  "libc",
- "spin 0.9.9",
+ "spin",
  "untrusted 0.9.0",
  "windows-sys 0.52.0",
 ]
@@ -4322,7 +4445,7 @@ dependencies = [
  "hmac",
  "hyper 0.12.26",
  "hyper-tls",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "md5",
  "rusoto_credential",
@@ -4529,7 +4652,7 @@ version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2f6abf258d99c3c1c5c2131d99d064e94b7b3dd5f416483057f308fea253339"
 dependencies = [
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "winapi 0.3.9",
 ]
 
@@ -4852,12 +4975,6 @@ dependencies = [
 
 [[package]]
 name = "spin"
-version = "0.4.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceac490aa12c567115b40b7b7fceca03a6c9d53d5defea066123debc83c5dc1f"
-
-[[package]]
-name = "spin"
 version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3763264f6b73151db08c50ff20d7d8a0b8796e021cdea7ceedad07b80155fa0e"
@@ -5069,11 +5186,31 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
+version = "1.0.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
+dependencies = [
+ "thiserror-impl 1.0.69",
+]
+
+[[package]]
+name = "thiserror"
 version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
 dependencies = [
- "thiserror-impl",
+ "thiserror-impl 2.0.21",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
+dependencies = [
+ "proc-macro2 1.0.107",
+ "quote 1.0.47",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -5093,16 +5230,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6b53e329000edc2b34dbe8545fd20e55a333362d0a321909685a19bd28c3f1b"
 dependencies = [
- "lazy_static 1.3.0",
-]
-
-[[package]]
-name = "threadpool"
-version = "1.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2f0c90a5f3459330ac8bc0d2f879c693bb7a2f59689c1083fc4ef83834da865"
-dependencies = [
- "num_cpus",
+ "lazy_static 1.5.1",
 ]
 
 [[package]]
@@ -5273,7 +5401,7 @@ checksum = "6af16bfac7e112bea8b0442542161bfc41cbfa4466b580bdda7d18cb88b911ce"
 dependencies = [
  "crossbeam-utils",
  "futures",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "mio 0.6.16",
  "num_cpus",
@@ -5393,7 +5521,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "350c9edade9830dc185ae48ba45667a445ab59f6167ef6d0254ec9d2430d9dd3"
 dependencies = [
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
 ]
 
 [[package]]
@@ -5565,7 +5693,7 @@ dependencies = [
  "failure",
  "futures",
  "idna 0.1.5",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "rand 0.5.6",
  "smallvec 0.6.9",
@@ -5589,7 +5717,7 @@ dependencies = [
  "failure",
  "futures",
  "idna 0.1.5",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "rand 0.5.6",
  "smallvec 0.6.9",
@@ -5613,7 +5741,7 @@ dependencies = [
  "failure",
  "futures",
  "ipconfig",
- "lazy_static 1.3.0",
+ "lazy_static 1.5.1",
  "log 0.4.34",
  "lru-cache",
  "resolv-conf",
@@ -5781,6 +5909,12 @@ name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
+
+[[package]]
+name = "utf8parse"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"

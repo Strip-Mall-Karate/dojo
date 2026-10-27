@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use time::{Duration as TimeDuration,
-           SteadyTime};
+use std::time::{Duration,
+                Instant};
 
 /// How long to wait for an Ack after we ping
 const PING_TIMING_DEFAULT_MS: i64 = 1000;
@@ -63,35 +63,29 @@ impl Timing {
     }
 
     /// When should this gossip period expire
-    pub fn gossip_timeout(&self) -> SteadyTime {
-        SteadyTime::now() + TimeDuration::milliseconds(self.gossip_period_ms)
-    }
+    pub fn gossip_timeout(&self) -> Instant { Instant::now() + millis(self.gossip_period_ms) }
 
     /// How long is a protocol period, in millis.
     pub fn protocol_period_ms(&self) -> i64 { self.ping_ms + self.pingreq_ms }
 
     /// When should this ping record time out?
-    pub fn ping_timeout(&self) -> SteadyTime {
-        SteadyTime::now() + TimeDuration::milliseconds(self.ping_ms)
-    }
+    pub fn ping_timeout(&self) -> Instant { Instant::now() + millis(self.ping_ms) }
 
     /// When should this pingreq timeout?
-    pub fn pingreq_timeout(&self) -> SteadyTime {
-        SteadyTime::now() + TimeDuration::milliseconds(self.pingreq_ms)
-    }
+    pub fn pingreq_timeout(&self) -> Instant { Instant::now() + millis(self.pingreq_ms) }
 
     /// How long before the next scheduled protocol period
-    pub fn next_protocol_period(&self) -> SteadyTime {
-        SteadyTime::now() + TimeDuration::milliseconds(self.ping_ms + self.pingreq_ms)
+    pub fn next_protocol_period(&self) -> Instant {
+        Instant::now() + millis(self.ping_ms + self.pingreq_ms)
     }
 
     /// How long before this suspect entry times out
-    pub fn suspicion_timeout_duration(&self) -> TimeDuration {
-        TimeDuration::milliseconds(self.protocol_period_ms()
-                                   * self.suspicion_timeout_protocol_periods)
+    pub fn suspicion_timeout_duration(&self) -> Duration {
+        millis(self.protocol_period_ms() * self.suspicion_timeout_protocol_periods)
     }
 
-    pub fn departure_timeout_duration(&self) -> TimeDuration {
-        TimeDuration::milliseconds(self.departure_timeout_ms)
-    }
+    pub fn departure_timeout_duration(&self) -> Duration { millis(self.departure_timeout_ms) }
 }
+
+/// A count of milliseconds as a duration; a negative count is no time at all.
+fn millis(ms: i64) -> Duration { Duration::from_millis(ms.max(0) as u64) }

@@ -17,9 +17,9 @@
 //! Every gossip round sends each member's hot rumors to it, `FANOUT` members at a time and no more
 //! often than `Timing::GOSSIP_PERIOD_DEFAULT_MS`.
 
-use std::time::Duration;
+use std::{sync::LazyLock,
+          time::Duration};
 
-use ::time::SteadyTime;
 use bytes::Bytes;
 use dojo_core::util::ToI64;
 use futures_util::SinkExt;
@@ -43,16 +43,16 @@ use crate::{gossip,
 
 const FANOUT: usize = 5;
 
-lazy_static! {
-    static ref GOSSIP_MESSAGES_SENT: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_gossip_messages_sent_total",
-                                  "Total number of gossip messages sent",
-                                  &["type", "mode"]).unwrap();
-    static ref GOSSIP_BYTES_SENT: IntGaugeVec =
-        register_int_gauge_vec!("doj_butterfly_gossip_sent_bytes",
-                                "Gossip message size sent in bytes",
-                                &["type", "mode"]).unwrap();
-}
+static GOSSIP_MESSAGES_SENT: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_gossip_messages_sent_total",
+                              "Total number of gossip messages sent",
+                              &["type", "mode"]).unwrap()
+});
+static GOSSIP_BYTES_SENT: LazyLock<IntGaugeVec> = LazyLock::new(|| {
+    register_int_gauge_vec!("doj_butterfly_gossip_sent_bytes",
+                            "Gossip message size sent in bytes",
+                            &["type", "mode"]).unwrap()
+});
 
 /// The Push server
 /// Sends hot rumors to every member each gossip round, until the runtime shuts down. Gets a list of
@@ -96,16 +96,9 @@ pub async fn run(server: Server, timing: Timing) {
                     error!("Push worker died: {}", e);
                 }
             }
-            wait_until(next_gossip).await;
+            time::sleep_until(next_gossip.into()).await;
         }
-        wait_until(long_wait).await;
-    }
-}
-
-async fn wait_until(deadline: SteadyTime) {
-    let wait_time = (deadline - SteadyTime::now()).num_milliseconds();
-    if wait_time > 0 {
-        time::sleep(Duration::from_millis(wait_time as u64)).await;
+        time::sleep_until(long_wait.into()).await;
     }
 }
 

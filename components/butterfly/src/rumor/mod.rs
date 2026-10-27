@@ -37,6 +37,7 @@ use std::{collections::{hash_map::Entry,
           sync::{atomic::{AtomicUsize,
                           Ordering},
                  Arc,
+                 LazyLock,
                  RwLock}};
 
 use prometheus::IntCounterVec;
@@ -62,12 +63,11 @@ use crate::{error::{Error,
             protocol::{FromProto,
                        Message}};
 
-lazy_static! {
-    static ref IGNORED_RUMOR_COUNT: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_ignored_rumor_total",
-                                  "How many rumors we ignore",
-                                  &["rumor"]).unwrap();
-}
+static IGNORED_RUMOR_COUNT: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_ignored_rumor_total",
+                              "How many rumors we ignore",
+                              &["rumor"]).unwrap()
+});
 
 #[derive(Debug, Clone, Serialize)]
 pub enum RumorKind {
@@ -520,7 +520,7 @@ mod tests {
 
     impl Default for FakeRumor {
         fn default() -> FakeRumor {
-            FakeRumor { id:  format!("{}", Uuid::new_v4().to_simple_ref()),
+            FakeRumor { id:  format!("{}", Uuid::new_v4().simple()),
                         key: String::from("fakerton"), }
         }
     }
@@ -559,7 +559,7 @@ mod tests {
 
     impl Default for TrumpRumor {
         fn default() -> TrumpRumor {
-            TrumpRumor { id:  format!("{}", Uuid::new_v4().to_simple_ref()),
+            TrumpRumor { id:  format!("{}", Uuid::new_v4().simple()),
                          key: String::from("fakerton"), }
         }
     }
@@ -600,7 +600,6 @@ mod tests {
         use super::FakeRumor;
         use crate::rumor::{Rumor,
                            RumorStore};
-        use std::usize;
 
         fn create_rumor_store() -> RumorStore<FakeRumor> { RumorStore::default() }
 

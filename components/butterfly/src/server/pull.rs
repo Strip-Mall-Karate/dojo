@@ -17,7 +17,8 @@
 //! Every member listens on its gossip port and reads the rumors other members
 //! push to it, one task per connection.
 
-use std::time::Duration;
+use std::{sync::LazyLock,
+          time::Duration};
 
 use dojo_core::util::ToI64;
 use futures_util::StreamExt;
@@ -34,16 +35,16 @@ use crate::{gossip,
             server::Server,
             trace::TraceKind};
 
-lazy_static! {
-    static ref GOSSIP_MESSAGES_RECEIVED: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_gossip_messages_received_total",
-                                  "Total number of gossip messages received",
-                                  &["type", "mode", "blocked"]).unwrap();
-    static ref GOSSIP_BYTES_RECEIVED: IntGaugeVec =
-        register_int_gauge_vec!("doj_butterfly_gossip_received_bytes",
-                                "Gossip message size received in bytes",
-                                &["type", "mode", "blocked"]).unwrap();
-}
+static GOSSIP_MESSAGES_RECEIVED: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_gossip_messages_received_total",
+                              "Total number of gossip messages received",
+                              &["type", "mode", "blocked"]).unwrap()
+});
+static GOSSIP_BYTES_RECEIVED: LazyLock<IntGaugeVec> = LazyLock::new(|| {
+    register_int_gauge_vec!("doj_butterfly_gossip_received_bytes",
+                            "Gossip message size received in bytes",
+                            &["type", "mode", "blocked"]).unwrap()
+});
 
 /// Accepts gossip connections on `listener` and reads the rumors each one
 /// carries, until the runtime shuts down.

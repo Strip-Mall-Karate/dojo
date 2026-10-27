@@ -86,12 +86,13 @@ impl IncarnationStore {
 mod tests {
     use super::*;
     use io::Write;
-    use mktemp::Temp;
     use std::path::Path;
+    use tempfile::{NamedTempFile,
+                   TempDir};
 
     #[test]
     fn happy_path() {
-        let dir = Temp::new_dir().expect("Could not create temp dir");
+        let dir = TempDir::new().expect("Could not create temp dir");
         let path = dir.as_ref().join("my_incarnation_store");
         assert!(!path.exists());
 
@@ -118,7 +119,7 @@ mod tests {
 
     #[test]
     fn unparseable_incarnation_file_is_an_error() {
-        let path = Temp::new_file().expect("Could not create temp file");
+        let path = NamedTempFile::new().expect("Could not create temp file");
         let mut buffer = File::create(&path).expect("could not create file");
         buffer.write_all(b"this is not a u64")
               .expect("could not write file");
@@ -129,7 +130,7 @@ mod tests {
 
     #[test]
     fn can_load_valid_values_from_disk() {
-        let path = Temp::new_file().expect("Could not create temp file");
+        let path = NamedTempFile::new().expect("Could not create temp file");
         let mut buffer = File::create(&path).expect("could not create file");
         buffer.write_all(b"42").expect("could not write file");
 
@@ -139,7 +140,7 @@ mod tests {
 
     #[test]
     fn can_store_a_new_incarnation_number() {
-        let path = Temp::new_file().expect("Could not create temp file");
+        let path = NamedTempFile::new().expect("Could not create temp file");
 
         let mut i = IncarnationStore::new(&path);
         i.store(Incarnation::from(2112))
@@ -150,7 +151,7 @@ mod tests {
 
     #[test]
     fn initialize_creates_file_with_the_default_incarnation_if_file_does_not_exist() {
-        let dir = Temp::new_dir().expect("Could not create temp dir");
+        let dir = TempDir::new().expect("Could not create temp dir");
         let path = dir.as_ref().join("my_incarnation_store");
         assert!(!path.exists());
 
@@ -167,7 +168,7 @@ mod tests {
 
     #[test]
     fn initialize_returns_an_error_if_file_exists_but_is_unparseable() {
-        let tempfile = Temp::new_file().expect("Could not create temp file");
+        let tempfile = NamedTempFile::new().expect("Could not create temp file");
         let path = tempfile.as_ref();
 
         let mut buffer = File::create(&path).expect("could not create file");

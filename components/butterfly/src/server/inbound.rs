@@ -18,6 +18,7 @@
 
 use std::{net::{SocketAddr,
                 UdpSocket},
+          sync::LazyLock,
           thread,
           time::Duration};
 
@@ -36,16 +37,16 @@ use crate::{member::Health,
                    SwimKind},
             trace::TraceKind};
 
-lazy_static! {
-    static ref SWIM_MESSAGES_RECEIVED: IntCounterVec =
-        register_int_counter_vec!("doj_butterfly_swim_messages_received_total",
-                                  "Total number of SWIM messages received",
-                                  &["type", "mode"]).unwrap();
-    static ref SWIM_BYTES_RECEIVED: IntGaugeVec =
-        register_int_gauge_vec!("doj_butterfly_swim_received_bytes",
-                                "SWIM message size received in bytes",
-                                &["type", "mode"]).unwrap();
-}
+static SWIM_MESSAGES_RECEIVED: LazyLock<IntCounterVec> = LazyLock::new(|| {
+    register_int_counter_vec!("doj_butterfly_swim_messages_received_total",
+                              "Total number of SWIM messages received",
+                              &["type", "mode"]).unwrap()
+});
+static SWIM_BYTES_RECEIVED: LazyLock<IntGaugeVec> = LazyLock::new(|| {
+    register_int_gauge_vec!("doj_butterfly_swim_received_bytes",
+                            "SWIM message size received in bytes",
+                            &["type", "mode"]).unwrap()
+});
 
 /// Takes the Server and a channel to send received Acks to the outbound thread.
 pub struct Inbound {

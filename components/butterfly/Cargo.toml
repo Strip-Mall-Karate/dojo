@@ -12,31 +12,27 @@ path = "src/main.rs"
 doc = false
 
 [dependencies]
-byteorder = "1.3.1"
 bytes = "1.12.1"
-env_logger = "0.6.1"
+env_logger = "0.11.11"
 futures-util = { version = "0.3.34", default-features = false, features = ["sink", "std"] }
 dojo_core = { path = "../core" }
 dojo_common = { path = "../common" }
+jiff = "0.2.38"
 log = "0.4"
-lazy_static = "1.3.0"
-prometheus = "0.5.0"
+prometheus = "0.14.0"
 prost = "0.14.4"
-rand = "0.6.5"
+rand = "0.10.3"
 serde = { version = "1.0.229", features = ["rc"] }
 serde_derive = "1.0.229"
 serde_json = "1.0.154"
 tempfile = "3.27.0"
-time = "0.1.42"
-threadpool = "1.7.1"
 tokio = { version = "1.54.1", features = ["macros", "net", "rt", "time"] }
 tokio-util = { version = "0.7.20", features = ["codec"] }
 toml = "1.1.8"
-uuid = { version = "0.7.4", features = ["v4"] }
+uuid = { version = "1.29.0", features = ["v4"] }
 
 [dev-dependencies]
 dojo_butterfly_test = { path = "../butterfly-test" }
-mktemp = "0.4.0"
 
 [build-dependencies]
 prost-build = "0.14.4"

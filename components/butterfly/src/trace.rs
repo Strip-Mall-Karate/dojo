@@ -15,8 +15,6 @@
 //! This module handles the writing of swim trace files, which can later be post-processed to see
 //! whats happening in a network.
 
-use time;
-
 use std::{env,
           fmt,
           fs,
@@ -94,15 +92,8 @@ impl<'a> TraceWrite<'a> {
                line: u32,
                thread_name: &'a str)
                -> TraceWrite<'a> {
-        let now = time::now_utc();
-        let time_string = format!("{}-{}-{}-{}-{}-{}-{}",
-                                  1900 + now.tm_year,
-                                  now.tm_mon + 1,
-                                  now.tm_mday,
-                                  now.tm_hour,
-                                  now.tm_min,
-                                  now.tm_sec,
-                                  now.tm_nsec);
+        // Fixed precision, so sorting trace lines sorts them by time.
+        let time_string = format!("{:.9}", jiff::Timestamp::now());
         TraceWrite { kind,
                      time: time_string,
                      module_path,
@@ -156,8 +147,7 @@ impl Trace {
     /// Initialize the trace object; only happens once.
     pub fn init(&mut self, server: &Server) {
         if self.file.is_none() {
-            let now = time::now_utc();
-            let filename = format!("{}-{}.swimtrace", server.name(), now.rfc3339());
+            let filename = format!("{}-{}.swimtrace", server.name(), jiff::Timestamp::now());
             match fs::create_dir_all(&self.directory) {
                 Ok(_) => {
                     match fs::File::create(self.directory.join(&filename)) {

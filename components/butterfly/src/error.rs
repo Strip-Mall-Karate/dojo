@@ -125,37 +125,7 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::BadDataPath(..) => "Unable to read or write to data directory",
-            Error::BadDatFile(..) => "Unable to decode contents of DatFile",
-            Error::CannotBind(_) => "Cannot bind to port",
-            Error::DatFileIO(..) => "Error reading or writing to DatFile",
-            Error::UnknownIOError(_) => "Unknown I/O error",
-            Error::DecodeError(ref err) => err.description(),
-            Error::EncodeError(ref err) => err.description(),
-            Error::DojoCore(_) => "Dojo core error",
-            Error::IncarnationIO(..) => "Error reading or writing incarnation store file",
-            Error::IncarnationParse(..) => "Error parsing value from incarnation store file",
-            Error::InvalidIncarnationSynchronization => {
-                "Tried to synchronize own member incarnation from non-existent incarnation store"
-            }
-            Error::InvalidRumorShareLimit => "Invalid rumor share limit",
-            Error::NonExistentRumor(..) => "Cannot write rumor to bytes because it does not exist",
-            Error::ProtocolMismatch(_) => {
-                "Received an unprocessable wire message from another Supervisor"
-            }
-            Error::ServiceConfigDecode(..) => "Cannot decode service config into TOML",
-            Error::ServiceConfigNotUtf8(..) => "Cannot read service config bytes to UTF-8",
-            Error::SocketCloneError => "Cannot clone the underlying UDP socket",
-            Error::SocketSetReadTimeout(_) => "Cannot set UDP socket read timeout",
-            Error::SocketSetWriteTimeout(_) => "Cannot set UDP socket write timeout",
-            Error::GossipConnectError(_) => "Cannot connect to a member's gossip port",
-            Error::GossipSendError(_) => "Cannot send a rumor to a member's gossip port",
-        }
-    }
-}
+impl error::Error for Error {}
 
 impl From<prost::DecodeError> for Error {
     fn from(err: prost::DecodeError) -> Error { Error::DecodeError(err) }

@@ -41,8 +41,6 @@
 //! Start exploring the code base by following the thread of execution in the `server` module.
 
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate prometheus;
