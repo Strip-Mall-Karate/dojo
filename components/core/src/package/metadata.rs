@@ -25,7 +25,7 @@ use std::{self,
           str::FromStr,
           vec::IntoIter};
 
-use serde_derive::Serialize;
+use serde::Serialize;
 
 use crate::{error::{Error,
                     Result},

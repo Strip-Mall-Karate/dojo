@@ -31,8 +31,7 @@ mod inner {
               str::FromStr};
 
     use crate::{common::ui::UI,
-                hcore::{crypto::init,
-                        env as henv,
+                hcore::{env as henv,
                         fs::find_command,
                         os::process,
                         package::PackageIdent}};
@@ -49,7 +48,6 @@ mod inner {
         let command = match henv::var(SUP_CMD_ENVVAR) {
             Ok(command) => PathBuf::from(command),
             Err(_) => {
-                init();
                 let version: Vec<&str> = VERSION.split('/').collect();
                 exec::command_from_min_pkg(ui,
                                            SUP_CMD,

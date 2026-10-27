@@ -23,7 +23,6 @@ use std::{env,
           str,
           string};
 
-use libarchive;
 use regex;
 use toml;
 
@@ -35,8 +34,6 @@ pub type Result<T> = result::Result<T, Error>;
 /// Core error types
 #[derive(Debug)]
 pub enum Error {
-    /// Occurs when a `dojo_core::package::PackageArchive` is being read.
-    ArchiveError(libarchive::error::ArchiveError),
     BadBindingMode(String),
     /// An invalid path to a keyfile was given.
     BadKeyPath(String),
@@ -166,7 +163,6 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = match *self {
-            Error::ArchiveError(ref err) => format!("{}", err),
             Error::BadBindingMode(ref value) => format!("Unknown binding mode '{}'", value),
             Error::BadKeyPath(ref e) => {
                 format!("Invalid keypath: {}. Specify an absolute path to a file on disk.",
@@ -348,138 +344,7 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::ArchiveError(ref err) => err.description(),
-            Error::BadBindingMode(_) => "Unknown binding mode",
-            Error::BadKeyPath(_) => "An absolute path to a file on disk is required",
-            Error::CompositePackageExpected(_) => "A composite package was expected",
-            Error::ConfigFileIO(..) => "Unable to read the raw contents of a configuration file",
-            Error::ConfigFileSyntax(_) => "Error parsing contents of configuration file",
-            Error::ConfigInvalidArraySocketAddr(_) => {
-                "Invalid array value of network address pair strings encountered while parsing a \
-                 configuration file"
-            }
-            Error::ConfigInvalidArrayTableString(_) => {
-                "Invalid array value of tables containing string fields and values encountered \
-                 while parsing a configuration file"
-            }
-            Error::ConfigInvalidArrayTarget(_) => {
-                "Invalid array value of targets containing string fields and values encountered \
-                 while parsing a configuration file"
-            }
-            Error::ConfigInvalidArrayU16(_) => {
-                "Invalid array value of u16 entries encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidArrayU32(_) => {
-                "Invalid array value of u32 entries encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidArrayU64(_) => {
-                "Invalid array value of u64 entries encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidBool(_) => {
-                "Invalid boolean value encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidIdent(_) => {
-                "Invalid package identifier string value encountered while parsing a configuration \
-                 file"
-            }
-            Error::ConfigInvalidIpAddr(_) => {
-                "Invalid IP address string value encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidSocketAddr(_) => {
-                "Invalid network address pair string value encountered while parsing a \
-                 configuration file"
-            }
-            Error::ConfigInvalidString(_) => {
-                "Invalid string value encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidTableString(_) => {
-                "Invalid table value of string fields and values encountered while parsing a \
-                 configuration file"
-            }
-            Error::ConfigInvalidTarget(_) => {
-                "Invalid package target string value encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidU16(_) => {
-                "Invalid u16 value encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidU32(_) => {
-                "Invalid u32 value encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidU64(_) => {
-                "Invalid u64 value encountered while parsing a configuration file"
-            }
-            Error::ConfigInvalidUsize(_) => {
-                "Invalid usize value encountered while parsing a configuration file"
-            }
-            Error::CreateProcessAsUserFailed(_) => "CreateProcessAsUserW failed",
-            Error::CryptoError(_) => "Crypto error",
-            Error::CryptProtectDataFailed(_) => "CryptProtectData failed",
-            Error::CryptUnprotectDataFailed(_) => "CryptUnprotectData failed",
-            Error::FileNotFound(_) => "File not found",
-            Error::FullyQualifiedPackageIdentRequired(_) => {
-                "A fully-qualified package identifier was expected"
-            }
-            Error::InvalidApplicationEnvironment(_) => {
-                "Application environment strings must be in application.environment format \
-                 (example: twitter.prod)"
-            }
-            Error::InvalidBinding(_) => {
-                "Service Bind strings must be in name:service_group format (example \
-                 cache:redis.cache@organization)."
-            }
-            Error::InvalidPackageIdent(_) => {
-                "Package identifiers must be in origin/name format (example: acme/redis)"
-            }
-            Error::InvalidPackageTarget(_) => {
-                "Package targets must be in architecture-platform format (example: x86_64-linux)"
-            }
-            Error::InvalidPackageType(_) => "Unsupported package type supplied.",
-            Error::InvalidServiceGroup(_) => {
-                "Service group strings must be in service.group[@organization] format (example: \
-                 redis.production or foo.default@bazcorp)"
-            }
-            Error::InvalidOrigin(_) => {
-                "Origins must begin with a lowercase letter or number.  Allowed characters include \
-                 a - z, 0 - 9, _, and -. No more than 255 characters."
-            }
-            Error::InvalidPathString(_) => "Failed to convert an OsString Path to a String",
-            Error::IO(ref err) => err.description(),
-            Error::JoinPathsError(ref err) => err.description(),
-            Error::LogonTypeNotGranted => {
-                "Logon type not granted to doj_svc_user to be spawned by the Supervisor"
-            }
-            Error::LogonUserFailed(_) => "LogonUserW failed",
-            Error::MetaFileBadBind => {
-                "Bad value parsed from BIND, BIND_OPTIONAL, or BIND_MAP MetaFile"
-            }
-            Error::MetaFileMalformed(_) => "MetaFile didn't contain a valid UTF-8 string",
-            Error::MetaFileNotFound(_) => "Failed to read an archive's metafile",
-            Error::MetaFileIO(_) => "MetaFile could not be read or written to",
-            Error::NoOutboundAddr => "Failed to discover the outbound IP address",
-            Error::OpenDesktopFailed(_) => "OpenDesktopW failed",
-            Error::PackageNotFound(_) => "Cannot find a package",
-            Error::PackageUnpackFailed(_) => "Package could not be unpacked",
-            Error::ParseIntError(_) => "Failed to parse an integer from a string!",
-            Error::PermissionFailed(_) => "File system permissions error",
-            Error::PlanMalformed => "Failed to read or parse contents of Plan file",
-            Error::PrivilegeNotHeld => "Privilege not held to spawn process as different user",
-            Error::RegexParse(_) => "Failed to parse a regular expression",
-            Error::StringFromUtf8Error(_) => "Failed to convert a string from a Vec<u8> as UTF-8",
-            Error::TargetMatchError(_) => "System target does not match package target",
-            Error::UnameFailed(_) => "uname failed",
-            Error::SignalFailed(..) => "Failed to send a signal to the child process",
-            Error::WaitpidFailed(_) => "waitpid failed",
-            Error::Utf8Error(_) => "Failed to interpret a sequence of bytes as a string",
-            Error::WrongActivePackageTarget(..) => {
-                "Package target is not supported as this system has a different active package \
-                 target"
-            }
-        }
-    }
-}
+impl error::Error for Error {}
 
 impl From<env::JoinPathsError> for Error {
     fn from(err: env::JoinPathsError) -> Self { Error::JoinPathsError(err) }
@@ -495,10 +360,6 @@ impl From<str::Utf8Error> for Error {
 
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self { Error::IO(err) }
-}
-
-impl From<libarchive::error::ArchiveError> for Error {
-    fn from(err: libarchive::error::ArchiveError) -> Self { Error::ArchiveError(err) }
 }
 
 impl From<num::ParseIntError> for Error {

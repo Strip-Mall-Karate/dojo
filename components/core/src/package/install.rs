@@ -24,8 +24,8 @@ use std::{cmp::{Ordering,
                  PathBuf},
           str::FromStr};
 
-use serde_derive::{Deserialize,
-                   Serialize};
+use serde::{Deserialize,
+            Serialize};
 use toml::{self,
            Value};
 
@@ -325,8 +325,8 @@ impl PackageInstall {
                     return None;
                 };
 
-                match raw.parse::<Value>() {
-                    Ok(v) => Some(v),
+                match raw.parse::<toml::Table>() {
+                    Ok(v) => Some(Value::Table(v)),
                     Err(e) => {
                         debug!("Failed to parse toml, error: {:?}", e);
                         None
@@ -708,7 +708,7 @@ mod test {
 
         match toml::ser::to_string(&cfg) {
             Ok(_) => (),
-            Err(e) => assert!(false, format!("{:?}", e)),
+            Err(e) => panic!("{:?}", e),
         }
     }
 

@@ -34,8 +34,7 @@ use crate::{common::{cli::{cache_key_path_from_matches,
                           UIWriter,
                           NONINTERACTIVE_ENVVAR,
                           UI}},
-            hcore::{crypto::{init,
-                             keys::PairType,
+            hcore::{crypto::{keys::PairType,
                              BoxKeyPair,
                              SigKeyPair},
                     env as henv,
@@ -315,7 +314,6 @@ fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
 
 fn sub_cli_setup(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::cli::setup::start(ui, &cache_key_path)
 }
@@ -356,7 +354,6 @@ fn sub_origin_key_export(m: &ArgMatches<'_>) -> Result<()> {
     let origin = m.value_of("ORIGIN").unwrap(); // Required via clap
     let pair_type = PairType::from_str(m.value_of("PAIR_TYPE").unwrap_or("public"))?;
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::origin::key::export::start(origin, pair_type, &cache_key_path)
 }
@@ -364,7 +361,6 @@ fn sub_origin_key_export(m: &ArgMatches<'_>) -> Result<()> {
 fn sub_origin_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let origin = origin_param_or_env(&m)?;
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::origin::key::generate::start(ui, &origin, &cache_key_path)
 }
@@ -372,7 +368,6 @@ fn sub_origin_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
 fn sub_origin_key_import(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let mut content = String::new();
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
     io::stdin().read_to_string(&mut content)?;
 
     // Trim the content to lose line feeds added by Powershell pipeline
@@ -383,8 +378,6 @@ fn sub_origin_key_upload(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let url = bldr_url_from_matches(&m)?;
     let token = auth_token_param_or_env(&m)?;
     let cache_key_path = cache_key_path_from_matches(&m);
-
-    init();
 
     if m.is_present("ORIGIN") {
         let origin = m.value_of("ORIGIN").unwrap();
@@ -459,7 +452,6 @@ fn sub_pkg_build(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let src = m.value_of("SRC_PATH");
     let keys_string = match m.values_of("DOJ_ORIGIN_KEYS") {
         Some(keys) => {
-            init();
             let cache_key_path = cache_key_path_from_matches(&m);
             for key in keys.clone() {
                 // Validate that all secret keys are present
@@ -533,7 +525,6 @@ fn sub_pkg_export(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
 }
 
 fn sub_pkg_hash(m: &ArgMatches<'_>) -> Result<()> {
-    init();
     match m.value_of("SOURCE") {
         Some(source) => {
             // hash single file
@@ -716,8 +707,6 @@ fn sub_pkg_install(ui: &mut UI, m: &ArgMatches<'_>, feature_flags: FeatureFlag) 
         InstallHookMode::default()
     };
 
-    init();
-
     for install_source in install_sources.iter() {
         let pkg_install =
             common::command::package::install::start(ui,
@@ -777,7 +766,6 @@ fn sub_pkg_sign(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
     let dst = Path::new(m.value_of("DEST").unwrap()); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
     let pair = SigKeyPair::get_latest_pair_for(&origin_param_or_env(&m)?,
                                                &cache_key_path,
                                                Some(&PairType::Secret))?;
@@ -825,14 +813,12 @@ fn sub_pkg_delete(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
 fn sub_pkg_verify(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::pkg::verify::start(ui, &src, &cache_key_path)
 }
 
 fn sub_pkg_header(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
-    init();
 
     command::pkg::header::start(ui, &src)
 }
@@ -840,7 +826,6 @@ fn sub_pkg_header(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
 fn sub_pkg_info(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let src = Path::new(m.value_of("SOURCE").unwrap()); // Required via clap
     let to_json = m.is_present("TO_JSON");
-    init();
 
     command::pkg::info::start(ui, &src, to_json)
 }
@@ -1223,16 +1208,11 @@ fn sub_sup_secret_generate() -> Result<()> {
     Ok(())
 }
 
-fn sub_supportbundle(ui: &mut UI) -> Result<()> {
-    init();
-
-    command::supportbundle::start(ui)
-}
+fn sub_supportbundle(ui: &mut UI) -> Result<()> { command::supportbundle::start(ui) }
 
 fn sub_ring_key_export(m: &ArgMatches<'_>) -> Result<()> {
     let ring = m.value_of("RING").unwrap(); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::ring::key::export::start(ring, &cache_key_path)
 }
@@ -1240,7 +1220,6 @@ fn sub_ring_key_export(m: &ArgMatches<'_>) -> Result<()> {
 fn sub_ring_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let ring = m.value_of("RING").unwrap(); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::ring::key::generate::start(ui, ring, &cache_key_path)
 }
@@ -1248,7 +1227,6 @@ fn sub_ring_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
 fn sub_ring_key_import(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let mut content = String::new();
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
     io::stdin().read_to_string(&mut content)?;
 
     // Trim the content to lose line feeds added by Powershell pipeline
@@ -1259,7 +1237,6 @@ fn sub_service_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let org = org_param_or_env(&m)?;
     let service_group = ServiceGroup::from_str(m.value_of("SERVICE_GROUP").unwrap())?;
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::service::key::generate::start(ui, &org, &service_group, &cache_key_path)
 }
@@ -1267,7 +1244,6 @@ fn sub_service_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
 fn sub_user_key_generate(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
     let user = m.value_of("USER").unwrap(); // Required via clap
     let cache_key_path = cache_key_path_from_matches(&m);
-    init();
 
     command::user::key::generate::start(ui, user, &cache_key_path)
 }

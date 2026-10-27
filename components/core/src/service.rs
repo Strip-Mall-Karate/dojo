@@ -15,8 +15,8 @@
 use crate::error::{Error,
                    Result};
 use regex::Regex;
-use serde_derive::{Deserialize,
-                   Serialize};
+use serde::{Deserialize,
+            Serialize};
 use std::{cmp::{Ordering,
                 PartialOrd},
           fmt,
@@ -25,15 +25,16 @@ use std::{cmp::{Ordering,
                 DerefMut},
           result,
           str::FromStr,
+          sync::LazyLock,
           time::Duration};
 
-lazy_static::lazy_static! {
-    static ref SG_FROM_STR_RE: Regex =
-        Regex::new(r"\A((?P<application_environment>[^#@]+)#)?(?P<service>[^#@.]+)\.(?P<group>[^#@.]+)(@(?P<organization>[^#@.]+))?\z").unwrap();
+static SG_FROM_STR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\A((?P<application_environment>[^#@]+)#)?(?P<service>[^#@.]+)\.(?P<group>[^#@.]+)(@(?P<organization>[^#@.]+))?\z").unwrap()
+});
 
-    static ref AE_FROM_STR_RE: Regex =
-        Regex::new(r"\A(?P<application>[^#.@]+)\.(?P<environment>[^#.@]+)\z").unwrap();
-}
+static AE_FROM_STR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\A(?P<application>[^#.@]+)\.(?P<environment>[^#.@]+)\z").unwrap()
+});
 
 /// Determines how the presence of bound service groups affects the
 /// starting of a service.

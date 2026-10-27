@@ -13,6 +13,6 @@ dojo-launcher-protocol = { path = "../launcher-protocol" }
 dojo_common = { path = "../common" }
 ipc-channel = { path = "../../vendor/ipc-channel" }
 libc = "*"
-log = "*"
+log = "0.4"
 prost = "*"
 serde = "*"

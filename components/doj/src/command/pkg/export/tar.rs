@@ -29,8 +29,7 @@ mod inner {
               str::FromStr};
 
     use crate::{common::ui::UI,
-                hcore::{crypto::init,
-                        env as henv,
+                hcore::{env as henv,
                         fs::find_command,
                         os::process,
                         package::PackageIdent}};
@@ -49,7 +48,6 @@ mod inner {
         let command = match henv::var(EXPORT_CMD_ENVVAR) {
             Ok(command) => PathBuf::from(command),
             Err(_) => {
-                init();
                 let ident = match henv::var(EXPORT_PKG_IDENT_ENVVAR) {
                     Ok(ref ident_str) => PackageIdent::from_str(ident_str)?,
                     Err(_) => {

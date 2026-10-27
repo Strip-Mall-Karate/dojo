@@ -11,7 +11,7 @@ chrono = "*"
 # Pending upgrade activities
 hyper = "0.10"
 hyper-openssl = "*"
-log = "*"
+log = "0.4"
 pbr = "*"
 rand = "*"
 regex = "*"

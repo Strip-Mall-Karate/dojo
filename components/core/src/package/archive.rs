@@ -14,20 +14,16 @@
 
 use std::{collections::HashMap,
           error,
+          io::{BufRead,
+               BufReader,
+               Read},
           path::{Path,
                  PathBuf},
           result,
-          str::{self,
-                FromStr}};
+          str::FromStr,
+          sync::LazyLock};
 
-use libarchive::{archive::{Entry,
-                           ExtractOption,
-                           ExtractOptions,
-                           ReadFilter,
-                           ReadFormat},
-                 reader::{self,
-                          Reader},
-                 writer};
+use liblzma::read::XzDecoder;
 use regex::Regex;
 
 use super::{metadata::{MetaFile,
@@ -40,148 +36,29 @@ use crate::{crypto::{artifact,
             error::{Error,
                     Result}};
 
-lazy_static::lazy_static! {
-    static ref METAFILE_REGXS: HashMap<MetaFile, Regex> = {
-        let mut map = HashMap::new();
-        map.insert(
-            MetaFile::CFlags,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::CFlags
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Config,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Config
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Deps,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Deps
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::TDeps,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::TDeps
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::BuildDeps,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::BuildDeps,
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::BuildTDeps,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::BuildTDeps,
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Exposes,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Exposes
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Ident,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Ident
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::LdRunPath,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::LdRunPath
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::LdFlags,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::LdFlags
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::SvcUser,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::SvcUser
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Services,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Services
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::ResolvedServices,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::ResolvedServices
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Manifest,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Manifest
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Path,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Path
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Target,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Target
-            ))
-            .unwrap(),
-        );
-        map.insert(
-            MetaFile::Type,
-            Regex::new(&format!(
-                r"^/?doj/pkgs/([^/]+)/([^/]+)/([^/]+)/([^/]+)/{}$",
-                MetaFile::Type
-            ))
-            .unwrap(),
-        );
-        map
-    };
-}
+/// The metadata files read from an archive, by file name.
+const METAFILES: &[MetaFile] = &[MetaFile::CFlags,
+                                 MetaFile::Config,
+                                 MetaFile::Deps,
+                                 MetaFile::TDeps,
+                                 MetaFile::BuildDeps,
+                                 MetaFile::BuildTDeps,
+                                 MetaFile::Exposes,
+                                 MetaFile::Ident,
+                                 MetaFile::LdRunPath,
+                                 MetaFile::LdFlags,
+                                 MetaFile::SvcUser,
+                                 MetaFile::Services,
+                                 MetaFile::ResolvedServices,
+                                 MetaFile::Manifest,
+                                 MetaFile::Path,
+                                 MetaFile::Target,
+                                 MetaFile::Type];
+
+/// A file directly inside a package's directory: `doj/pkgs/<ident>/<file>`.
+static METAFILE_PATH: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^/?doj/pkgs/[^/]+/[^/]+/[^/]+/[^/]+/([^/]+)$").expect("the pattern is valid")
+});
 
 type Metadata = HashMap<MetaFile, String>;
 
@@ -386,20 +263,25 @@ impl PackageArchive {
     /// * If the package cannot be unpacked
     pub fn unpack(&self, fs_root_path: Option<&Path>) -> Result<()> {
         let root = fs_root_path.unwrap_or_else(|| Path::new("/"));
-        let tar_reader = artifact::get_archive_reader(&self.path)?;
-        let mut builder = reader::Builder::new();
-        builder.support_format(ReadFormat::Gnutar)?;
-        builder.support_filter(ReadFilter::Xz)?;
-        let mut reader = builder.open_stream(tar_reader)?;
-        let writer = writer::Disk::new();
-        let mut extract_options = ExtractOptions::new();
-        extract_options.add(ExtractOption::Time);
-        extract_options.add(ExtractOption::Permissions);
-        writer.set_options(&extract_options)?;
-        writer.set_standard_lookup()?;
-        writer.write(&mut reader, Some(root.to_string_lossy().as_ref()))?;
-        writer.close()?;
+        let mut archive = self.tar()?;
+        archive.set_preserve_permissions(true);
+        archive.set_preserve_mtime(true);
+        archive.unpack(root)?;
         Ok(())
+    }
+
+    /// The archive's tar stream, after its signed header. Payloads are
+    /// xz-compressed, but a plain tar is read too, as libarchive did.
+    fn tar(&self) -> Result<tar::Archive<Box<dyn Read>>> {
+        const XZ_MAGIC: &[u8] = b"\xFD7zXZ\0";
+        let mut payload = BufReader::new(artifact::get_archive_reader(&self.path)?);
+        let compressed = payload.fill_buf()?.starts_with(XZ_MAGIC);
+        let stream: Box<dyn Read> = if compressed {
+            Box::new(XzDecoder::new(payload))
+        } else {
+            Box::new(payload)
+        };
+        Ok(tar::Archive::new(stream))
     }
 
     fn read_deps(&mut self, file: MetaFile) -> Result<Vec<PackageIdent>> {
@@ -428,64 +310,34 @@ impl PackageArchive {
     }
 
     fn read_metadata(&mut self, file: MetaFile) -> Result<Option<&String>> {
-        if let Some(ref files) = self.metadata {
-            return Ok(files.get(&file));
+        if self.metadata.is_none() {
+            self.metadata = Some(self.read_all_metadata()?);
         }
+        Ok(self.metadata.as_ref().and_then(|files| files.get(&file)))
+    }
+
+    fn read_all_metadata(&self) -> Result<Metadata> {
         let mut metadata = Metadata::new();
-        let mut matched_count = 0u8;
-        let tar_reader = artifact::get_archive_reader(&self.path)?;
-        let mut builder = reader::Builder::new();
-        builder.support_format(ReadFormat::Gnutar)?;
-        builder.support_filter(ReadFilter::Xz)?;
-        let mut reader = builder.open_stream(tar_reader)?;
-        loop {
-            let mut matched_type: Option<MetaFile> = None;
-            if let Some(entry) = reader.next_header() {
-                for (matched, regx) in METAFILE_REGXS.iter() {
-                    if regx.is_match(entry.pathname()) {
-                        matched_type = Some(*matched);
-                        matched_count += 1;
-                        break;
-                    }
-                }
-            } else {
-                break;
-            }
-
-            if matched_type.is_none() {
+        let mut archive = self.tar()?;
+        for entry in archive.entries()? {
+            let mut entry = entry?;
+            let path = entry.path()?.to_string_lossy().into_owned();
+            let Some(name) = METAFILE_PATH.captures(&path).and_then(|c| c.get(1)) else {
                 continue;
-            }
-
-            let mut buf = String::new();
-            loop {
-                match reader.read_block() {
-                    Ok(Some(bytes)) => {
-                        match str::from_utf8(bytes) {
-                            Ok(content) => {
-                                // You used to trim. Now you don't, because you were trimming
-                                // in the wrong place. Sometimes a buffer ends (or starts!) with
-                                // a newline.
-                                buf.push_str(content);
-                            }
-                            Err(_) => return Err(Error::MetaFileMalformed(matched_type.unwrap())),
-                        }
-                    }
-                    Ok(None) => {
-                        // Hey, before you go - we are trimming whitespace for you. This
-                        // is handy, because later on, you just want the string you want.
-                        metadata.insert(matched_type.unwrap(), String::from(buf.trim()));
-                        break;
-                    }
-                    Err(_) => return Err(Error::MetaFileMalformed(matched_type.unwrap())),
-                }
-            } // inner loop
-
-            if matched_count == METAFILE_REGXS.len() as u8 {
+            };
+            let Some(file) = METAFILES.iter().find(|f| f.to_string() == name.as_str()) else {
+                continue;
+            };
+            let mut body = String::new();
+            entry.read_to_string(&mut body)
+                 .map_err(|_| Error::MetaFileMalformed(*file))?;
+            // Callers want the value without surrounding whitespace.
+            metadata.insert(*file, body.trim().to_string());
+            if metadata.len() == METAFILES.len() {
                 break;
             }
         }
-        self.metadata = Some(metadata);
-        Ok(self.metadata.as_ref().unwrap().get(&file))
+        Ok(metadata)
     }
 }
 
@@ -530,6 +382,30 @@ mod test {
                                                             4-20160427165340-x86_64-linux.hart"));
         let tdeps = hart.tdeps().unwrap();
         assert_eq!(1024, tdeps.len());
+    }
+
+    #[test]
+    fn unpacking_writes_the_files_with_their_modes_and_times() {
+        use std::os::unix::fs::{MetadataExt,
+                                PermissionsExt};
+
+        let root = tempfile::tempdir().unwrap();
+        let hart = PackageArchive::new(fixtures().join("happyhumans-possums-8.1.\
+                                                        4-20160427165340-x86_64-linux.hart"));
+        hart.unpack(Some(root.path())).unwrap();
+        let prefix = root.path()
+                         .join("doj/pkgs/happyhumans/possums/8.1.4/20160427165340");
+        assert_eq!(std::fs::read_to_string(prefix.join("IDENT")).unwrap()
+                                                                .trim(),
+                   "happyhumans/possums/8.1.4/20160427165340");
+        let signme = std::fs::metadata(prefix.join("share/signme.dat")).unwrap();
+        assert_eq!(signme.permissions().mode() & 0o777, 0o755);
+        let ident = std::fs::metadata(prefix.join("IDENT")).unwrap();
+        assert_eq!(ident.permissions().mode() & 0o777, 0o644);
+        // 2016-04-27 09:53, as the archive records it.
+        assert!(ident.mtime() < 1_461_800_000 && ident.mtime() > 1_461_700_000,
+                "mtime {}",
+                ident.mtime());
     }
 
     #[test]

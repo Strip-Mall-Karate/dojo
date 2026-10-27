@@ -9,7 +9,7 @@ workspace = "../../"
 futures = "*"
 dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
 dojo_common = { path = "../common" }
-log = "*"
+log = "0.4"
 prost = "*"
 termcolor = "*"
 tokio = "*"

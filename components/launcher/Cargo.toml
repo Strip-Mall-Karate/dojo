@@ -19,7 +19,7 @@ dojo_core = { path = "../core" }
 dojo-launcher-protocol = { path = "../launcher-protocol" }
 ipc-channel = { path = "../../vendor/ipc-channel" }
 libc = "*"
-log = "*"
+log = "0.4"
 prost = "*"
 semver = "*"
 time = "*"

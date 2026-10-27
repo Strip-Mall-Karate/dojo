@@ -15,9 +15,9 @@
 //! Traps and notifies UNIX signals.
 
 use std::{collections::VecDeque,
-          sync::{Mutex,
-                 Once,
-                 ONCE_INIT}};
+          sync::{LazyLock,
+                 Mutex,
+                 Once}};
 
 use crate::os::process::{OsSignal,
                          Signal,
@@ -25,11 +25,10 @@ use crate::os::process::{OsSignal,
 
 use super::SignalEvent;
 
-static INIT: Once = ONCE_INIT;
+static INIT: Once = Once::new();
 
-lazy_static::lazy_static! {
-    static ref CAUGHT_SIGNALS: Mutex<VecDeque<SignalCode>> = Mutex::new(VecDeque::new());
-}
+static CAUGHT_SIGNALS: LazyLock<Mutex<VecDeque<SignalCode>>> =
+    LazyLock::new(|| Mutex::new(VecDeque::new()));
 
 // Functions from POSIX libc.
 extern "C" {

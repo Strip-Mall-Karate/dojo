@@ -104,10 +104,6 @@ fn main() {
 }
 
 fn boot() -> Option<LauncherCli> {
-    if !crypto::init() {
-        println!("Crypto initialization failed!");
-        process::exit(1);
-    }
     match dojo_launcher_client::env_pipe() {
         Some(pipe) => {
             match LauncherCli::connect(pipe) {
