@@ -285,6 +285,8 @@ fn packaging_uses_the_builders_tools_not_a_dependencys() {
                "the build itself sees the dependency's xz");
 }
 
+// The check reads ELF files and the copied /bin/true is one only on Linux.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_package_naming_host_paths_is_refused_when_asked() {
     let sandbox = Sandbox::new("host-paths");
@@ -693,6 +695,29 @@ fn an_isolated_build_sees_only_its_dependencies() {
     assert_eq!(read(&built.prefix.join("greet")), "greetings from the tool");
     assert_eq!(read(&built.prefix.join("env")),
                format!("{}|/home/builder|kept|", tool.join("bin").display()));
+}
+
+#[test]
+fn an_isolated_build_fetches_and_unpacks_with_the_builders_tools() {
+    let sandbox = Sandbox::new("isolated-source");
+    let upstream = sandbox.dir.join("upstream");
+    fs::create_dir_all(upstream.join("hello-2.0")).unwrap();
+    fs::write(upstream.join("hello-2.0/hello.txt"), "hi from the tarball").unwrap();
+    let status = Command::new("tar").args(["cJf", "hello-2.0.tar.xz", "hello-2.0"])
+                                    .current_dir(&upstream)
+                                    .status()
+                                    .expect("run tar");
+    assert!(status.success());
+    let tarball = upstream.join("hello-2.0.tar.xz");
+    let sha = hex(&Sha256::digest(fs::read(&tarball).unwrap()));
+    let mut options = sandbox.options();
+    options.isolate = true;
+    let source = plan("hello",
+                      &format!(r#":version "2.0" :source {{:url "file://{}" :sha256 "{sha}"}}"#,
+                               tarball.display()),
+                      r#" :build (fn [b] (b:copy (b:join b.src "hello.txt") (b:join b.prefix "hello.txt")))"#);
+    let built = sandbox.build_with(&source, &options).expect("curl, tar and xz are the builder's");
+    assert_eq!(read(&built.prefix.join("hello.txt")), "hi from the tarball");
 }
 
 #[test]

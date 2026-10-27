@@ -85,7 +85,7 @@ pub fn fetch(state: &State, url: &str, sha256: &str, filename: &str) -> Result<P
                 partial.to_string_lossy().into_owned(),
                 url.to_string()],
               None,
-              &[],
+              &state.builder_env(),
               false)?;
     fs::rename(&partial, &file).map_err(|e| {
                                    format!("cannot move {} to {}: {e}",
@@ -136,7 +136,7 @@ fn unpack(state: &State) -> Result<(), String> {
                            tar.join(", ")));
     };
     state.log(&format!("Unpacking {}", source.filename));
-    state.run(&argv, None, &[], false)?;
+    state.run(&argv, None, &state.builder_env(), false)?;
     owner_writable(&state.src_dir())
 }
 
@@ -190,10 +190,7 @@ fn strip(state: &State) -> Result<(), String> {
     if !files.is_empty() {
         state.log("Stripping unneeded symbols from binaries and libraries");
     }
-    let builder_path: Vec<(String, String)> = state.builder_path
-                                                   .iter()
-                                                   .map(|path| ("PATH".to_string(), path.clone()))
-                                                   .collect();
+    let builder_path = state.builder_env();
     for file in files {
         let flag = match kind(&file)? {
             Some(Binary::Executable) => "--strip-all",

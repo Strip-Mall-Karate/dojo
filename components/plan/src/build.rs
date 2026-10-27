@@ -237,6 +237,17 @@ impl State {
 
     pub fn prefix_text(&self) -> Result<String, String> { text(&self.prefix()?) }
 
+    /// The `PATH` the builder was started with, for the programs Dojo runs
+    /// itself (curl, tar, unzip, strip) rather than the plan: a dependency's
+    /// tools are the build's, and an isolated build has none of the
+    /// builder's.
+    pub fn builder_env(&self) -> Vec<(String, String)> {
+        self.builder_path
+            .iter()
+            .map(|path| ("PATH".to_string(), path.clone()))
+            .collect()
+    }
+
     /// The directory a program runs in unless told otherwise: the plan's
     /// source directory while computing the version, the cache while
     /// fetching and unpacking, and `b.src` after.
