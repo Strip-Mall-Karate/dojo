@@ -23,7 +23,6 @@ use std::{error,
 use dojo_core;
 use prost;
 use toml;
-use zmq;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -47,8 +46,8 @@ pub enum Error {
     SocketCloneError,
     SocketSetReadTimeout(io::Error),
     SocketSetWriteTimeout(io::Error),
-    ZmqConnectError(zmq::Error),
-    ZmqSendError(zmq::Error),
+    GossipConnectError(io::Error),
+    GossipSendError(io::Error),
     UnknownIOError(io::Error),
 }
 
@@ -115,9 +114,11 @@ impl fmt::Display for Error {
             Error::SocketSetWriteTimeout(ref err) => {
                 format!("Cannot set UDP socket write timeout: {}", err)
             }
-            Error::ZmqConnectError(ref err) => format!("Cannot connect ZMQ socket: {}", err),
-            Error::ZmqSendError(ref err) => {
-                format!("Cannot send message through ZMQ socket: {}", err)
+            Error::GossipConnectError(ref err) => {
+                format!("Cannot connect to a member's gossip port: {}", err)
+            }
+            Error::GossipSendError(ref err) => {
+                format!("Cannot send a rumor to a member's gossip port: {}", err)
             }
         };
         write!(f, "{}", msg)
@@ -150,8 +151,8 @@ impl error::Error for Error {
             Error::SocketCloneError => "Cannot clone the underlying UDP socket",
             Error::SocketSetReadTimeout(_) => "Cannot set UDP socket read timeout",
             Error::SocketSetWriteTimeout(_) => "Cannot set UDP socket write timeout",
-            Error::ZmqConnectError(_) => "Cannot connect ZMQ socket",
-            Error::ZmqSendError(_) => "Cannot send message through ZMQ socket",
+            Error::GossipConnectError(_) => "Cannot connect to a member's gossip port",
+            Error::GossipSendError(_) => "Cannot send a rumor to a member's gossip port",
         }
     }
 }

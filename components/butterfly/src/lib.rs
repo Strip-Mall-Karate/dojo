@@ -55,6 +55,7 @@ extern crate serde_derive;
 pub mod trace;
 pub mod client;
 pub mod error;
+pub mod gossip;
 pub mod member;
 pub mod message;
 pub mod protocol;
@@ -63,27 +64,3 @@ pub mod server;
 pub mod swim;
 
 pub use crate::server::Server;
-use std::cell::UnsafeCell;
-
-lazy_static! {
-    /// A threadsafe shared ZMQ context for consuming services.
-    ///
-    /// You probably want to use this context to create new ZMQ sockets unless you *do not* want to
-    /// connect them together using an in-proc queue.
-    pub static ref ZMQ_CONTEXT: Box<ServerContext> = {
-        let ctx = ServerContext(UnsafeCell::new(zmq::Context::new()));
-        Box::new(ctx)
-    };
-}
-
-/// This is a wrapper to provide interior mutability of an underlying `zmq::Context` and allows
-/// for sharing/sending of a `zmq::Context` between threads.
-pub struct ServerContext(UnsafeCell<zmq::Context>);
-
-impl ServerContext {
-    #[allow(clippy::mut_from_ref)]
-    pub fn as_mut(&self) -> &mut zmq::Context { unsafe { &mut *self.0.get() } }
-}
-
-unsafe impl Send for ServerContext {}
-unsafe impl Sync for ServerContext {}

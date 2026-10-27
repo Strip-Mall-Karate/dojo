@@ -507,18 +507,26 @@ impl Server {
                                           panic!("You should never, ever get here, frank");
                                       });
 
+        // Gossip runs on a runtime of its own until the Supervisor shares one. Bind here, so a
+        // taken port fails start instead of the gossip thread.
+        let listener = std::net::TcpListener::bind(self.gossip_addr).map_err(Error::CannotBind)?;
+        listener.set_nonblocking(true).map_err(Error::CannotBind)?;
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_all()
+                                                                   .build()
+                                                                   .map_err(Error::CannotBind)?;
         let server_d = self.clone();
-        let _ = thread::Builder::new().name(format!("pull-{}", self.name()))
+        let _ = thread::Builder::new().name(format!("gossip-{}", self.name()))
                                       .spawn(move || {
-                                          pull::Pull::new(server_d).run();
+                                          runtime.block_on(async move {
+                                                     let listener =
+                                                         tokio::net::TcpListener::from_std(listener)
+                                                             .expect("A bound listener registers \
+                                                                      with the runtime");
+                                                     tokio::join!(pull::run(server_d.clone(),
+                                                                            listener),
+                                                                  push::run(server_d, timing));
+                                                 });
                                           panic!("You should never, ever get here, davey");
-                                      });
-
-        let server_e = self.clone();
-        let _ = thread::Builder::new().name(format!("push-{}", self.name()))
-                                      .spawn(move || {
-                                          push::Push::new(server_e, timing).run();
-                                          panic!("You should never, ever get here, liu");
                                       });
 
         if self.dat_file.is_some() {

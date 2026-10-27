@@ -1174,7 +1174,7 @@ dependencies = [
  "tar",
  "tempfile",
  "termcolor",
- "toml 1.1.8+spec-1.1.0",
+ "toml",
  "url 1.7.2",
  "uuid 0.7.4",
  "walkdir",
@@ -1259,7 +1259,7 @@ dependencies = [
  "tempfile",
  "tokio 0.1.18",
  "tokio-codec",
- "toml 1.1.8+spec-1.1.0",
+ "toml",
 ]
 
 [[package]]
@@ -1284,10 +1284,12 @@ name = "dojo_butterfly"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "bytes 1.12.1",
  "dojo_butterfly_test",
  "dojo_common",
  "dojo_core",
  "env_logger 0.6.1",
+ "futures-util",
  "lazy_static 1.3.0",
  "log 0.4.34",
  "mktemp",
@@ -1301,9 +1303,10 @@ dependencies = [
  "tempfile",
  "threadpool",
  "time",
- "toml 1.1.8+spec-1.1.0",
+ "tokio 1.54.1",
+ "tokio-util",
+ "toml",
  "uuid 0.7.4",
- "zmq",
 ]
 
 [[package]]
@@ -1337,7 +1340,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "termcolor",
- "toml 1.1.8+spec-1.1.0",
+ "toml",
  "uuid 1.29.0",
 ]
 
@@ -1365,7 +1368,7 @@ dependencies = [
  "subtle",
  "tar",
  "tempfile",
- "toml 1.1.8+spec-1.1.0",
+ "toml",
  "uzers",
  "zeroize",
 ]
@@ -1485,7 +1488,7 @@ dependencies = [
  "tokio 0.1.18",
  "tokio-codec",
  "tokio-core",
- "toml 1.1.8+spec-1.1.0",
+ "toml",
  "url 1.7.2",
  "valico",
 ]
@@ -1696,12 +1699,6 @@ checksum = "6930e04918388a9a2e41d518c25cf679ccafe26733fb4127dbf21993f2575d46"
 dependencies = [
  "backtrace",
 ]
-
-[[package]]
-name = "error-chain"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9435d864e017c3c6afeac1654189b06cdb491cf2ff73dbf0d73b0f292f42ff8"
 
 [[package]]
 name = "error-chain"
@@ -2996,17 +2993,6 @@ name = "memoffset"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f9dc261e2b62d7a622bf416ea3c5245cdd5d9a7fcc428c0d06804dfce1775b3"
-
-[[package]]
-name = "metadeps"
-version = "1.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73b122901b3a675fac8cecf68dcb2f0d3036193bc861d1ac0e1c337f7d5254c2"
-dependencies = [
- "error-chain 0.10.0",
- "pkg-config",
- "toml 0.2.1",
-]
 
 [[package]]
 name = "micromap"
@@ -5176,6 +5162,7 @@ dependencies = [
  "mio 1.2.4",
  "pin-project-lite",
  "socket2 0.6.5",
+ "tokio-macros",
  "windows-sys 0.61.2",
 ]
 
@@ -5249,6 +5236,17 @@ dependencies = [
  "bytes 0.4.12",
  "futures",
  "log 0.4.34",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78773a2a397f451582ce068015985c33193cf6dea8b74d2a639fe457b2f07b0e"
+dependencies = [
+ "proc-macro2 1.0.107",
+ "quote 1.0.47",
+ "syn 3.0.9",
 ]
 
 [[package]]
@@ -5432,10 +5430,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml"
-version = "0.2.1"
+name = "tokio-util"
+version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "736b60249cb25337bc196faa43ee12c705e426f3d55c214d73a4e7be06f92cb4"
+checksum = "e464cf451ba96ebfc6f9b6542f17ee8b8956e33f1e40d9690624e59d7a7f8a4b"
+dependencies = [
+ "bytes 1.12.1",
+ "futures-core",
+ "futures-sink",
+ "libc",
+ "pin-project-lite",
+ "tokio 1.54.1",
+]
 
 [[package]]
 name = "toml"
@@ -6453,22 +6459,3 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
-
-[[package]]
-name = "zmq"
-version = "0.8.3"
-source = "git+https://github.com/erickt/rust-zmq?branch=release%2Fv0.8#0d371fec87b6e3f13ea91c873e215319661cf176"
-dependencies = [
- "libc",
- "log 0.4.34",
- "zmq-sys",
-]
-
-[[package]]
-name = "zmq-sys"
-version = "0.8.3"
-source = "git+https://github.com/erickt/rust-zmq?branch=release%2Fv0.8#0d371fec87b6e3f13ea91c873e215319661cf176"
-dependencies = [
- "libc",
- "metadeps",
-]

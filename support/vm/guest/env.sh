@@ -9,13 +9,12 @@ export GIT_CONFIG_GLOBAL=$base/gitconfig RUSTUP_HOME=$base/rustup CARGO_HOME=$ba
 mkdir -p "$base"
 : >"$GIT_CONFIG_GLOBAL"
 pkgs=("${np}#rustup" "${np}#gcc" "${np}#pkg-config" "${np}#protobuf" "${np}#gnumake" "${np}#perl"
-  "${np}#patchelf" "${np}#openssl.dev" "${np}#openssl.out" "${np}#zeromq" "${np}#zlib.dev"
-  "${np}#zlib.out")
+  "${np}#patchelf" "${np}#openssl.dev" "${np}#openssl.out" "${np}#zlib.dev" "${np}#zlib.out")
 ssl_dev=$(nix build --impure --no-link --print-out-paths "${np}#openssl.dev")
 ssl_lib=$(nix build --impure --no-link --print-out-paths "${np}#openssl.out")
-pcpath=$(nix build --impure --no-link --print-out-paths "${np}#openssl.dev" "${np}#zeromq" \
+pcpath=$(nix build --impure --no-link --print-out-paths "${np}#openssl.dev" \
   "${np}#zlib.dev" | sed 's|$|/lib/pkgconfig|' | paste -sd:)
-libpath=$(nix build --impure --no-link --print-out-paths "${np}#openssl.out" "${np}#zeromq" \
+libpath=$(nix build --impure --no-link --print-out-paths "${np}#openssl.out" \
   "${np}#zlib.out" | sed 's|$|/lib|' | paste -sd:)
 # prost-build's bundled protoc is a generic Linux binary, which NixOS can't run.
 protoc=$(nix build --impure --no-link --print-out-paths "${np}#protobuf" | head -1)/bin/protoc
