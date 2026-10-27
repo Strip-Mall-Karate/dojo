@@ -79,11 +79,20 @@ struct TargetDeclaration {
 impl Declaration {
     fn load(dir: &Path) -> Result<Declaration> {
         let path = dir.join(DECLARATION);
-        let text = fs::read_to_string(&path).map_err(|e| {
-                                                Error::ShellError(format!("cannot read {}: {}",
-                                                                          path.display(),
-                                                                          e))
-                                            })?;
+        let text = match fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+                return Err(Error::ShellError(format!("no {} in {}: the directory declares no \
+                                                      Dojo shell",
+                                                     DECLARATION,
+                                                     dir.display())))
+            }
+            Err(e) => {
+                return Err(Error::ShellError(format!("cannot read {}: {}",
+                                                     path.display(),
+                                                     e)))
+            }
+        };
         let declaration: Declaration = toml::from_str(&text).map_err(|e| {
                                            Error::ShellError(format!("{}: {}", path.display(), e))
                                        })?;
@@ -578,6 +587,16 @@ mod tests {
                                             .map(|i| i.to_string())
                                             .collect();
         assert_eq!(vec!["acme/a", "acme/b"], names);
+    }
+
+    #[test]
+    fn a_directory_with_no_declaration_says_it_declares_no_shell() {
+        let world = World::new();
+        let error = Declaration::load(world.project.path()).unwrap_err()
+                                                           .to_string();
+        assert_eq!(format!("no shell.toml in {}: the directory declares no Dojo shell",
+                           world.project.path().display()),
+                   error);
     }
 
     #[test]

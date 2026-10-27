@@ -264,7 +264,7 @@ fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
         Some(("shell", matches)) => {
             match matches.subcommand() {
                 Some(("lock", m)) => sub_shell_lock(m)?,
-                Some(("env", m)) => sub_shell_env(m)?,
+                Some(("env", _)) => sub_shell_env()?,
                 _ => unreachable!(),
             }
         }
@@ -534,9 +534,10 @@ fn sub_shell_lock(m: &ArgMatches) -> Result<()> {
     command::shell::lock(&env::current_dir()?, &*FS_ROOT, m.get_flag("UPDATE"))
 }
 
-fn sub_shell_env(m: &ArgMatches) -> Result<()> {
-    let url = bldr_url_from_matches(m)?;
-    command::shell::env(&env::current_dir()?, &*FS_ROOT, &url)
+fn sub_shell_env() -> Result<()> {
+    command::shell::env(&env::current_dir()?,
+                        &*FS_ROOT,
+                        &bldr_url_from_env_or_config()?)
 }
 
 fn sub_pkg_env(m: &ArgMatches) -> Result<()> {
@@ -1416,16 +1417,21 @@ fn org_param_or_env(m: &ArgMatches) -> Result<String> {
 fn bldr_url_from_matches(matches: &ArgMatches) -> Result<String> {
     match matches.get_one::<String>("BLDR_URL").map(String::as_str) {
         Some(url) => Ok(url.to_string()),
-        None => {
-            match henv::var(BLDR_URL_ENVVAR) {
-                Ok(v) => Ok(v),
-                Err(_) => {
-                    let config = config::load()?;
-                    match config.bldr_url {
-                        Some(v) => Ok(v),
-                        None => Ok(default_bldr_url()),
-                    }
-                }
+        None => bldr_url_from_env_or_config(),
+    }
+}
+
+/// Builder's URL for a command with no `--url` of its own: the environment's, the config's, or the
+/// default. clap panics on reading an argument a command does not define, so such a command calls
+/// this rather than `bldr_url_from_matches`.
+fn bldr_url_from_env_or_config() -> Result<String> {
+    match henv::var(BLDR_URL_ENVVAR) {
+        Ok(v) => Ok(v),
+        Err(_) => {
+            let config = config::load()?;
+            match config.bldr_url {
+                Some(v) => Ok(v),
+                None => Ok(default_bldr_url()),
             }
         }
     }
