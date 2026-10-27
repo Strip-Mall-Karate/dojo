@@ -11,6 +11,16 @@
 #                                  --update-lock lets cargo change Cargo.lock and
 #                                  copies it back
 #   builder test <package>...      test packages and check their formatting
+#   builder run <command>...       run a command in the tree's build environment
+#                                  in the VM; copies Cargo.lock back if it changed
+#   builder fmt <package>...       format packages with the tree's nightly
+#                                  rustfmt and copy back the files it rewrote
+#   builder verify                 the checks a pull request carries: every test
+#                                  against support/vm/expected-failures, the
+#                                  payload, and boot --check and --check-reboot
+#
+# Each command but ssh copies this tree over the VM's ~/dojo first, so a file
+# the VM changed and no command copied back is gone at the next one.
 #
 # The VM's disk, ssh key and log live in DOJO_BUILDER_STATE (default
 # ~/.local/state/dojo-builder). Its ssh port, DOJO_BUILDER_PORT (default 31022),
@@ -23,7 +33,7 @@ state="${DOJO_BUILDER_STATE:-${XDG_STATE_HOME:-${HOME}/.local/state}/dojo-builde
 port="${DOJO_BUILDER_PORT:-31022}"
 
 usage() {
-  sed -n '5,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '5,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -140,13 +150,45 @@ require_running() {
 }
 
 # Copies the tree's tracked and unignored files into a fresh ~/dojo in the VM,
-# keeping the old tree's target directory so builds stay incremental.
+# keeping the old tree's target directory so builds stay incremental. The old
+# tree is replaced only once the new one has arrived whole: an empty or broken
+# copy fails here and leaves it as it was.
 sync_tree() {
+  # Apple's tar, whatever a dev shell puts first on PATH: GNU tar has no
+  # --no-mac-metadata.
   (cd "${repo}" && git ls-files -z --cached --others --exclude-standard |
-    COPYFILE_DISABLE=1 tar --no-mac-metadata --null -T - -cf -) |
-    vm_ssh 'rm -rf dojo.new && mkdir dojo.new && tar -x -C dojo.new 2>/dev/null &&
-            if [ -d dojo/target ]; then mv dojo/target dojo.new/; fi &&
-            chmod -R u+w dojo 2>/dev/null; rm -rf dojo && mv dojo.new dojo'
+    COPYFILE_DISABLE=1 /usr/bin/tar --no-mac-metadata --null -T - -cf -) |
+    vm_ssh 'set -e
+            rm -rf dojo.new && mkdir dojo.new
+            tar -x -C dojo.new 2>/dev/null
+            [ -f dojo.new/Cargo.toml ] || { echo "builder: the tree did not arrive" >&2; exit 1; }
+            if [ -d dojo/target ]; then mv dojo/target dojo.new/; fi
+            if [ -d dojo ]; then chmod -R u+w dojo; rm -rf dojo; fi
+            mv dojo.new dojo'
+}
+
+# Builds the payload and copies it to support/vm/out; with --update-lock, copies
+# Cargo.lock back too.
+payload() {
+  vm_ssh "dojo/support/vm/guest/build.sh dojo out ${1-}"
+  mkdir -p "${here}/out"
+  scp -q -F "${state}/ssh_config" dojo-builder:out/payload.cpio.gz "${here}/out/payload.cpio.gz"
+  if [[ "${1-}" == --update-lock ]]; then
+    scp -q -F "${state}/ssh_config" dojo-builder:dojo/Cargo.lock "${repo}/Cargo.lock"
+  fi
+  echo "builder: ${here}/out/payload.cpio.gz" >&2
+}
+
+# Copies the VM's Cargo.lock over the tree's if a command changed it.
+fetch_lock() {
+  local lock
+  lock="$(mktemp)"
+  scp -q -F "${state}/ssh_config" dojo-builder:dojo/Cargo.lock "${lock}"
+  if ! cmp -s "${lock}" "${repo}/Cargo.lock"; then
+    cp "${lock}" "${repo}/Cargo.lock"
+    echo "builder: Cargo.lock changed in the VM; copied it back" >&2
+  fi
+  rm -f "${lock}"
 }
 
 case "${1-}" in
@@ -171,13 +213,7 @@ case "${1-}" in
     esac
     require_running
     sync_tree
-    vm_ssh "dojo/support/vm/guest/build.sh dojo out ${2-}"
-    mkdir -p "${here}/out"
-    scp -q -F "${state}/ssh_config" dojo-builder:out/payload.cpio.gz "${here}/out/payload.cpio.gz"
-    if [[ "${2-}" == --update-lock ]]; then
-      scp -q -F "${state}/ssh_config" dojo-builder:dojo/Cargo.lock "${repo}/Cargo.lock"
-    fi
-    echo "builder: ${here}/out/payload.cpio.gz" >&2
+    payload "${2-}"
     ;;
   test)
     [[ $# -ge 2 ]] || usage
@@ -185,6 +221,53 @@ case "${1-}" in
     shift
     sync_tree
     vm_ssh dojo/support/vm/guest/test.sh dojo "$@"
+    ;;
+  run)
+    [[ $# -ge 2 ]] || usage
+    require_running
+    shift
+    sync_tree
+    status=0
+    # env.sh's run() puts cargo and the C libraries on the path; a bare cargo
+    # exits 127. The command's words are quoted for the VM's shell.
+    vm_ssh "cd dojo && . support/vm/guest/env.sh >&2 && run $(printf '%q ' "$@")" || status=$?
+    fetch_lock
+    exit "${status}"
+    ;;
+  fmt)
+    [[ $# -ge 2 ]] || usage
+    require_running
+    shift
+    sync_tree
+    packages=()
+    for p in "$@"; do
+      packages+=(-p "$p")
+    done
+    # rustfmt writes only the files it changes; those, newer than the stamp,
+    # come back as a tar on stdout, so everything else goes to stderr.
+    vm_ssh "cd dojo && . support/vm/guest/env.sh >&2 && stamp=\$(mktemp) &&
+            run env PATH=\"\${rustfmt_nightly}/bin:\${PATH}\" cargo-fmt fmt $(printf '%q ' "${packages[@]}") >&2 &&
+            find . -path ./target -prune -o -name '*.rs' -newer \"\${stamp}\" -print0 |
+              tar --null -T - -cf - && rm -f \"\${stamp}\"" |
+      /usr/bin/tar -xvf - -C "${repo}"
+    ;;
+  verify)
+    [[ $# -eq 1 ]] || usage
+    require_running
+    sync_tree
+    status=0
+    vm_ssh "dojo/support/vm/guest/verify.sh dojo verify-logs" || status=1
+    payload || status=1
+    for check in --check --check-reboot; do
+      log="${here}/out/boot${check}.log"
+      if "${here}/boot" "${check}" --payload "${here}/out/payload.cpio.gz" >"${log}" 2>&1; then
+        echo "builder: boot ${check} passed" >&2
+      else
+        echo "builder: boot ${check} FAILED; see ${log}" >&2
+        status=1
+      fi
+    done
+    exit "${status}"
     ;;
   *) usage ;;
 esac

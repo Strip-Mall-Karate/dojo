@@ -21,3 +21,4 @@ test/builder-api/services.log
 tmp/
 /support/vm/out/
 /components/plan/target
+__pycache__/

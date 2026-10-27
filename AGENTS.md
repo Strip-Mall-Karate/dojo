@@ -48,7 +48,12 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
   startup, or the VM scripts. Both checks pass before a PR opens, and a check that cannot fail is
   not evidence: break it once and show the failure.
 - One builder VM runs per state directory (`DOJO_BUILDER_STATE`) and ssh port; parallel work in
-  separate worktrees (`~/code/dojo-trees/<name>`) needs a builder of its own.
+  separate worktrees (`~/code/dojo-trees/<name>`) needs a builder of its own. Set both on every
+  `builder` command: without them it finds the default VM, which may be another session's.
+- Every `builder` command but `ssh` copies the tree over the VM's `~/dojo`, so a file the VM
+  generated is gone at the next command unless one copied it back. `builder run` returns a changed
+  `Cargo.lock`, and `builder fmt` returns the files rustfmt rewrote. `.rustfmt.toml` needs the
+  nightly rustfmt `env.sh` provides, so format with `builder fmt` rather than by hand.
 - The `support/vm/guest` scripts run on any Linux with Nix, not only in the builder VM.
 
 ## Testing
@@ -60,11 +65,13 @@ page "Dojo" in project SMK (`smk wiki list --match Dojo`).
   1.0.2 from an old nixpkgs, every test binary that loaded libcrypto died at load (`libdl.so.2:
   undefined symbol: _dl_catch_error`, exit 127), so seven test binaries silently never ran for the
   first months of this fork. A loader error is not counted as a failed test: count the binaries
-  that ran against the ones cargo built before calling a run green.
+  that ran against the ones cargo built before calling a run green. `builder verify` does that
+  count, and it is the run a PR body reports.
 - Expected failures that are not regressions: the Supervisor fixtures carry `TARGET x86_64-linux`
   and cannot load on arm64; `compile_hook_table` and the Supervisor integration tests install
   `karate/busybox-static` from Builder, which does not exist yet; `dojo_common`'s templating tests
-  want a real, writable `/doj` with packages installed.
+  want a real, writable `/doj` with packages installed. `support/vm/expected-failures` names them;
+  a change that makes one pass removes it.
 
 ## Landing
 

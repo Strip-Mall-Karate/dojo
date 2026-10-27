@@ -95,7 +95,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 } < <(nix-build --no-out-link "${here}" -A qemu -A kernel -A initrd -A coreutils)
 qemu="${qemu}/bin/qemu-system-aarch64"
 kernel="${kernel}/Image"
-work="$(mktemp -d -t dojo-vm)"
+work="$(mktemp -d "${TMPDIR:-/tmp}/dojo-vm.XXXXXX")"
 trap 'rm -rf "${work}"' EXIT
 if [[ -n "${payload}" ]]; then
   # The kernel unpacks concatenated archives in order, so the payload lands
