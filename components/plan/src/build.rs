@@ -765,8 +765,7 @@ impl Plan {
             chains.insert(*phase, [own, scaffolded]);
         }
 
-        let runtime = Inherited::from_deps(deps.deps.iter().map(|dep| dep.path.as_path()));
-        let buildtime = Inherited::from_deps(deps.build_deps.iter().map(|dep| dep.path.as_path()));
+        let (runtime, buildtime) = inherited(&deps);
         let mut env = if options.isolate {
             Env::new(build_env::isolated(&options.env))
         } else {
@@ -880,6 +879,15 @@ fn call_level(state: &Rc<State>, b: &Table, phase: &'static str, from: usize) ->
         }
     }
     builtin::run(state, phase).map_err(mlua::Error::runtime)
+}
+
+/// The environment the run dependencies pass on, and the one the build
+/// dependencies do: theirs includes their build-time environment, which
+/// only the packages that build with them get.
+fn inherited(deps: &Resolved) -> (Inherited, Inherited) {
+    (Inherited::from_deps(deps.deps.iter().map(|dep| dep.path.as_path()), &["RUNTIME_ENVIRONMENT"]),
+     Inherited::from_deps(deps.build_deps.iter().map(|dep| dep.path.as_path()),
+                          &["RUNTIME_ENVIRONMENT", "BUILDTIME_ENVIRONMENT"]))
 }
 
 /// `build_deps` with the backline last, unless the plan is the backline

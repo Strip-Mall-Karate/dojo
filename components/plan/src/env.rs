@@ -218,22 +218,26 @@ pub struct Inherited {
 }
 
 impl Inherited {
-    /// Collects `deps`' `RUNTIME_ENVIRONMENT` files, as the shell builder
-    /// did: `PATH` is left out, a list variable gets each value in front of
-    /// the last, and any other variable takes the last value.
-    pub fn from_deps<'a>(deps: impl IntoIterator<Item = &'a Path>) -> Inherited {
+    /// Collects the environment `deps` pass on, from each one's metadata
+    /// `files` in order (`RUNTIME_ENVIRONMENT`, and for build dependencies
+    /// `BUILDTIME_ENVIRONMENT` too): `PATH` is left out, a list variable gets
+    /// each value in front of the last, and any other variable takes the last
+    /// value.
+    pub fn from_deps<'a>(deps: impl IntoIterator<Item = &'a Path>, files: &[&str]) -> Inherited {
         let mut inherited = Inherited::default();
         for dep in deps {
-            let Ok(text) = fs::read_to_string(dep.join("RUNTIME_ENVIRONMENT")) else {
-                continue;
-            };
             let ident = metadata(dep, "IDENT").unwrap_or_default();
-            for line in text.lines() {
-                let (name, value) = line.split_once('=').unwrap_or((line, ""));
-                if name.is_empty() || name == "PATH" {
+            for file in files {
+                let Ok(text) = fs::read_to_string(dep.join(file)) else {
                     continue;
+                };
+                for line in text.lines() {
+                    let (name, value) = line.split_once('=').unwrap_or((line, ""));
+                    if name.is_empty() || name == "PATH" {
+                        continue;
+                    }
+                    inherited.set_from(name, value, &ident);
                 }
-                inherited.set_from(name, value, &ident);
             }
         }
         inherited
