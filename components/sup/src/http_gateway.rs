@@ -271,19 +271,12 @@ impl Server {
                 Err(_) => HTTP_THREAD_COUNT,
             };
 
-            let mut server = server::new(move || {
-                                 let app_state =
-                                     AppState::new(gateway_state.clone(), feature_flags);
-                                 App::with_state(app_state).middleware(Authentication)
-                                                           .middleware(Metrics)
-                                                           .configure(routes)
-                             }).workers(thread_count);
-
-            // With IGNORE_SIGNALS, actix installs no signal handler, so the
-            // Supervisor's default signal behavior stands.
-            if feature_flags.contains(FeatureFlag::IGNORE_SIGNALS) {
-                server = server.disable_signals();
-            }
+            let server = server::new(move || {
+                             let app_state = AppState::new(gateway_state.clone(), feature_flags);
+                             App::with_state(app_state).middleware(Authentication)
+                                                       .middleware(Metrics)
+                                                       .configure(routes)
+                         }).workers(thread_count);
 
             let bind = match tls_config {
                 Some(c) => server.bind_rustls(listen_addr.to_string(), c),

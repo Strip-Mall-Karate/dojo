@@ -779,11 +779,7 @@ impl Manager {
             debug!("http-gateway started");
         }
 
-        // With IGNORE_SIGNALS, the Supervisor installs no signal handlers and
-        // a signal takes its default action.
-        if !self.feature_flags.contains(FeatureFlag::IGNORE_SIGNALS) {
-            signals::init();
-        }
+        signals::init();
 
         // Enter the main Supervisor loop. When we break out, it'll be
         // because we've been instructed to shutdown. The value we
@@ -827,11 +823,9 @@ impl Manager {
             if self.check_for_departure() {
                 break ShutdownMode::Departed;
             }
-            if !self.feature_flags.contains(FeatureFlag::IGNORE_SIGNALS) {
-                if let Some(SignalEvent::Passthrough(Signal::HUP)) = signals::check_for_signal() {
-                    outputln!("Supervisor shutting down for signal");
-                    break ShutdownMode::Restarting;
-                }
+            if let Some(SignalEvent::Passthrough(Signal::HUP)) = signals::check_for_signal() {
+                outputln!("Supervisor shutting down for signal");
+                break ShutdownMode::Restarting;
             }
 
             if let Some(package) = self.check_for_updated_supervisor() {
