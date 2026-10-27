@@ -1087,6 +1087,15 @@ mod tests {
         use clap::error::ErrorKind;
 
         #[test]
+        fn help_puts_the_version_and_the_maintainer_on_lines_of_their_own() {
+            let help = get(no_feature_flags()).render_help().to_string();
+            let lines: Vec<&str> = help.lines().take(2).collect();
+            assert_eq!(lines,
+                       [format!("doj {}", crate::VERSION).as_str(),
+                        "Maintainer: Strip Mall Karate Company"]);
+        }
+
+        #[test]
         fn the_cli_is_well_formed() {
             get(no_feature_flags()).debug_assert();
             get(FeatureFlag::all()).debug_assert();
