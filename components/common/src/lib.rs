@@ -16,19 +16,14 @@ use crate::ui::{UIWriter,
                 UI};
 use dojo_api_client as api_client;
 use dojo_core as hcore;
-use lazy_static::lazy_static;
 use std::{collections::HashMap,
           env,
-          iter::FromIterator};
+          sync::LazyLock};
 
-extern crate json;
 #[macro_use]
 extern crate log;
 #[macro_use]
-extern crate lazy_static;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 #[cfg_attr(test, macro_use)]
 extern crate serde_json;
 
@@ -46,17 +41,20 @@ pub mod types;
 pub mod ui;
 pub mod util;
 
-lazy_static::lazy_static! {
-    pub static ref PROGRAM_NAME: String = {
-        match env::current_exe() {
-            Ok(path) => path.file_stem().and_then(|p| p.to_str()).unwrap().to_string(),
-            Err(e) => {
-                error!("Error getting path of current_exe: {}", e);
-                String::from("doj-?")
-            }
+pub static PROGRAM_NAME: LazyLock<String> = LazyLock::new(|| {
+    match env::current_exe() {
+        Ok(path) => {
+            path.file_stem()
+                .and_then(|p| p.to_str())
+                .unwrap()
+                .to_string()
         }
-    };
-}
+        Err(e) => {
+            error!("Error getting path of current_exe: {}", e);
+            String::from("doj-?")
+        }
+    }
+});
 
 // TODO (CM): It would be nice to come up with a way to more
 // programmatically manage these flags. It's a bit of a pain to define
@@ -86,6 +84,7 @@ bitflags::bitflags! {
     /// constant here, as well as a mapping from the feature to the
     /// environment variable to which it corresponds in the `ENV_VARS`
     /// map below.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub struct FeatureFlag: u32 {
         const LIST            = 0b0000_0000_0001;
         const TEST_EXIT       = 0b0000_0000_0010;
@@ -98,19 +97,16 @@ bitflags::bitflags! {
     }
 }
 
-lazy_static! {
-    static ref ENV_VARS: HashMap<FeatureFlag, &'static str> = {
-        let mapping = vec![(FeatureFlag::LIST, "DOJ_FEAT_LIST"),
-                           (FeatureFlag::TEST_EXIT, "DOJ_FEAT_TEST_EXIT"),
-                           (FeatureFlag::TEST_BOOT_FAIL, "DOJ_FEAT_BOOT_FAIL"),
-                           (FeatureFlag::REDACT_HTTP, "DOJ_FEAT_REDACT_HTTP"),
-                           (FeatureFlag::INSTALL_HOOK, "DOJ_FEAT_INSTALL_HOOK"),
-                           (FeatureFlag::OFFLINE_INSTALL, "DOJ_FEAT_OFFLINE_INSTALL"),
-                           (FeatureFlag::IGNORE_LOCAL, "DOJ_FEAT_IGNORE_LOCAL"),
-                           (FeatureFlag::EVENT_STREAM, "DOJ_FEAT_EVENT_STREAM")];
-        HashMap::from_iter(mapping)
-    };
-}
+static ENV_VARS: LazyLock<HashMap<FeatureFlag, &'static str>> = LazyLock::new(|| {
+    HashMap::from([(FeatureFlag::LIST, "DOJ_FEAT_LIST"),
+                   (FeatureFlag::TEST_EXIT, "DOJ_FEAT_TEST_EXIT"),
+                   (FeatureFlag::TEST_BOOT_FAIL, "DOJ_FEAT_BOOT_FAIL"),
+                   (FeatureFlag::REDACT_HTTP, "DOJ_FEAT_REDACT_HTTP"),
+                   (FeatureFlag::INSTALL_HOOK, "DOJ_FEAT_INSTALL_HOOK"),
+                   (FeatureFlag::OFFLINE_INSTALL, "DOJ_FEAT_OFFLINE_INSTALL"),
+                   (FeatureFlag::IGNORE_LOCAL, "DOJ_FEAT_IGNORE_LOCAL"),
+                   (FeatureFlag::EVENT_STREAM, "DOJ_FEAT_EVENT_STREAM")])
+});
 
 impl FeatureFlag {
     /// If the environment variable for a flag is set to _anything_ but

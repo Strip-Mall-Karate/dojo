@@ -369,9 +369,9 @@ two = 2
 
     #[test]
     fn trivial_failure() {
-        let state = validate_string(r#"{"svc":{},"pkg":{},"cfg":{},"svc":{},"bind":{}}"#,
-                                    "render_context_schema.json");
-        assert!(!state.is_valid(),
+        let errors = validate_string(r#"{"svc":{},"pkg":{},"cfg":{},"svc":{},"bind":{}}"#,
+                                     "render_context_schema.json");
+        assert!(!errors.is_empty(),
                 "Expected schema validation to fail, but it succeeded!");
     }
 

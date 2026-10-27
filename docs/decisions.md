@@ -57,3 +57,14 @@ longer story.
 - **Everything moves to current tooling.** The whole tree builds with the newest stable Rust
   (1.99.1, read from `rust-toolchain`), then moves to current nixpkgs and OpenSSL 3, current
   versions of every crate, and edition 2024, a phase at a time, each phase passing the boot checks.
+- **Templates render on Handlebars 6 with their old output.** Configuration and hook templates
+  were written for handlebars 0.28, which never removed a line holding only a block tag, so
+  authors put a tilde on one side of such tags (`{{~#if x}}`, `{{#if x ~}}`) to manage newlines.
+  Handlebars 6 removes those lines as the Handlebars spec says, and the tilde then joins lines.
+  The renderer rewrites a one-sided tilde on a standalone block tag so the output is what 0.28
+  produced, and plan authors keep writing templates as they do now. Rendered against every
+  template in `dojo-plans`, output is byte-identical or differs only in blank lines, except that
+  `toYaml` writes plain YAML without a leading `---` (same data) and an array printed directly
+  loses its trailing `, `. Two things break: `foo[0]` must be written `foo.[0]` (nothing uses
+  it), and pest stays at 2.8 until the Supervisor's actix-web 0.7, whose ring 0.13 holds cc at
+  1.0.95, is replaced.

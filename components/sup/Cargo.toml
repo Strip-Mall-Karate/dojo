@@ -58,7 +58,7 @@ state = "0.4.1"
 tempfile = "3.27.0"
 termcolor = "1.0.4"
 time = "0.1.42"
-toml = { version = "0.5.0", default-features = false }
+toml = "1.1.8"
 tokio = "0.1.18"
 tokio-core = "0.1.17"
 tokio-codec = "0.1.1"

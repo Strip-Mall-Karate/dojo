@@ -109,11 +109,8 @@ impl Service {
                   pkg: package.to_string(),
                   sys,
                   cfg: cfg.map(|v| {
-                              // Directly serializing a toml::value::Table can lead to an error
-                              // Wrapping it in a toml::value::Value makes this operation safe
-                              // See https://github.com/alexcrichton/toml-rs/issues/142
-                              toml::ser::to_vec(&toml::value::Value::Table(v))
-                        .expect("Struct should serialize to bytes")
+                              toml::to_string(&v).expect("Table should serialize to TOML")
+                                                 .into_bytes()
                           })
                           .unwrap_or_default() }
     }

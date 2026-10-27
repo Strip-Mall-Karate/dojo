@@ -22,45 +22,40 @@ use clap::ArgMatches;
 use dojo_core::{env as henv,
                 fs::{cache_key_path,
                      CACHE_KEY_PATH}};
-use std::path::PathBuf;
+use std::{path::PathBuf,
+          sync::LazyLock};
 
 pub const GOSSIP_DEFAULT_IP: &str = "0.0.0.0";
 pub const GOSSIP_DEFAULT_PORT: u16 = 9638;
-lazy_static! {
-    pub static ref GOSSIP_DEFAULT_ADDR: String =
-        { format!("{}:{}", GOSSIP_DEFAULT_IP, GOSSIP_DEFAULT_PORT) };
-}
+pub static GOSSIP_DEFAULT_ADDR: LazyLock<String> =
+    LazyLock::new(|| format!("{}:{}", GOSSIP_DEFAULT_IP, GOSSIP_DEFAULT_PORT));
 pub const GOSSIP_LISTEN_ADDRESS_ENVVAR: &str = "DOJ_LISTEN_GOSSIP";
 pub const RING_ENVVAR: &str = "DOJ_RING";
 pub const RING_KEY_ENVVAR: &str = "DOJ_RING_KEY";
 
 pub const LISTEN_HTTP_DEFAULT_PORT: u16 = 9631;
 pub const LISTEN_HTTP_DEFAULT_IP: &str = "0.0.0.0";
-lazy_static! {
-    pub static ref LISTEN_HTTP_DEFAULT_ADDR: String =
-        { format!("{}:{}", LISTEN_HTTP_DEFAULT_IP, LISTEN_HTTP_DEFAULT_PORT) };
-}
+pub static LISTEN_HTTP_DEFAULT_ADDR: LazyLock<String> =
+    LazyLock::new(|| format!("{}:{}", LISTEN_HTTP_DEFAULT_IP, LISTEN_HTTP_DEFAULT_PORT));
 pub const LISTEN_HTTP_ADDRESS_ENVVAR: &str = "DOJ_LISTEN_HTTP";
 
 pub const PACKAGE_TARGET_ENVVAR: &str = "DOJ_PACKAGE_TARGET";
 
-lazy_static! {
-    pub static ref LISTEN_CTL_DEFAULT_ADDR_STRING: String =
-        { ListenCtlAddr::default().to_string() };
+pub static LISTEN_CTL_DEFAULT_ADDR_STRING: LazyLock<String> =
+    LazyLock::new(|| ListenCtlAddr::default().to_string());
 
-    /// The default filesystem root path to base all commands from. This is lazily generated on
-    /// first call and reflects on the presence and value of the environment variable keyed as
-    /// `FS_ROOT_ENVVAR`.
-    pub static ref FS_ROOT: PathBuf = {
-        use crate::hcore::fs::FS_ROOT_ENVVAR;
+/// The default filesystem root path to base all commands from. This is lazily generated on
+/// first call and reflects on the presence and value of the environment variable keyed as
+/// `FS_ROOT_ENVVAR`.
+pub static FS_ROOT: LazyLock<PathBuf> = LazyLock::new(|| {
+    use crate::hcore::fs::FS_ROOT_ENVVAR;
 
-        if let Ok(root) = henv::var(FS_ROOT_ENVVAR) {
-            PathBuf::from(root)
-        } else {
-            PathBuf::from("/")
-        }
-    };
-}
+    if let Ok(root) = henv::var(FS_ROOT_ENVVAR) {
+        PathBuf::from(root)
+    } else {
+        PathBuf::from("/")
+    }
+});
 
 pub const BINLINK_DIR_ENVVAR: &str = "DOJ_BINLINK_DIR";
 

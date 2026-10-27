@@ -12,29 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use handlebars::{Handlebars,
+use handlebars::{Context,
+                 Handlebars,
                  Helper,
                  HelperDef,
-                 RenderContext,
-                 RenderError};
-use toml;
+                 HelperResult,
+                 Output,
+                 RenderContext};
 
-use super::super::RenderResult;
+use super::render_error;
 
 #[derive(Clone, Copy)]
 pub struct ToTomlHelper;
 
 impl HelperDef for ToTomlHelper {
-    fn call(&self, h: &Helper<'_>, _: &Handlebars, rc: &mut RenderContext<'_>) -> RenderResult<()> {
+    fn call<'reg: 'rc, 'rc>(&self,
+                            h: &Helper<'rc>,
+                            _: &'reg Handlebars<'reg>,
+                            _: &'rc Context,
+                            _: &mut RenderContext<'reg, 'rc>,
+                            out: &mut dyn Output)
+                            -> HelperResult {
         let param = h.param(0)
-                     .ok_or_else(|| RenderError::new("Expected 1 parameter for \"toToml\""))?
+                     .ok_or_else(|| render_error("Expected 1 parameter for \"toToml\""))?
                      .value();
-        let bytes = toml::ser::to_vec(&param).map_err(|e| {
-                                                 RenderError::new(format!("Can't serialize \
-                                                                           parameter to TOML: {}",
-                                                                          e))
-                                             })?;
-        rc.writer.write_all(bytes.as_ref())?;
+        let toml =
+            toml::to_string(param).map_err(|e| {
+                                      render_error(format!("Can't serialize parameter to TOML: {}",
+                                                           e))
+                                  })?;
+        out.write(&toml)?;
         Ok(())
     }
 }
