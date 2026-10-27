@@ -14,19 +14,17 @@
 
 use std::io::Read;
 
-use hyper::client::Response;
-use serde;
-use serde_json;
+use log::debug;
+use reqwest::blocking::Response;
 
-use crate::error::{Error,
-                   Result};
+use crate::error::Result;
 
+/// The JSON body of `response`.
 pub fn decoded_response<T>(mut response: Response) -> Result<T>
     where T: serde::de::DeserializeOwned
 {
     let mut encoded = String::new();
-    response.read_to_string(&mut encoded).map_err(Error::IO)?;
+    response.read_to_string(&mut encoded)?;
     debug!("Body: {:?}", encoded);
-    let thing = serde_json::from_str(&encoded).map_err(Error::Json)?;
-    Ok(thing)
+    Ok(serde_json::from_str(&encoded)?)
 }

@@ -12,85 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{error,
-          fmt,
-          io,
+use std::{io,
+          path::PathBuf,
           result};
-
-use dojo_core as doj_core;
-use hyper;
-use openssl::{self,
-              ssl};
-use serde_json;
-use url;
 
 pub type Result<T> = result::Result<T, Error>;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    DojoCore(doj_core::Error),
-    HyperError(hyper::error::Error),
-    /// Occurs when an improper http or https proxy value is given.
-    InvalidProxyValue(String),
-    IO(io::Error),
-    Json(serde_json::Error),
-    SslError(ssl::Error),
-    SslErrorStack(openssl::error::ErrorStack),
-    /// When an error occurs attempting to parse a string into a URL.
-    UrlParseError(url::ParseError),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let msg = match *self {
-            Error::DojoCore(ref e) => format!("{}", e),
-            Error::HyperError(ref err) => format!("{}", err),
-            Error::IO(ref e) => format!("{}", e),
-            Error::Json(ref e) => format!("{}", e),
-            Error::InvalidProxyValue(ref e) => format!("Invalid proxy value: {:?}", e),
-            Error::SslError(ref e) => format!("{}", e),
-            Error::SslErrorStack(ref e) => format!("{}", e),
-            Error::UrlParseError(ref e) => format!("{}", e),
-        };
-        write!(f, "{}", msg)
-    }
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::DojoCore(ref err) => err.description(),
-            Error::HyperError(ref err) => err.description(),
-            Error::IO(ref err) => err.description(),
-            Error::Json(ref err) => err.description(),
-            Error::InvalidProxyValue(_) => "Invalid proxy value",
-            Error::SslError(ref err) => err.description(),
-            Error::SslErrorStack(ref err) => err.description(),
-            Error::UrlParseError(ref err) => err.description(),
-        }
-    }
-}
-
-impl From<doj_core::Error> for Error {
-    fn from(err: doj_core::Error) -> Error { Error::DojoCore(err) }
-}
-
-impl From<hyper::error::Error> for Error {
-    fn from(err: hyper::error::Error) -> Error { Error::HyperError(err) }
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Error { Error::IO(err) }
-}
-
-impl From<ssl::Error> for Error {
-    fn from(err: ssl::Error) -> Error { Error::SslError(err) }
-}
-
-impl From<openssl::error::ErrorStack> for Error {
-    fn from(err: openssl::error::ErrorStack) -> Error { Error::SslErrorStack(err) }
-}
-
-impl From<url::ParseError> for Error {
-    fn from(err: url::ParseError) -> Self { Error::UrlParseError(err) }
+    #[error("{0}")]
+    DojoCore(#[from] dojo_core::Error),
+    #[error("{0}")]
+    Http(#[from] reqwest::Error),
+    #[error("{0}")]
+    IO(#[from] io::Error),
+    #[error("{0}")]
+    Json(#[from] serde_json::Error),
+    #[error("cannot read CA certificates from {0}: {1}")]
+    CaCertificates(PathBuf, String),
+    #[error("{0}")]
+    Tls(#[from] rustls::Error),
+    #[error("{0}")]
+    UrlParseError(#[from] url::ParseError),
 }

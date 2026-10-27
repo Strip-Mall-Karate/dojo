@@ -35,9 +35,6 @@ for b in doj-launch doj-sup doj; do
   cp "target/release/$b" "$out/root/bin/$b"
   # Append, so the binary's own RUNPATH (its glibc) still comes first.
   run patchelf --add-rpath "$libpath" "$out/root/bin/$b"
-  # libcrypto 1.0.2 finds libdl.so.2 through its own RUNPATH, which is glibc
-  # 2.27. Needing it here loads glibc 2.39's first, and libcrypto reuses it.
-  run patchelf --add-needed libdl.so.2 "$out/root/bin/$b"
 done
 interp=$(run patchelf --print-interpreter "$out/root/bin/doj-sup")
 mapfile -t libdirs < <(tr : '\n' <<<"$libpath" | sed 's|/lib$||')

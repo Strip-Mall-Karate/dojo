@@ -8,9 +8,8 @@ Dojo is a Strip Mall Karate Company project, created by Jamie Stormbreaker.
 
 ## Status
 
-Early. This tree builds with the stable Rust pinned in `rust-toolchain` (its
-2019 dependencies, OpenSSL 1.0.2 included, are still in place) and is being
-modernized. Packages live in the `karate` origin. The default Builder is
+Early. This tree builds with the stable Rust pinned in `rust-toolchain` and is
+moving from its 2019 dependencies to current ones, a crate at a time. Packages live in the `karate` origin. The default Builder is
 `https://bldr.karate.company`, which is not running yet; set `DOJ_BLDR_URL` to use
 another.
 
@@ -29,7 +28,6 @@ another.
 | `components/pkg-export-docker`, `pkg-export-tar` | Exporters |
 | `support/vm` | The Dojo VM for Apple silicon Macs |
 | `vendor/ipc-channel` | Servo's ipc-channel, vendored as a snapshot |
-| `vendor/traitobject` | traitobject 0.1.0, which current rustc otherwise rejects |
 
 ## Building
 

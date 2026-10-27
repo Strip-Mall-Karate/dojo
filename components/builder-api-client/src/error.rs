@@ -12,135 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{error,
-          fmt,
-          io,
+use std::{io,
           num,
           path::PathBuf,
           result};
-
-use hyper;
-use serde_json;
-use url;
 
 use crate::{doj_core,
             doj_http};
 
 pub type Result<T> = result::Result<T, Error>;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    APIError(hyper::status::StatusCode, String),
+    #[error("{}", api_error(.0, .1))]
+    APIError(reqwest::StatusCode, String),
+    #[error("Failed to read response body, {0}")]
     BadResponseBody(io::Error),
+    #[error("Failed to write contents of builder response, {}, {}", .0.display(), .1)]
     DownloadWrite(PathBuf, io::Error),
-    DojoCore(doj_core::Error),
-    DojoHttpClient(doj_http::Error),
-    HyperError(hyper::error::Error),
-    IO(io::Error),
-    Json(serde_json::Error),
+    #[error("{0}")]
+    DojoCore(#[from] doj_core::Error),
+    #[error("{0}")]
+    DojoHttpClient(#[from] doj_http::Error),
+    #[error("{0}")]
+    Http(#[from] reqwest::Error),
+    #[error("{0}")]
+    IO(#[from] io::Error),
+    #[error("{0}")]
+    Json(#[from] serde_json::Error),
+    #[error("Failed to read origin key, {}, {}", .0.display(), .1)]
     KeyReadError(PathBuf, io::Error),
+    #[error("Builder's response named no file to write it to")]
     NoFilePart,
+    #[error("Failed to read package artifact, {}, {}", .0.display(), .1)]
     PackageReadError(PathBuf, io::Error),
-    ParseIntError(num::ParseIntError),
+    #[error("{0}")]
+    ParseIntError(#[from] num::ParseIntError),
+    #[error("Cannot perform the specified operation. Specify a fully qualifed package \
+             identifier (ex: karate/busybox-static/1.42.2/20170513215502)")]
     IdentNotFullyQualified,
+    #[error("Upload failed: {0}")]
     UploadFailed(String),
-    UrlParseError(url::ParseError),
+    #[error("{0}")]
+    UrlParseError(#[from] url::ParseError),
+    #[error("Could not write to destination; perhaps the disk is full?")]
     WriteSyncFailed,
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let msg = match *self {
-            Error::APIError(ref c, ref m) if !m.is_empty() => format!("[{}] {}", c, m),
-            Error::APIError(ref c, _) => format!("[{}]", c),
-            Error::BadResponseBody(ref e) => format!("Failed to read response body, {}", e),
-            Error::DownloadWrite(ref p, ref e) => {
-                format!("Failed to write contents of builder response, {}, {}",
-                        p.display(),
-                        e)
-            }
-            Error::DojoCore(ref e) => format!("{}", e),
-            Error::DojoHttpClient(ref e) => format!("{}", e),
-            Error::HyperError(ref err) => format!("{}", err),
-            Error::IO(ref e) => format!("{}", e),
-            Error::Json(ref e) => format!("{}", e),
-            Error::KeyReadError(ref p, ref e) => {
-                format!("Failed to read origin key, {}, {}", p.display(), e)
-            }
-            Error::NoFilePart => {
-                "An invalid path was passed - we needed a filename, and this \
-                                  path does not have one"
-                                                         .to_string()
-            }
-            Error::PackageReadError(ref p, ref e) => {
-                format!("Failed to read package artifact, {}, {}", p.display(), e)
-            }
-            Error::ParseIntError(ref err) => format!("{}", err),
-            Error::IdentNotFullyQualified => {
-                "Cannot perform the specified operation. Specify a fully qualifed package \
-                 identifier (ex: karate/busybox-static/1.42.2/20170513215502)"
-                                                                              .to_string()
-            }
-            Error::UploadFailed(ref s) => format!("Upload failed: {}", s),
-            Error::UrlParseError(ref e) => format!("{}", e),
-            Error::WriteSyncFailed => {
-                "Could not write to destination; perhaps the disk is full?".to_string()
-            }
-        };
-        write!(f, "{}", msg)
+/// `[404 Not Found] message`, or just the status when there is no message.
+fn api_error(status: &reqwest::StatusCode, message: &str) -> String {
+    if message.is_empty() {
+        format!("[{}]", status)
+    } else {
+        format!("[{}] {}", status, message)
     }
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::APIError(..) => "Received a non-2XX response code from API",
-            Error::BadResponseBody(_) => "Failed to read response body",
-            Error::DownloadWrite(..) => "Failed to write response contents to file",
-            Error::DojoCore(ref err) => err.description(),
-            Error::DojoHttpClient(ref err) => err.description(),
-            Error::HyperError(ref err) => err.description(),
-            Error::IO(ref err) => err.description(),
-            Error::Json(ref err) => err.description(),
-            Error::KeyReadError(..) => "Failed to read origin key from disk",
-            Error::NoFilePart => {
-                "An invalid path was passed - we needed a filename, and this path does not have one"
-            }
-            Error::PackageReadError(..) => "Failed to read package artifact from disk",
-            Error::ParseIntError(ref err) => err.description(),
-            Error::IdentNotFullyQualified => {
-                "Cannot perform the specified operation. Specify a fully qualifed package \
-                 identifier (ex: karate/busybox-static/1.42.2/20170513215502)"
-            }
-            Error::UploadFailed(_) => "Upload failed",
-            Error::UrlParseError(ref err) => err.description(),
-            Error::WriteSyncFailed => {
-                "Could not write to destination; bytes written was 0 on a non-0 buffer"
-            }
-        }
-    }
-}
-
-impl From<doj_core::Error> for Error {
-    fn from(err: doj_core::Error) -> Error { Error::DojoCore(err) }
-}
-
-impl From<doj_http::Error> for Error {
-    fn from(err: doj_http::Error) -> Error { Error::DojoHttpClient(err) }
-}
-
-impl From<hyper::error::Error> for Error {
-    fn from(err: hyper::error::Error) -> Error { Error::HyperError(err) }
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Error { Error::IO(err) }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Error { Error::Json(err) }
-}
-
-impl From<url::ParseError> for Error {
-    fn from(err: url::ParseError) -> Error { Error::UrlParseError(err) }
 }

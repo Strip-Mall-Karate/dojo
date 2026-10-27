@@ -33,7 +33,7 @@ use crate::{api_client::{self,
             hcore::{package::{PackageIdent,
                               PackageTarget},
                     ChannelIdent}};
-use hyper::status::StatusCode;
+use dojo_api_client::StatusCode;
 
 use crate::{error::{Error,
                     Result},
@@ -58,7 +58,7 @@ pub fn start(ui: &mut UI,
     if channel != &ChannelIdent::stable() && channel != &ChannelIdent::unstable() {
         match api_client.create_channel(&ident.origin, channel, token) {
             Ok(_) => (),
-            Err(api_client::Error::APIError(StatusCode::Conflict, _)) => (),
+            Err(api_client::Error::APIError(StatusCode::CONFLICT, _)) => (),
             Err(e) => {
                 println!("Failed to create '{}' channel: {:?}", channel, e);
                 return Err(Error::from(e));
@@ -70,7 +70,7 @@ pub fn start(ui: &mut UI,
         Ok(_) => (),
         Err(e) => {
             println!("Failed to promote '{}': {:?}", ident, e);
-            if let api_client::Error::APIError(StatusCode::NotFound, _) = e {
+            if let api_client::Error::APIError(StatusCode::NOT_FOUND, _) = e {
                 println!("You may need to specify a platform target argument");
             }
             return Err(Error::from(e));

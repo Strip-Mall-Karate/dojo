@@ -19,9 +19,3 @@ members = [
   "components/sup-client",
   "components/sup-protocol",
 ]
-
-
-[patch.crates-io]
-# The published traitobject spells one trait object three ways; rustc now
-# rejects that. vendor/traitobject is 0.1.0 with the duplicates removed.
-traitobject = { path = "vendor/traitobject" }

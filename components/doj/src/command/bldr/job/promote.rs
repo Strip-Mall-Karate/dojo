@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::hcore::package::PackageIdent;
-use hyper::status::StatusCode;
+use dojo_api_client::StatusCode;
 use std::str::FromStr;
 
 use crate::{api_client,
@@ -143,7 +143,7 @@ pub fn start(ui: &mut UI,
             ui.status(changed_status,
                       format!("job group {} {} channel '{}'", group_id, to_from, channel))?;
         }
-        Err(api_client::Error::APIError(StatusCode::UnprocessableEntity, _)) => {
+        Err(api_client::Error::APIError(StatusCode::UNPROCESSABLE_ENTITY, _)) => {
             return Err(Error::JobGroupPromoteOrDemoteUnprocessable(promote));
         }
         Err(e) => {

@@ -11,15 +11,15 @@ path = "src/main.rs"
 doc = false
 
 [dependencies]
-env_logger = "*"
+env_logger = "0.6.1"
 dojo_common = { path = "../common" }
 # JW TODO: core has external deps that we don't want, libarchive/libsodium. We should either
 # put these things behind a feature flag so we can statically compile the launcher.
 dojo_core = { path = "../core" }
 dojo-launcher-protocol = { path = "../launcher-protocol" }
 ipc-channel = { path = "../../vendor/ipc-channel" }
-libc = "*"
+libc = "0.2.191"
 log = "0.4"
-prost = "*"
-semver = "*"
-time = "*"
+prost = "0.5.0"
+semver = "0.9.0"
+time = "0.1.42"

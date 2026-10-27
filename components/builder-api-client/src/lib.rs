@@ -14,22 +14,11 @@
 
 use dojo_core as doj_core;
 use dojo_http_client as doj_http;
-#[macro_use]
-extern crate hyper;
-
-#[macro_use]
-extern crate log;
-
-use serde;
-#[macro_use]
-extern crate serde_derive;
-#[allow(unused_imports)]
-#[macro_use]
-extern crate serde_json;
 
 pub mod error;
 pub use crate::error::{Error,
                        Result};
+pub use reqwest::StatusCode;
 
 use std::{fmt,
           fs::{self,
@@ -41,33 +30,46 @@ use std::{fmt,
                  PathBuf},
           string::ToString};
 
-use crate::{doj_core::{crypto::keys::box_key_pair::WrappedSealedBox,
+use crate::{doj_core::{ChannelIdent,
+                       crypto::keys::box_key_pair::WrappedSealedBox,
                        fs::AtomicWriter,
                        package::{Identifiable,
                                  PackageArchive,
                                  PackageIdent,
-                                 PackageTarget},
-                       ChannelIdent},
-            doj_http::{util::decoded_response,
-                       ApiClient}};
-use broadcast::BroadcastWriter;
+                                 PackageTarget}},
+            doj_http::{ApiClient,
+                       util::decoded_response}};
 use chrono::DateTime;
-use hyper::{client::{Body,
-                     IntoUrl,
-                     RequestBuilder,
-                     Response},
-            header::{Accept,
-                     Authorization,
-                     Bearer,
-                     ContentType},
-            status::StatusCode,
-            Url};
-use tee::TeeReader;
-use url::percent_encoding::{percent_encode,
-                            PATH_SEGMENT_ENCODE_SET};
+use log::debug;
+use percent_encoding::{AsciiSet,
+                       CONTROLS,
+                       utf8_percent_encode};
+use reqwest::{IntoUrl,
+              blocking::{Body,
+                         RequestBuilder,
+                         Response},
+              header::{ACCEPT,
+                       CONTENT_TYPE}};
+use serde::{Deserialize,
+            Serialize};
+use serde_json::json;
+use url::Url;
 
-header! { (XFileName, "X-Filename") => [String] }
-header! { (ETag, "ETag") => [String] }
+/// The characters a URL path segment percent-encodes: the WHATWG URL
+/// standard's path percent-encode set, plus `/` and `%`.
+const PATH_SEGMENT: &AsciiSet = &CONTROLS.add(b' ')
+                                         .add(b'"')
+                                         .add(b'#')
+                                         .add(b'<')
+                                         .add(b'>')
+                                         .add(b'?')
+                                         .add(b'`')
+                                         .add(b'{')
+                                         .add(b'}')
+                                         .add(b'/')
+                                         .add(b'%');
+
+const JSON: &str = "application/json";
 
 const DEFAULT_API_PATH: &str = "/v1";
 
@@ -212,15 +214,12 @@ pub struct OriginPrivateSigningKey {
 }
 
 mod json {
+    use serde::Deserialize;
+
+    /// The part of Builder's package JSON Dojo reads.
     #[derive(Clone, Deserialize)]
     pub struct Package {
-        pub ident:    PackageIdent,
-        pub checksum: String,
-        pub manifest: String,
-        pub deps:     Vec<PackageIdent>,
-        pub tdeps:    Vec<PackageIdent>,
-        pub exposes:  Vec<u32>,
-        pub config:   String,
+        pub ident: PackageIdent,
     }
 
     #[derive(Clone, Deserialize)]
@@ -269,14 +268,14 @@ impl Client {
                   -> Result<Self>
         where U: IntoUrl
     {
-        let mut endpoint = endpoint.into_url().map_err(Error::UrlParseError)?;
+        let mut endpoint = endpoint.into_url().map_err(Error::Http)?;
         if !endpoint.cannot_be_a_base() && endpoint.path() == "/" {
             endpoint.set_path(DEFAULT_API_PATH);
         }
-        Ok(Client(
-            ApiClient::new(endpoint, product, version, fs_root_path)
-                .map_err(Error::DojoHttpClient)?,
-        ))
+        Ok(Client(ApiClient::new(endpoint,
+                                 product,
+                                 version,
+                                 fs_root_path)?))
     }
 
     /// Retrieves the status of every group job in an origin
@@ -299,7 +298,7 @@ impl Client {
 
         let res = self.0.get_with_custom_url(&path, custom).send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         }
 
@@ -324,7 +323,7 @@ impl Client {
 
         let res = self.0.get_with_custom_url(&path, custom).send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         }
 
@@ -342,7 +341,7 @@ impl Client {
                         (ident, target): (&PackageIdent, PackageTarget),
                         package_only: bool,
                         token: &str)
-                        -> Result<(String)> {
+                        -> Result<String> {
         let path = format!("depot/pkgs/schedule/{}/{}", ident.origin(), ident.name());
 
         let custom = |url: &mut Url| {
@@ -355,7 +354,7 @@ impl Client {
                   .send()
         {
             Ok(response) => {
-                if response.status == StatusCode::Created || response.status == StatusCode::Ok {
+                if response.status() == StatusCode::CREATED || response.status() == StatusCode::OK {
                     let sr: SchedulerResponse = decoded_response(response)?;
                     Ok(sr.id)
                 } else {
@@ -382,10 +381,9 @@ impl Client {
                           .get_with_custom_url(&url, |u| {
                               u.set_query(Some(&format!("target={}", &target.to_string())))
                           })
-                          .send()
-                          .map_err(Error::HyperError)?;
+                          .send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         }
 
@@ -416,16 +414,15 @@ impl Client {
                           if promote { "promote" } else { "demote" },
                           channel);
         let res = self.add_authz(self.0.post(&url), token)
-                      .body(&sbody)
-                      .header(Accept::json())
-                      .header(ContentType::json())
-                      .send()
-                      .map_err(Error::HyperError)?;
+                      .body(sbody)
+                      .header(ACCEPT, JSON)
+                      .header(CONTENT_TYPE, JSON)
+                      .send()?;
 
-        if res.status != StatusCode::NoContent {
+        if res.status() != StatusCode::NO_CONTENT {
             debug!("Failed to {} group, status: {:?}",
                    if promote { "promote" } else { "demote" },
-                   res.status);
+                   res.status());
             return Err(err_from_response(res));
         }
 
@@ -439,12 +436,10 @@ impl Client {
     /// * Remote API Server is not available
     pub fn job_group_cancel(&self, group_id: u64, token: &str) -> Result<()> {
         let url = format!("jobs/group/{}/cancel", group_id);
-        let res = self.add_authz(self.0.post(&url), token)
-                      .send()
-                      .map_err(Error::HyperError)?;
+        let res = self.add_authz(self.0.post(&url), token).send()?;
 
-        if res.status != StatusCode::NoContent {
-            debug!("Failed to cancel group, status: {:?}", res.status);
+        if res.status() != StatusCode::NO_CONTENT {
+            debug!("Failed to cancel group, status: {:?}", res.status());
             return Err(err_from_response(res));
         }
 
@@ -493,12 +488,12 @@ impl Client {
 
         let sbody = serde_json::to_string(&body)?;
         let res = self.add_authz(self.0.post(&path), token)
-                      .body(&sbody)
-                      .header(Accept::json())
-                      .header(ContentType::json())
+                      .body(sbody)
+                      .header(ACCEPT, JSON)
+                      .header(CONTENT_TYPE, JSON)
                       .send()?;
 
-        if res.status != StatusCode::Created {
+        if res.status() != StatusCode::CREATED {
             return Err(err_from_response(res));
         }
 
@@ -516,7 +511,7 @@ impl Client {
         let res = self.add_authz(self.0.delete(&path), token).send()?;
 
         // We expect NoContent, because the origin must be empty to delete
-        if res.status == StatusCode::NoContent {
+        if res.status() == StatusCode::NO_CONTENT {
             Ok(())
         } else {
             Err(err_from_response(res))
@@ -535,7 +530,7 @@ impl Client {
 
         let res = self.add_authz(self.0.delete(&path), token).send()?;
 
-        if res.status != StatusCode::NoContent {
+        if res.status() != StatusCode::NO_CONTENT {
             return Err(err_from_response(res));
         }
 
@@ -552,7 +547,7 @@ impl Client {
 
         let mut res = self.add_authz(self.0.get(&path), token).send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         }
 
@@ -617,7 +612,7 @@ impl Client {
         let mut res = self.0.get(&origin_keys_path(origin)).send()?;
         debug!("Response: {:?}", res);
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         };
 
@@ -654,7 +649,7 @@ impl Client {
         let mut res = self.maybe_add_authz(self.0.get_with_custom_url(&path, custom), token)
                           .send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         }
 
@@ -684,32 +679,18 @@ impl Client {
                              token: &str,
                              progress: Option<D>)
                              -> Result<()>
-        where D: DisplayProgress + Sized
+        where D: DisplayProgress + Sized + Send + 'static
     {
         let path = format!("depot/origins/{}/keys/{}", &origin, &revision);
-        let mut file =
+        let file =
             File::open(src_path).map_err(|e| Error::KeyReadError(src_path.to_path_buf(), e))?;
         let file_size = file.metadata()
                             .map_err(|e| Error::KeyReadError(src_path.to_path_buf(), e))?
                             .len();
 
-        let result = if let Some(mut progress) = progress {
-            progress.size(file_size);
-            let mut reader = TeeReader::new(file, progress);
-            self.add_authz(self.0.post(&path), token)
-                .body(Body::SizedBody(&mut reader, file_size))
-                .send()
-        } else {
-            self.add_authz(self.0.post(&path), token)
-                .body(Body::SizedBody(&mut file, file_size))
-                .send()
-        };
-        match result {
-            Ok(Response { status: StatusCode::Created,
-                          .. }) => Ok(()),
-            Ok(response) => Err(err_from_response(response)),
-            Err(e) => Err(Error::from(e)),
-        }
+        created(self.add_authz(self.0.post(&path), token)
+                    .body(upload_body(file, file_size, progress))
+                    .send())
     }
 
     /// Download a secret key from a remote Builder to the given filepath.
@@ -749,32 +730,18 @@ impl Client {
                                     token: &str,
                                     progress: Option<D>)
                                     -> Result<()>
-        where D: DisplayProgress + Sized
+        where D: DisplayProgress + Sized + Send + 'static
     {
         let path = format!("depot/origins/{}/secret_keys/{}", &origin, &revision);
-        let mut file =
+        let file =
             File::open(src_path).map_err(|e| Error::KeyReadError(src_path.to_path_buf(), e))?;
         let file_size = file.metadata()
                             .map_err(|e| Error::KeyReadError(src_path.to_path_buf(), e))?
                             .len();
 
-        let result = if let Some(mut progress) = progress {
-            progress.size(file_size);
-            let mut reader = TeeReader::new(file, progress);
-            self.add_authz(self.0.post(&path), token)
-                .body(Body::SizedBody(&mut reader, file_size))
-                .send()
-        } else {
-            self.add_authz(self.0.post(&path), token)
-                .body(Body::SizedBody(&mut file, file_size))
-                .send()
-        };
-        match result {
-            Ok(Response { status: StatusCode::Created,
-                          .. }) => Ok(()),
-            Ok(response) => Err(err_from_response(response)),
-            Err(e) => Err(Error::from(e)),
-        }
+        created(self.add_authz(self.0.post(&path), token)
+                    .body(upload_body(file, file_size, progress))
+                    .send())
     }
 
     /// Download the latest release of a package.
@@ -844,7 +811,7 @@ impl Client {
                                            token)
                           .send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         }
 
@@ -872,7 +839,7 @@ impl Client {
                           force_upload: bool,
                           progress: Option<D>)
                           -> Result<()>
-        where D: DisplayProgress + Sized
+        where D: DisplayProgress + Sized + Send + 'static
     {
         let checksum = pa.checksum()?;
         let ident = pa.ident()?;
@@ -893,23 +860,9 @@ impl Client {
         };
         debug!("Reading from {}", &pa.path.display());
 
-        let mut reader: Box<dyn Read> = if let Some(mut progress) = progress {
-            progress.size(file_size);
-            Box::new(TeeReader::new(file, progress))
-        } else {
-            Box::new(file)
-        };
-
-        let result = self.add_authz(self.0.post_with_custom_url(&path, custom), token)
-                         .body(Body::SizedBody(&mut reader, file_size))
-                         .send();
-
-        match result {
-            Ok(Response { status: StatusCode::Created,
-                          .. }) => Ok(()),
-            Ok(response) => Err(err_from_response(response)),
-            Err(e) => Err(Error::from(e)),
-        }
+        created(self.add_authz(self.0.post_with_custom_url(&path, custom), token)
+                    .body(upload_body(file, file_size, progress))
+                    .send())
     }
 
     pub fn x_put_package(&self, pa: &mut PackageArchive, token: &str) -> Result<()> {
@@ -917,8 +870,7 @@ impl Client {
         let ident = pa.ident()?;
         let target = pa.target()?;
 
-        let mut file =
-            File::open(&pa.path).map_err(|e| Error::PackageReadError(pa.path.clone(), e))?;
+        let file = File::open(&pa.path).map_err(|e| Error::PackageReadError(pa.path.clone(), e))?;
         let file_size = file.metadata()
                             .map_err(|e| Error::PackageReadError(pa.path.clone(), e))?
                             .len();
@@ -931,15 +883,9 @@ impl Client {
         };
         debug!("Reading from {}", &pa.path.display());
 
-        let result = self.add_authz(self.0.post_with_custom_url(&path, custom), token)
-                         .body(Body::SizedBody(&mut file, file_size))
-                         .send();
-        match result {
-            Ok(Response { status: StatusCode::Created,
-                          .. }) => Ok(()),
-            Ok(response) => Err(err_from_response(response)),
-            Err(e) => Err(Error::from(e)),
-        }
+        created(self.add_authz(self.0.post_with_custom_url(&path, custom), token)
+                    .body(Body::sized(file, file_size))
+                    .send())
     }
 
     /// Delete a package from Builder
@@ -965,7 +911,7 @@ impl Client {
         let res = self.add_authz(self.0.delete_with_custom_url(&path, custom), token)
                       .send()?;
 
-        if res.status != StatusCode::NoContent {
+        if res.status() != StatusCode::NO_CONTENT {
             return Err(err_from_response(res));
         };
 
@@ -1001,7 +947,7 @@ impl Client {
         let res = self.add_authz(self.0.put_with_custom_url(&path, custom), token)
                       .send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         };
 
@@ -1037,7 +983,7 @@ impl Client {
         let res = self.add_authz(self.0.put_with_custom_url(&path, custom), token)
                       .send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         };
 
@@ -1055,7 +1001,7 @@ impl Client {
 
         let res = self.add_authz(self.0.post(&path), token).send()?;
 
-        if res.status != StatusCode::Created {
+        if res.status() != StatusCode::CREATED {
             return Err(err_from_response(res));
         };
 
@@ -1073,7 +1019,7 @@ impl Client {
 
         let res = self.add_authz(self.0.delete(&path), token).send()?;
 
-        if res.status != StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         };
 
@@ -1098,8 +1044,8 @@ impl Client {
             self.0.get(&path).send()?
         };
 
-        match res.status {
-            StatusCode::Ok | StatusCode::PartialContent => {
+        match res.status() {
+            StatusCode::OK | StatusCode::PARTIAL_CONTENT => {
                 let mut encoded = String::new();
                 res.read_to_string(&mut encoded)
                    .map_err(Error::BadResponseBody)?;
@@ -1122,102 +1068,144 @@ impl Client {
                           -> Result<(Vec<PackageIdent>, bool)> {
         let mut res = self.maybe_add_authz(self.0.get(&package_search(search_term)), token)
                           .send()?;
-        match res.status {
-            StatusCode::Ok | StatusCode::PartialContent => {
+        match res.status() {
+            StatusCode::OK | StatusCode::PARTIAL_CONTENT => {
                 let mut encoded = String::new();
                 res.read_to_string(&mut encoded)
                    .map_err(Error::BadResponseBody)?;
                 let package_results: PackageResults<PackageIdent> = serde_json::from_str(&encoded)?;
                 let packages: Vec<PackageIdent> = package_results.data;
-                Ok((packages, res.status == StatusCode::PartialContent))
+                Ok((packages, res.status() == StatusCode::PARTIAL_CONTENT))
             }
             _ => Err(err_from_response(res)),
         }
     }
 
-    fn maybe_add_authz<'a>(&'a self,
-                           rb: RequestBuilder<'a>,
-                           token: Option<&str>)
-                           -> RequestBuilder<'_> {
+    fn maybe_add_authz(&self, rb: RequestBuilder, token: Option<&str>) -> RequestBuilder {
         if token.is_some() {
-            rb.header(Authorization(Bearer { token: token.unwrap().to_string(), }))
+            rb.bearer_auth(token.unwrap())
         } else {
             rb
         }
     }
 
-    fn add_authz<'a>(&'a self, rb: RequestBuilder<'a>, token: &str) -> RequestBuilder<'_> {
-        rb.header(Authorization(Bearer { token: token.to_string(), }))
-    }
+    fn add_authz(&self, rb: RequestBuilder, token: &str) -> RequestBuilder { rb.bearer_auth(token) }
 
-    fn download<'a, D>(&'a self,
-                       rb: RequestBuilder<'a>,
-                       dst_path: &Path,
-                       token: Option<&str>,
-                       progress: Option<D>)
-                       -> Result<PathBuf>
+    fn download<D>(&self,
+                   rb: RequestBuilder,
+                   dst_path: &Path,
+                   token: Option<&str>,
+                   progress: Option<D>)
+                   -> Result<PathBuf>
         where D: DisplayProgress + Sized
     {
         let mut res = self.maybe_add_authz(rb, token).send()?;
-
         debug!("Response: {:?}", res);
 
-        if res.status != hyper::status::StatusCode::Ok {
+        if res.status() != StatusCode::OK {
             return Err(err_from_response(res));
         }
 
         fs::create_dir_all(&dst_path)?;
-
-        let file_name = res.headers
-                           .get::<XFileName>()
-                           .expect("XFileName missing from response")
-                           .to_string();
-        let dst_file_path = dst_path.join(file_name);
+        let dst_file_path = dst_path.join(file_name(&res)?);
+        let size = res.content_length().unwrap_or(0);
         let w = AtomicWriter::new(&dst_file_path)?;
-        w.with_writer(|mut f| {
+        w.with_writer(|f| {
              match progress {
                  Some(mut progress) => {
-                     let size: u64 = res.headers
-                                        .get::<hyper::header::ContentLength>()
-                                        .map_or(0, |v| **v);
                      progress.size(size);
-                     let mut writer = BroadcastWriter::new(&mut f, progress);
-                     io::copy(&mut res, &mut writer)
+                     io::copy(&mut res, &mut Both(f, progress))
                  }
-                 None => io::copy(&mut res, &mut f),
+                 None => io::copy(&mut res, f),
              }
          })
          .map_err(Error::BadResponseBody)?;
         Ok(dst_file_path)
     }
 
-    // TODO: Ideally we would have a single download function that can support
-    // both progress and non-progress versions, however the Rust compiler cannot
-    // infer the type for a None for a Display + Sized trait, and makes this task
-    // much more difficult than it should be. Fix later.
     fn x_download(&self, path: &str, dst_path: &Path, token: &str) -> Result<PathBuf> {
-        let mut res = self.add_authz(self.0.get(path), token).send()?;
-        debug!("Response: {:?}", res);
-
-        if res.status != hyper::status::StatusCode::Ok {
-            return Err(err_from_response(res));
-        }
-        fs::create_dir_all(&dst_path)?;
-
-        let file_name = res.headers
-                           .get::<XFileName>()
-                           .expect("XFileName missing from response")
-                           .to_string();
-        let dst_file_path = dst_path.join(file_name);
-        let w = AtomicWriter::new(&dst_file_path)?;
-        w.with_writer(|mut w| io::copy(&mut res, &mut w).map_err(Error::BadResponseBody))?;
-        Ok(dst_file_path)
+        self.download::<NoProgress>(self.0.get(path), dst_path, Some(token), None)
     }
 }
 
-fn err_from_response(mut response: hyper::client::Response) -> Error {
-    if response.status == StatusCode::Unauthorized {
-        return Error::APIError(response.status,
+/// The file name Builder gives a download in its `X-Filename` header.
+fn file_name(res: &Response) -> Result<String> {
+    res.headers()
+       .get("X-Filename")
+       .and_then(|v| v.to_str().ok())
+       .filter(|name| !name.is_empty() && !name.contains('/') && *name != "..")
+       .map(String::from)
+       .ok_or(Error::NoFilePart)
+}
+
+/// A `CREATED` response, or the error the response describes.
+fn created(result: reqwest::Result<Response>) -> Result<()> {
+    let response = result?;
+    if response.status() == StatusCode::CREATED {
+        Ok(())
+    } else {
+        Err(err_from_response(response))
+    }
+}
+
+/// An upload of `file`, which is `size` bytes, reported to `progress`.
+fn upload_body<D>(file: File, size: u64, progress: Option<D>) -> Body
+    where D: DisplayProgress + Send + 'static
+{
+    match progress {
+        Some(mut progress) => {
+            progress.size(size);
+            Body::sized(Reported(file, progress), size)
+        }
+        None => Body::sized(file, size),
+    }
+}
+
+/// Reads from a reader and reports what it read to a progress display.
+struct Reported<R, D>(R, D);
+
+impl<R: Read, D: DisplayProgress> Read for Reported<R, D> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let n = self.0.read(buf)?;
+        self.1.write_all(&buf[..n])?;
+        Ok(n)
+    }
+}
+
+/// Writes to a file and reports what it wrote to a progress display.
+struct Both<'a, D>(&'a mut File, D);
+
+impl<D: DisplayProgress> Write for Both<'_, D> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let n = self.0.write(buf)?;
+        self.1.write_all(&buf[..n])?;
+        Ok(n)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()?;
+        self.1.flush()
+    }
+}
+
+/// No progress display, for downloads nobody watches.
+struct NoProgress;
+
+impl Write for NoProgress {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> { Ok(buf.len()) }
+
+    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+}
+
+impl DisplayProgress for NoProgress {
+    fn size(&mut self, _: u64) {}
+
+    fn finish(&mut self) {}
+}
+
+fn err_from_response(mut response: Response) -> Error {
+    if response.status() == StatusCode::UNAUTHORIZED {
+        return Error::APIError(response.status(),
                                "Please check that you have specified a valid Personal Access \
                                 Token."
                                        .to_string());
@@ -1227,13 +1215,13 @@ fn err_from_response(mut response: hyper::client::Response) -> Error {
     match response.read_to_string(&mut buff) {
         Ok(_) => {
             match serde_json::from_str::<NetError>(&buff) {
-                Ok(err) => Error::APIError(response.status, err.to_string()),
-                Err(_) => Error::APIError(response.status, buff),
+                Ok(err) => Error::APIError(response.status(), err.to_string()),
+                Err(_) => Error::APIError(response.status(), buff),
             }
         }
         Err(_) => {
             buff.truncate(0);
-            Error::APIError(response.status, buff)
+            Error::APIError(response.status(), buff)
         }
     }
 }
@@ -1251,7 +1239,7 @@ fn package_download(package: &PackageIdent) -> String {
 fn package_path(package: &PackageIdent) -> String { format!("depot/pkgs/{}", package) }
 
 fn package_search(term: &str) -> String {
-    let encoded_term = percent_encode(term.as_bytes(), PATH_SEGMENT_ENCODE_SET);
+    let encoded_term = utf8_percent_encode(term, PATH_SEGMENT);
     format!("depot/pkgs/search/{}", encoded_term)
 }
 
@@ -1301,6 +1289,96 @@ fn channel_package_demote(channel: &ChannelIdent, package: &PackageIdent) -> Str
 mod tests {
     use super::*;
     use serde_json;
+    use std::{net::TcpListener,
+              sync::mpsc,
+              thread};
+
+    /// Serves one request on localhost with `response`, and returns the
+    /// client's URL and what the request was: its head and body.
+    fn serve_once(response: &'static str) -> (String, mpsc::Receiver<(String, Vec<u8>)>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let (tx, rx) = mpsc::channel();
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut head = Vec::new();
+            let mut byte = [0u8; 1];
+            while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap() == 1 {
+                head.push(byte[0]);
+            }
+            let head = String::from_utf8(head).unwrap();
+            let length = head.lines()
+                             .find_map(|l| {
+                                 l.to_lowercase()
+                                  .strip_prefix("content-length: ")
+                                  .map(String::from)
+                             })
+                             .map_or(0, |n| n.trim().parse::<usize>().unwrap());
+            let mut body = vec![0u8; length];
+            stream.read_exact(&mut body).unwrap();
+            stream.write_all(response.as_bytes()).unwrap();
+            tx.send((head, body)).unwrap();
+        });
+        (url, rx)
+    }
+
+    fn client(url: &str) -> Client { Client::new(url, "dojo-test", "0.0.0", None).unwrap() }
+
+    #[test]
+    fn a_download_is_written_under_the_name_builder_gives() {
+        let (url, received) = serve_once("HTTP/1.1 200 OK\r\nX-Filename: karate-20261027.pub\r\n\
+                                          Content-Length: 5\r\n\r\nhello");
+        let dir = tempfile::tempdir().unwrap();
+        let path =
+            client(&url).fetch_origin_key::<NoProgress, _>("karate", "20261027", dir.path(), None)
+                        .unwrap();
+        assert_eq!(path, dir.path().join("karate-20261027.pub"));
+        assert_eq!(fs::read_to_string(&path).unwrap(), "hello");
+        let (head, _) = received.recv().unwrap();
+        assert!(head.starts_with("GET /v1/depot/origins/karate/keys/20261027 HTTP/1.1\r\n"),
+                "{}",
+                head);
+    }
+
+    #[test]
+    fn a_download_without_a_file_name_is_refused() {
+        let (url, _) = serve_once("HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello");
+        let dir = tempfile::tempdir().unwrap();
+        let result =
+            client(&url).fetch_origin_key::<NoProgress, _>("karate", "20261027", dir.path(), None);
+        assert!(matches!(result, Err(Error::NoFilePart)));
+    }
+
+    #[test]
+    fn an_upload_sends_the_file_with_the_token() {
+        let (url, received) = serve_once("HTTP/1.1 201 Created\r\nContent-Length: 0\r\n\r\n");
+        let dir = tempfile::tempdir().unwrap();
+        let key = dir.path().join("karate-20261027.pub");
+        fs::write(&key, "public key").unwrap();
+        client(&url).put_origin_key::<NoProgress>("karate", "20261027", &key, "t0ken", None)
+                    .unwrap();
+        let (head, body) = received.recv().unwrap();
+        assert!(head.starts_with("POST /v1/depot/origins/karate/keys/20261027 HTTP/1.1\r\n"));
+        assert!(head.to_lowercase()
+                    .contains("authorization: bearer t0ken\r\n"),
+                "{}",
+                head);
+        assert_eq!(body, b"public key");
+    }
+
+    #[test]
+    fn an_error_response_carries_its_status_and_message() {
+        let (url, _) = serve_once("HTTP/1.1 404 Not Found\r\nContent-Length: 38\r\n\r\n\
+                                   {\"code\": 404, \"msg\": \"no such origin\"}");
+        match client(&url).show_origin_keys("karate") {
+            Err(Error::APIError(status, message)) => {
+                assert_eq!(status, StatusCode::NOT_FOUND);
+                assert_eq!(message, "[err: 404, msg: no such origin]");
+            }
+            Err(e) => panic!("wrong error: {}", e),
+            Ok(_) => panic!("succeeded on a 404"),
+        }
+    }
 
     #[test]
     fn json_round_trip_u64_fields() {
