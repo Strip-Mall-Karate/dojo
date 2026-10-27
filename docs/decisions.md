@@ -79,3 +79,23 @@ longer story.
   Supervisor with this change cannot exchange rumors with one using ZeroMQ, although SWIM
   membership still works between them. Nothing is deployed, so nothing is lost. libzmq leaves
   the build and the payload.
+- **The Supervisor runs on one tokio 1 runtime.** Its main loop stays a synchronous loop on the
+  main thread, and the runtime (`DOJ_TOKIO_THREAD_COUNT` workers) carries the ctl gateway, the
+  HTTP gateway, gossip, the event stream and service operations. Stopping a service, its hooks
+  and each ctl command run on the runtime's blocking threads, since they wait on processes or
+  install packages. Shutdown waits for every service operation and command still running, as the
+  old runtime's `shutdown_on_idle` did. Butterfly gossips on this runtime instead of its own.
+  `DOJ_SUP_HTTP_THREADS` is gone: the HTTP gateway has no threads of its own to size.
+- **The HTTP gateway is axum.** It is a thin layer over hyper 1 and tower that runs on the
+  Supervisor's runtime, where actix-web 4 would bring runtimes of its own. Routes, responses,
+  bearer-token authentication and `DOJ_FEAT_REDACT_HTTP` behave as before. TLS is rustls 0.23
+  with the ring provider, and the key may now be PKCS#8 or SEC1 as well as PKCS#1 RSA.
+- **`doj` talks to the Supervisor with a blocking client.** The ctl gateway serves one request
+  per connection, so `doj` connects, sends, reads replies until the last and closes. `doj` and
+  `sup-client` no longer use tokio or futures, and the codec is `tokio_util`'s on bytes 1. A
+  connection whose request the Supervisor drops unanswered now closes instead of hanging.
+- **Events go to NATS through async-nats.** NATS Streaming, which nitox spoke, has reached its
+  end of life. Events are published on the subject `dojo` to `nats://127.0.0.1:4222`; a
+  JetStream stream on that subject keeps them if the server has one. The prototype's cluster ID
+  and port 4223 are gone.
+- **pest moves to 2.9 and cc to its current release** now that ring 0.13 left with actix-web 0.7.
