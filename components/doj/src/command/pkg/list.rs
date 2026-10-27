@@ -35,22 +35,24 @@ pub enum ListingType {
 }
 
 /// Convert a set of command line options into a ListingType
-impl<'a> From<&'a ArgMatches<'a>> for ListingType {
+impl<'a> From<&'a ArgMatches> for ListingType {
     /// Convert clap options into a listing type.
     ///
     /// We assume that the arguments have been validated during CLI parsing i.e.
     /// ORIGIN and PKG_IDENT are a valid origin and package identifier
-    fn from(m: &ArgMatches<'_>) -> Self {
-        if m.is_present("ALL") {
+    fn from(m: &ArgMatches) -> Self {
+        if m.get_flag("ALL") {
             return ListingType::AllPackages;
         }
 
-        if m.is_present("ORIGIN") {
-            let origin = m.value_of("ORIGIN").unwrap(); // Required by clap
+        if m.contains_id("ORIGIN") {
+            let origin = m.get_one::<String>("ORIGIN").map(String::as_str).unwrap(); // Required by clap
             return ListingType::Origin(origin.to_string());
         }
 
-        let p = m.value_of("PKG_IDENT").unwrap(); // Required by clap
+        let p = m.get_one::<String>("PKG_IDENT")
+                 .map(String::as_str)
+                 .unwrap(); // Required by clap
         match PackageIdent::from_str(&p) {
             Ok(ident) => ListingType::Ident(ident),
             Err(_) => unreachable!("We've already validated PackageIdent {}", &p),

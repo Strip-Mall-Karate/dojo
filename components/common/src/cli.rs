@@ -27,7 +27,7 @@ use std::{path::PathBuf,
 
 /// The help layout of Dojo's programs: clap's own, with the author line clap 4 no longer shows.
 pub const HELP_TEMPLATE: &str =
-    "{before-help}{name} {version}{author-with-newline}{about-with-newline}\n\
+    "{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n\
                                  {usage-heading} {usage}\n\n{all-args}{after-help}";
 
 pub const GOSSIP_DEFAULT_IP: &str = "0.0.0.0";
@@ -73,8 +73,9 @@ pub const DEFAULT_BINLINK_DIR: &str = "/usr/local/bin";
 /// so we can safely unwrap, but we need some additional logic to calculate
 // the dynamic "default" value if the argument has the default signifier value:
 /// CACHE_KEY_PATH. An empty value can't stand for default since it is invalid.
-pub fn cache_key_path_from_matches(matches: &ArgMatches<'_>) -> PathBuf {
-    match matches.value_of("CACHE_KEY_PATH")
+pub fn cache_key_path_from_matches(matches: &ArgMatches) -> PathBuf {
+    match matches.get_one::<String>("CACHE_KEY_PATH")
+                 .map(String::as_str)
                  .expect("CACHE_KEY_PATH required")
     {
         CACHE_KEY_PATH => cache_key_path(Some(&*FS_ROOT)),

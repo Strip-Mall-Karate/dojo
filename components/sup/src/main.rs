@@ -124,19 +124,19 @@ fn start(feature_flags: FeatureFlag) -> Result<()> {
         return Err(sup_error!(Error::TestBootFail));
     }
     let launcher = boot();
-    let app_matches = match cli().get_matches_safe() {
+    let app_matches = match cli().try_get_matches() {
         Ok(matches) => matches,
         Err(err) => {
             let out = io::stdout();
-            writeln!(&mut out.lock(), "{}", err.message).expect("Error writing Error to stdout");
+            writeln!(&mut out.lock(), "{}", err).expect("Error writing Error to stdout");
             match launcher {
                 Some(_) => process::exit(ERR_NO_RETRY_EXCODE),
                 // If we weren't started by a launcher, exit 0 for
                 // help and version
                 None => {
-                    match err.kind {
-                        clap::ErrorKind::HelpDisplayed => process::exit(0),
-                        clap::ErrorKind::VersionDisplayed => process::exit(0),
+                    match err.kind() {
+                        clap::error::ErrorKind::DisplayHelp => process::exit(0),
+                        clap::error::ErrorKind::DisplayVersion => process::exit(0),
                         _ => process::exit(ERR_NO_RETRY_EXCODE),
                     }
                 }
@@ -144,13 +144,13 @@ fn start(feature_flags: FeatureFlag) -> Result<()> {
         }
     };
     match app_matches.subcommand() {
-        ("bash", Some(_)) => sub_bash(),
-        ("run", Some(m)) => {
+        Some(("bash", _)) => sub_bash(),
+        Some(("run", m)) => {
             let launcher = launcher.ok_or(sup_error!(Error::NoLauncher))?;
             sub_run(m, launcher, feature_flags)
         }
-        ("sh", Some(_)) => sub_sh(),
-        ("term", Some(_)) => sub_term(),
+        Some(("sh", _)) => sub_sh(),
+        Some(("term", _)) => sub_term(),
         _ => unreachable!(),
     }
 }
@@ -164,7 +164,9 @@ fn sub_run(m: &ArgMatches, launcher: LauncherCli, feature_flags: FeatureFlag) ->
     let manager = Manager::load(cfg, launcher)?;
 
     // We need to determine if we have an initial service to start
-    let svc = if let Some(pkg) = m.value_of("PKG_IDENT_OR_ARTIFACT") {
+    let svc = if let Some(pkg) = m.get_one::<String>("PKG_IDENT_OR_ARTIFACT")
+                                  .map(String::as_str)
+    {
         let mut msg = dojo_sup_protocol::ctl::SvcLoad::default();
         update_svc_load_from_input(m, &mut msg)?;
         // Always force - running with a package ident is a "do what I mean" operation. You
@@ -224,72 +226,89 @@ fn mgrcfg_from_sup_run_matches(m: &ArgMatches,
                                -> Result<ManagerConfig> {
     let cache_key_path = cache_key_path_from_matches(m);
 
-    let cfg = ManagerConfig {
-        auto_update: m.is_present("AUTO_UPDATE"),
-        custom_state_path: None, // remove entirely?
-        cache_key_path,
-        update_url: bldr_url(m),
-        update_channel: channel(m),
-        http_disable: m.is_present("HTTP_DISABLE"),
-        organization: m.value_of("ORGANIZATION").map(str::to_string),
-        gossip_permanent: m.is_present("PERMANENT_PEER"),
-        ring_key: get_ring_key(m, &cache_key_path_from_matches(m))?,
-        gossip_peers: get_peers(m)?,
-        watch_peer_file: m.value_of("PEER_WATCH_FILE").map(str::to_string),
-        // TODO: Refactor this to remove the duplication
-        gossip_listen: if m.is_present("LOCAL_GOSSIP_MODE") {
-            // When local gossip mode is used we still startup the gossip layer but set
-            // it to listen on 127.0.0.2 to scope it to the local node.
-            sup::config::GossipListenAddr::new(Ipv4Addr::new(127, 0, 0, 2), GOSSIP_DEFAULT_PORT)
-        } else {
-            m.value_of("LISTEN_GOSSIP").map_or_else(
-                || {
-                    let default = sup::config::GossipListenAddr::default();
-                    error!(
+    let cfg =
+        ManagerConfig { auto_update: m.get_flag("AUTO_UPDATE"),
+                        custom_state_path: None, // remove entirely?
+                        cache_key_path,
+                        update_url: bldr_url(m),
+                        update_channel: channel(m),
+                        http_disable: m.get_flag("HTTP_DISABLE"),
+                        organization: m.get_one::<String>("ORGANIZATION")
+                                       .map(String::as_str)
+                                       .map(str::to_string),
+                        gossip_permanent: m.get_flag("PERMANENT_PEER"),
+                        ring_key: get_ring_key(m, &cache_key_path_from_matches(m))?,
+                        gossip_peers: get_peers(m)?,
+                        watch_peer_file: m.get_one::<String>("PEER_WATCH_FILE")
+                                          .map(String::as_str)
+                                          .map(str::to_string),
+                        // TODO: Refactor this to remove the duplication
+                        gossip_listen: if m.get_flag("LOCAL_GOSSIP_MODE") {
+                            // When local gossip mode is used we still startup the gossip layer but
+                            // set it to listen on 127.0.0.2 to scope it
+                            // to the local node.
+                            sup::config::GossipListenAddr::new(Ipv4Addr::new(127, 0, 0, 2),
+                                                               GOSSIP_DEFAULT_PORT)
+                        } else {
+                            m.get_one::<String>("LISTEN_GOSSIP")
+                             .map(String::as_str)
+                             .map_or_else(
+                                          || {
+                                              let default =
+                                                  sup::config::GossipListenAddr::default();
+                                              error!(
                         "Value for LISTEN_GOSSIP has not been set. Using default: {}",
                         default
                     );
-                    Ok(default)
-                },
-                |v| v.parse(),
+                                              Ok(default)
+                                          },
+                                          |v| v.parse(),
             )?
-        },
-        ctl_listen: m.value_of("LISTEN_CTL").map_or_else(
-            || {
-                let default = dojo_common::types::ListenCtlAddr::default();
-                error!(
+                        },
+                        ctl_listen:
+                            m.get_one::<String>("LISTEN_CTL")
+                             .map(String::as_str)
+                             .map_or_else(
+                                          || {
+                                              let default =
+                                                  dojo_common::types::ListenCtlAddr::default();
+                                              error!(
                     "Value for LISTEN_CTL has not been set. Using default: {}",
                     default
                 );
-                Ok(default)
-            },
-            |v| v.parse(),
-        )?,
-        http_listen: m.value_of("LISTEN_HTTP").map_or_else(
-            || {
-                let default = sup::http_gateway::ListenAddr::default();
-                error!(
+                                              Ok(default)
+                                          },
+                                          |v| v.parse(),
+            )?,
+                        http_listen: m.get_one::<String>("LISTEN_HTTP")
+                                      .map(String::as_str)
+                                      .map_or_else(
+                                                   || {
+                                                       let default =
+                                                           sup::http_gateway::ListenAddr::default();
+                                                       error!(
                     "Value for LISTEN_HTTP has not been set. Using default: {}",
                     default
                 );
-                Ok(default)
-            },
-            |v| v.parse(),
+                                                       Ok(default)
+                                                   },
+                                                   |v| v.parse(),
         )?,
-        tls_config: m.value_of("KEY_FILE").map(|kf| {
-            let cert_path = m
-                .value_of("CERT_FILE")
+                        tls_config: m.get_one::<String>("KEY_FILE")
+                                     .map(String::as_str)
+                                     .map(|kf| {
+                                         let cert_path = m
+                .get_one::<String>("CERT_FILE").map(String::as_str)
                 .map(PathBuf::from)
                 .expect("CERT_FILE should always have a value if KEY_FILE has a value.");
-            let ca_cert_path = m.value_of("CA_CERT_FILE").map(PathBuf::from);
-            TLSConfig {
-                key_path: PathBuf::from(kf),
-                cert_path,
-                ca_cert_path,
-            }
-        }),
-        feature_flags
-    };
+                                         let ca_cert_path = m.get_one::<String>("CA_CERT_FILE")
+                                                             .map(String::as_str)
+                                                             .map(PathBuf::from);
+                                         TLSConfig { key_path: PathBuf::from(kf),
+                                                     cert_path,
+                                                     ca_cert_path }
+                                     }),
+                        feature_flags };
 
     Ok(cfg)
 }
@@ -301,7 +320,9 @@ fn get_peers(matches: &ArgMatches) -> Result<Vec<SocketAddr>> {
     // TODO fn: Clean this up--using a for loop doesn't feel good however an iterator was
     // causing a lot of developer/compiler type confusion
     let mut gossip_peers = Vec::new();
-    if let Some(peers) = matches.values_of("PEER") {
+    if let Some(peers) = matches.get_many::<String>("PEER")
+                                .map(|v| v.map(String::as_str))
+    {
         for peer in peers {
             let peer_addr = if peer.find(':').is_some() {
                 peer.to_string()
@@ -328,13 +349,13 @@ fn get_peers(matches: &ArgMatches) -> Result<Vec<SocketAddr>> {
 // setting an env var in one test can adversely effect the results in another test. We need some
 // additional abstractions written around env vars in order to make them more testable.
 fn get_ring_key(m: &ArgMatches, cache_key_path: &Path) -> Result<Option<SymKey>> {
-    match m.value_of("RING") {
+    match m.get_one::<String>("RING").map(String::as_str) {
         Some(val) => {
             let key = SymKey::get_latest_pair_for(&val, cache_key_path)?;
             Ok(Some(key))
         }
         None => {
-            match m.value_of("RING_KEY") {
+            match m.get_one::<String>("RING_KEY").map(String::as_str) {
                 Some(val) => {
                     let (key, _) = SymKey::write_file_from_str(&val, cache_key_path)?;
                     Ok(Some(key))
@@ -357,7 +378,8 @@ fn bldr_url(m: &ArgMatches) -> String {
 /// A Builder URL, but *only* if the user specified it via CLI args or
 /// the environment
 fn bldr_url_from_input(m: &ArgMatches) -> Option<String> {
-    m.value_of("BLDR_URL")
+    m.get_one::<String>("BLDR_URL")
+     .map(String::as_str)
      .map(str::to_string)
      .or_else(bldr_url_from_env)
 }
@@ -368,20 +390,26 @@ fn channel(matches: &ArgMatches) -> ChannelIdent { channel_from_input(matches).u
 
 /// A channel name, but *only* if the user specified via CLI args.
 fn channel_from_input(m: &ArgMatches) -> Option<ChannelIdent> {
-    m.value_of("CHANNEL").map(ChannelIdent::from)
+    m.get_one::<String>("CHANNEL")
+     .map(String::as_str)
+     .map(ChannelIdent::from)
 }
 
 // ServiceSpec Modification Functions
 ////////////////////////////////////////////////////////////////////////
 
 fn get_group_from_input(m: &ArgMatches) -> Option<String> {
-    m.value_of("GROUP").map(ToString::to_string)
+    m.get_one::<String>("GROUP")
+     .map(String::as_str)
+     .map(ToString::to_string)
 }
 
 /// If the user provides both --application and --environment options,
 /// parse and set the value on the spec.
 fn get_app_env_from_input(m: &ArgMatches) -> Result<Option<ApplicationEnvironment>> {
-    if let (Some(app), Some(env)) = (m.value_of("APPLICATION"), m.value_of("ENVIRONMENT")) {
+    if let (Some(app), Some(env)) = (m.get_one::<String>("APPLICATION").map(String::as_str),
+                                     m.get_one::<String>("ENVIRONMENT").map(String::as_str))
+    {
         Ok(Some(ApplicationEnvironment { application: app.to_string(),
                                          environment: env.to_string(), }))
     } else {
@@ -390,17 +418,19 @@ fn get_app_env_from_input(m: &ArgMatches) -> Result<Option<ApplicationEnvironmen
 }
 
 fn get_topology_from_input(m: &ArgMatches) -> Option<Topology> {
-    m.value_of("TOPOLOGY")
+    m.get_one::<String>("TOPOLOGY")
+     .map(String::as_str)
      .and_then(|f| Topology::from_str(f).ok())
 }
 
 fn get_strategy_from_input(m: &ArgMatches) -> Option<UpdateStrategy> {
-    m.value_of("STRATEGY")
+    m.get_one::<String>("STRATEGY")
+     .map(String::as_str)
      .and_then(|f| UpdateStrategy::from_str(f).ok())
 }
 
 fn get_binds_from_input(m: &ArgMatches) -> Result<Option<ServiceBindList>> {
-    match m.values_of("BIND") {
+    match m.get_many::<String>("BIND").map(|v| v.map(String::as_str)) {
         Some(bind_strs) => {
             let mut list = ServiceBindList::default();
             for bind_str in bind_strs {
@@ -414,12 +444,13 @@ fn get_binds_from_input(m: &ArgMatches) -> Result<Option<ServiceBindList>> {
 
 fn get_binding_mode_from_input(m: &ArgMatches) -> Option<BindingMode> {
     // There won't be errors, because we validate with `valid_binding_mode`
-    m.value_of("BINDING_MODE")
+    m.get_one::<String>("BINDING_MODE")
+     .map(String::as_str)
      .and_then(|b| BindingMode::from_str(b).ok())
 }
 
 fn get_config_from_input(m: &ArgMatches) -> Option<String> {
-    if let Some(ref config_from) = m.value_of("CONFIG_DIR") {
+    if let Some(ref config_from) = m.get_one::<String>("CONFIG_DIR").map(String::as_str) {
         warn!("");
         warn!("WARNING: Setting '--config-from' should only be used in development, not \
                production!");
@@ -431,13 +462,13 @@ fn get_config_from_input(m: &ArgMatches) -> Option<String> {
 }
 
 fn set_supervisor_logging_options(m: &ArgMatches) {
-    if m.is_present("VERBOSE") {
+    if m.get_flag("VERBOSE") {
         output::set_verbosity(OutputVerbosity::Verbose);
     }
-    if m.is_present("NO_COLOR") {
+    if m.get_flag("NO_COLOR") {
         output::set_format(OutputFormat::NoColor)
     }
-    if m.is_present("JSON") {
+    if m.get_flag("JSON") {
         output::set_format(OutputFormat::JSON)
     }
 }
@@ -469,7 +500,7 @@ fn update_svc_load_from_input(m: &ArgMatches,
     msg.application_environment = get_app_env_from_input(m)?;
     msg.binds = get_binds_from_input(m)?;
     msg.config_from = get_config_from_input(m);
-    if m.is_present("FORCE") {
+    if m.get_flag("FORCE") {
         msg.force = Some(true);
     }
     msg.group = get_group_from_input(m);
@@ -504,10 +535,10 @@ mod test {
         fn cmd_vec_from_cmd_str(cmd: &str) -> Vec<&str> { Vec::from_iter(cmd.split_whitespace()) }
 
         fn config_from_cmd_vec(cmd_vec: Vec<&str>) -> ManagerConfig {
-            let matches = cli().get_matches_from_safe(cmd_vec)
+            let matches = cli().try_get_matches_from(cmd_vec)
                                .expect("Error while getting matches");
-            let (_, sub_matches) = matches.subcommand();
-            let sub_matches = sub_matches.expect("Error getting sub command matches");
+            let (_, sub_matches) = matches.subcommand()
+                                          .expect("Error getting sub command matches");
 
             mgrcfg_from_sup_run_matches(&sub_matches, no_feature_flags()).expect("Could not get \
                                                                                   config")
