@@ -78,7 +78,7 @@ if ! "${check}"; then
   exit
 fi
 
-work="$(mktemp -d -t dojo-ring)"
+work="$(mktemp -d "${TMPDIR:-/tmp}/dojo-ring.XXXXXX")"
 trap 'stop; rm -rf "${work}"' EXIT
 "${here}/boot" --check ${common[@]+"${common[@]}"} "${vm1[@]}" --members 2 >"${work}/1.log" 2>&1 &
 pids+=("$!")

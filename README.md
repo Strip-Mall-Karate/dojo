@@ -60,8 +60,11 @@ HTTP gateway answers and it found its own address, that the Launcher restarts
 the Supervisor after SIGKILL and after `doj sup term`, and that SIGTERM to PID 1
 powers the VM off without a kernel panic. `--check-reboot` ends with SIGINT to
 PID 1 (the kernel's Ctrl-Alt-Del) and expects a reboot. `support/vm/builder
-test <package>...` runs a package's tests and format check in the builder.
-`support/vm/builder stop` stops it.
+test <package>...` runs a package's tests and format check in the builder,
+`support/vm/builder verify` runs every check a pull request reports (all tests
+against `support/vm/expected-failures`, the payload and both boot checks), and
+`support/vm/builder stop` stops it. `support/vm/builder` with no arguments lists
+the rest.
 
 ### A ring
 
