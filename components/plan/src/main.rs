@@ -29,7 +29,7 @@ use dojo_plan::{DojPkgPath,
                 locate};
 
 const USAGE: &str = "usage: doj-plan-build show <plan-dir> [--target <target>]
-       doj-plan-build build <plan-dir> [--target <target>] [--check] [--refuse-host-paths]";
+       doj-plan-build build <plan-dir> [--target <target>] [--check] [--refuse-host-paths] [--isolate]";
 
 struct Args {
     command: String,
@@ -37,6 +37,7 @@ struct Args {
     target:  Option<String>,
     check:   bool,
     refuse_host_paths: bool,
+    isolate: bool,
 }
 
 fn parse(args: &[String]) -> Option<Args> {
@@ -48,7 +49,8 @@ fn parse(args: &[String]) -> Option<Args> {
                             dir:     String::new(),
                             target:  None,
                             check:   false,
-                            refuse_host_paths: false, };
+                            refuse_host_paths: false,
+                            isolate: false, };
     let mut rest = rest.iter();
     while let Some(arg) = rest.next() {
         match arg.as_str() {
@@ -57,6 +59,7 @@ fn parse(args: &[String]) -> Option<Args> {
             "--refuse-host-paths" if command == "build" && !parsed.refuse_host_paths => {
                 parsed.refuse_host_paths = true;
             }
+            "--isolate" if command == "build" && !parsed.isolate => parsed.isolate = true,
             flag if flag.starts_with("--") => return None,
             dir if parsed.dir.is_empty() => parsed.dir = dir.to_string(),
             _ => return None,
@@ -90,7 +93,7 @@ fn main() -> ExitCode {
     if args.command == "show" {
         show(&plan, args.target.as_deref())
     } else {
-        build(&plan, &located, args.target.as_deref(), args.check, args.refuse_host_paths)
+        build(&plan, &located, args.target.as_deref(), &args)
     }
 }
 
@@ -110,8 +113,7 @@ fn show(plan: &Plan, target: Option<&str>) -> ExitCode {
 fn build(plan: &Plan,
          located: &Located,
          target: Option<&str>,
-         check: bool,
-         refuse_host_paths: bool)
+         args: &Args)
          -> ExitCode {
     let Some(host) = host_target() else {
         eprintln!("doj-plan-build: this host is not one of Dojo's targets ({})",
@@ -134,8 +136,9 @@ fn build(plan: &Plan,
             }
         };
     let mut options = Options::new(target, &plan_dir, &context);
-    options.check = check;
-    options.refuse_host_paths = refuse_host_paths;
+    options.check = args.check;
+    options.refuse_host_paths = args.refuse_host_paths;
+    options.isolate = args.isolate;
     match plan.build(&options, &DojPkgPath::from_env()) {
         Ok(built) => {
             println!("{}", built.ident);

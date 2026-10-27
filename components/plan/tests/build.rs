@@ -670,6 +670,45 @@ fn dependencies_set_path_and_compiler_flags() {
 }
 
 #[test]
+fn an_isolated_build_sees_only_its_dependencies() {
+    let mut sandbox = Sandbox::new("isolated");
+    let tool = sandbox.package("test/tool");
+    fs::create_dir_all(tool.join("bin")).unwrap();
+    fs::write(tool.join("bin/greet"),
+              "#!/bin/sh\necho greetings from the tool\n").unwrap();
+    fs::set_permissions(tool.join("bin/greet"), fs::Permissions::from_mode(0o755)).unwrap();
+    fs::write(tool.join("PATH"), format!("{}\n", tool.join("bin").display())).unwrap();
+    let mut options = sandbox.options();
+    options.isolate = true;
+    options.env.extend([("HOME".to_string(), "/home/builder".to_string()),
+                        ("DOJ_SETTING".to_string(), "kept".to_string()),
+                        ("LEAKY".to_string(), "dropped".to_string())]);
+
+    let source = plan("isolated",
+                      r#":build_deps ["test/tool"]"#,
+                      r#" :build (fn [b]
+                                   (b:write "greet" (b:capture ["greet"]))
+                                   (b:write "env" (b:capture ["/bin/sh" "-c" "echo \"$PATH|$HOME|$DOJ_SETTING|$LEAKY\""])))"#);
+    let built = sandbox.build_with(&source, &options).expect("builds and packages");
+    assert_eq!(read(&built.prefix.join("greet")), "greetings from the tool");
+    assert_eq!(read(&built.prefix.join("env")),
+               format!("{}|/home/builder|kept|", tool.join("bin").display()));
+}
+
+#[test]
+fn an_isolated_build_cannot_run_the_builders_programs() {
+    let sandbox = Sandbox::new("isolated-host-tools");
+    let mut options = sandbox.options();
+    options.isolate = true;
+    let source = plan("hosttools", "", r#" :build (fn [b] (b:run ["true"]))"#);
+    let error = sandbox.build_with(&source, &options).expect_err("true is the builder's");
+    assert!(error.contains("true"), "{error}");
+
+    // The same plan builds when not isolated.
+    sandbox.build(&source).expect("finds the builder's true");
+}
+
+#[test]
 fn a_target_the_plan_does_not_list_is_refused() {
     let sandbox = Sandbox::new("target");
     let mut options = sandbox.options();

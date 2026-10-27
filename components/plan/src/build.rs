@@ -102,6 +102,11 @@ pub struct Options {
     /// Whether a Linux package that names files outside the root (a dynamic
     /// linker, a RUNPATH entry, a script's interpreter) fails the build.
     pub refuse_host_paths: bool,
+    /// Whether the build's programs see only what its dependencies provide:
+    /// `PATH` holds only their directories, and of the builder's environment
+    /// only a few variables pass (see `env::isolated`). Packaging still uses
+    /// the builder's own tools.
+    pub isolate: bool,
     /// Parallel jobs, `b.jobs`.
     pub jobs:     usize,
     /// The environment the build starts from.
@@ -140,6 +145,7 @@ impl Options {
                   context: context.to_path_buf(),
                   check: false,
                   refuse_host_paths: false,
+                  isolate: false,
                   jobs: thread::available_parallelism().map_or(1, usize::from),
                   env: env::vars().collect() }
     }
@@ -741,7 +747,11 @@ impl Plan {
 
         let runtime = Inherited::from_deps(deps.deps.iter().map(|dep| dep.path.as_path()));
         let buildtime = Inherited::from_deps(deps.build_deps.iter().map(|dep| dep.path.as_path()));
-        let mut env = Env::new(options.env.iter().cloned());
+        let mut env = if options.isolate {
+            Env::new(build_env::isolated(&options.env))
+        } else {
+            Env::new(options.env.iter().cloned())
+        };
         build_env::layer(&mut env, &runtime, &buildtime);
         let initial_path = env.get("PATH").unwrap_or_default().to_string();
         build_env::set_path(&mut env, &initial_path, &[], &deps, SEPARATOR);
