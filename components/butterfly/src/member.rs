@@ -336,6 +336,11 @@ mod member_list {
 
 /// Tracks lists of members, their health, and how long they have been
 /// suspect or confirmed.
+///
+/// The `with_*` methods copy what they need and release their lock before
+/// calling back, so a callback may use the member list. The locks are not
+/// reentrant: holding a read lock while another read waits behind a writer
+/// deadlocks.
 #[derive(Debug)]
 pub struct MemberList {
     entries:         RwLock<HashMap<UuidSimple, member_list::Entry>>,
@@ -416,7 +421,8 @@ impl MemberList {
     }
 
     pub fn with_initial_members(&self, mut with_closure: impl FnMut(&Member)) {
-        for member in self.initial_members_read().iter() {
+        let members = self.initial_members_read().clone();
+        for member in members.iter() {
             with_closure(member);
         }
     }
@@ -612,16 +618,18 @@ impl MemberList {
                                 sending_member_id: &str,
                                 target_member_id: &str,
                                 mut with_closure: impl FnMut(&Member)) {
-        for member_list::Entry { member, .. } in
-            self.read_entries()
-                .values()
-                .filter(|member_list::Entry { member, health, .. }| {
-                    member.id != sending_member_id
-                    && member.id != target_member_id
-                    && *health == Health::Alive
-                })
-                .sample(&mut rand::rng(), PINGREQ_TARGETS)
-        {
+        let targets: Vec<Member> = self.read_entries()
+                                       .values()
+                                       .filter(|member_list::Entry { member, health, .. }| {
+                                           member.id != sending_member_id
+                                           && member.id != target_member_id
+                                           && *health == Health::Alive
+                                       })
+                                       .sample(&mut rand::rng(), PINGREQ_TARGETS)
+                                       .into_iter()
+                                       .map(|member_list::Entry { member, .. }| member.clone())
+                                       .collect();
+        for member in targets.iter() {
             with_closure(member);
         }
     }
@@ -636,14 +644,16 @@ impl MemberList {
 
     /// Calls a function whose argument is a reference to a membership entry matching the given ID.
     pub fn with_member(&self, member_id: &str, mut with_closure: impl FnMut(Option<&Member>)) {
-        with_closure(self.read_entries()
-                         .get(member_id)
-                         .map(|member_list::Entry { member, .. }| member));
+        with_closure(self.get_cloned(member_id).as_ref());
     }
 
     /// Iterates over the member list, calling the function for each member.
     pub fn with_members(&self, mut with_closure: impl FnMut(&Member)) {
-        for member_list::Entry { member, .. } in self.read_entries().values() {
+        let members: Vec<Member> = self.read_entries()
+                                       .values()
+                                       .map(|member_list::Entry { member, .. }| member.clone())
+                                       .collect();
+        for member in members.iter() {
             with_closure(member);
         }
     }
@@ -652,14 +662,15 @@ impl MemberList {
     pub fn with_memberships(&self,
                             mut with_closure: impl FnMut(Membership) -> Result<u64>)
                             -> Result<u64> {
+        let memberships: Vec<Membership> = self.read_entries()
+                                               .values()
+                                               .map(|member_list::Entry { member, health, .. }| {
+                                                   Membership { member: member.clone(),
+                                                                health: *health, }
+                                               })
+                                               .collect();
         let mut ok: Result<u64> = Ok(0);
-        for membership in self.read_entries()
-                              .values()
-                              .map(|member_list::Entry { member, health, .. }| {
-                                  Membership { member: member.clone(),
-                                               health: *health, }
-                              })
-        {
+        for membership in memberships {
             ok = Ok(with_closure(membership)?);
         }
         ok
@@ -869,6 +880,40 @@ mod tests {
         fn health_of() {
             let ml = populated_member_list(1);
             ml.with_members(|m| assert_eq!(ml.health_of(m), Some(Health::Alive)));
+        }
+
+        // A callback that writes to the member list would wait forever for the
+        // read lock its caller held.
+        #[test]
+        fn with_members_callback_may_write_the_member_list() {
+            let ml = populated_member_list(3);
+            ml.with_members(|m| {
+                  ml.insert(m.clone(), Health::Suspect);
+              });
+            ml.with_members(|m| assert_eq!(ml.health_of(m), Some(Health::Suspect)));
+        }
+
+        #[test]
+        fn with_pingreq_targets_callback_may_write_the_member_list() {
+            let ml = populated_member_list(10);
+            let (from, target) =
+                ml.with_member_iter(|mut i| (i.nth(0).unwrap().clone(), i.nth(1).unwrap().clone()));
+            let mut written = 0;
+            ml.with_pingreq_targets(&from.id, &target.id, |m| {
+                  ml.insert(m.clone(), Health::Suspect);
+                  written += 1;
+              });
+            assert_eq!(written, PINGREQ_TARGETS);
+        }
+
+        #[test]
+        fn with_member_callback_may_write_the_member_list() {
+            let ml = populated_member_list(1);
+            let id = ml.with_member_iter(|mut i| i.nth(0).unwrap().id.clone());
+            ml.with_member(&id, |m| {
+                  ml.insert(m.unwrap().clone(), Health::Suspect);
+              });
+            assert_eq!(ml.health_of_by_id(&id), Some(Health::Suspect));
         }
 
         #[test]
