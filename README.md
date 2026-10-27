@@ -150,8 +150,26 @@ lock is text sorted the same way every time, and belongs in the repository.
 `doj shell env` installs what the lock pins, from the cache and only after each
 archive's checksum matches, and prints the packages' environment with
 `shell.toml`'s variables over it, as shell exports for `eval` (direnv's
-`.envrc` included). It refuses a lock that no longer pins what `shell.toml`
-asks for. Install progress goes to stderr, so stdout is only the exports.
+`.envrc` included). The exports lay the shell over the environment it is
+loaded into: `PATH` and the other list variables get the packages' entries in
+front of their own, so the system's tools stay reachable behind the shell's. It
+refuses a lock that no longer pins what `shell.toml` asks for. Install progress
+goes to stderr, so stdout is only the exports.
+
+With direnv, a function in `~/.config/direnv/lib/doj.sh` (direnv sources every
+file there) lets an `.envrc` say `use doj`:
+
+```bash
+use_doj() {
+  watch_file shell.toml shell.lock
+  local exports
+  exports="$(doj shell env)" || return 1
+  eval "${exports}"
+}
+```
+
+The function returns on a failed `doj shell env`, rather than evaluating
+nothing, so a stale lock stops the load with its error.
 
 Resolving from Builder's channels comes when Builder runs.
 
