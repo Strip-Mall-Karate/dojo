@@ -4,14 +4,18 @@ set -eou pipefail
 
 while [[ $# -gt 1 ]]; do
   case $1 in
-    -f | --features )       shift
-                            features=$1
-                            ;;
-    -t | --test-options )   shift
-                            test_options=$1
-                            ;;
-    * )                     echo "FAIL SCHOONER"
-                            exit 1
+  -f | --features)
+    shift
+    features=$1
+    ;;
+  -t | --test-options)
+    shift
+    test_options=$1
+    ;;
+  *)
+    echo "FAIL SCHOONER"
+    exit 1
+    ;;
   esac
   shift
 done
@@ -34,9 +38,9 @@ sudo doj pkg install karate/xz
 sudo doj pkg install karate/zeromq
 sudo doj pkg install karate/protobuf --binlink
 sudo doj pkg install karate/rust --binlink
-export SODIUM_STATIC=true # so the libarchive crate links to sodium statically
+export SODIUM_STATIC=true     # so the libarchive crate links to sodium statically
 export LIBARCHIVE_STATIC=true # so the libarchive crate *builds* statically
-export OPENSSL_DIR # so the openssl crate knows what to build against
+export OPENSSL_DIR            # so the openssl crate knows what to build against
 OPENSSL_DIR="$(doj pkg path karate/openssl)"
 export OPENSSL_STATIC=true # so the openssl crate builds statically
 export LIBZMQ_PREFIX

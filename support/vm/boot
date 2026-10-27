@@ -32,32 +32,47 @@ members=""
 console=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --check) check=true; shift ;;
-    --check-reboot)
-      check=true
-      check_args="dojo.check dojo.reboot"
-      ending="reboot: Restarting system"
-      shift
-      ;;
-    --payload)
-      [[ $# -ge 2 ]] || usage
-      payload="$2"; shift 2 ;;
-    --ring)
-      [[ $# -ge 2 ]] || usage
-      ring="$2"; shift 2 ;;
-    --link)
-      [[ $# -ge 2 ]] || usage
-      link="$2"; shift 2 ;;
-    --peer)
-      [[ $# -ge 2 ]] || usage
-      peer="$2"; shift 2 ;;
-    --members)
-      [[ $# -ge 2 ]] || usage
-      members="$2"; shift 2 ;;
-    --console)
-      [[ $# -ge 2 ]] || usage
-      console="$2"; shift 2 ;;
-    *) usage ;;
+  --check)
+    check=true
+    shift
+    ;;
+  --check-reboot)
+    check=true
+    check_args="dojo.check dojo.reboot"
+    ending="reboot: Restarting system"
+    shift
+    ;;
+  --payload)
+    [[ $# -ge 2 ]] || usage
+    payload="$2"
+    shift 2
+    ;;
+  --ring)
+    [[ $# -ge 2 ]] || usage
+    ring="$2"
+    shift 2
+    ;;
+  --link)
+    [[ $# -ge 2 ]] || usage
+    link="$2"
+    shift 2
+    ;;
+  --peer)
+    [[ $# -ge 2 ]] || usage
+    peer="$2"
+    shift 2
+    ;;
+  --members)
+    [[ $# -ge 2 ]] || usage
+    members="$2"
+    shift 2
+    ;;
+  --console)
+    [[ $# -ge 2 ]] || usage
+    console="$2"
+    shift 2
+    ;;
+  *) usage ;;
   esac
 done
 if [[ -n "${payload}" && ! -f "${payload}" ]]; then
@@ -100,11 +115,13 @@ trap 'rm -rf "${work}"' EXIT
 if [[ -n "${payload}" ]]; then
   # The kernel unpacks concatenated archives in order, so the payload lands
   # on top of the base initramfs.
-  cat "${initrd}" "${payload}" > "${work}/initrd"
+  cat "${initrd}" "${payload}" >"${work}/initrd"
   initrd="${work}/initrd"
 fi
 
 append="console=ttyAMA0 panic=-1"
+# QEMU's options are comma-separated within one argument.
+# shellcheck disable=SC2054
 args=(
   -machine virt -accel hvf -cpu host -smp 4 -m 2048
   -kernel "${kernel}" -initrd "${initrd}"
@@ -117,6 +134,7 @@ if [[ -n "${ring}" ]]; then
   # eth1: Ethernet frames in UDP datagrams between two QEMU processes on the
   # loopback, a link the user-mode network cannot offer. The guest addresses
   # it statically; init reads dojo.ring from the command line.
+  # shellcheck disable=SC2054
   args+=(
     -netdev "dgram,id=ring0,local.type=inet,local.host=127.0.0.1,local.port=${link%%:*},remote.type=inet,remote.host=127.0.0.1,remote.port=${link##*:}"
     -device virtio-net-pci,netdev=ring0

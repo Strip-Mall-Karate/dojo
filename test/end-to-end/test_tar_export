@@ -3,8 +3,8 @@
 set -euo pipefail
 
 print_help() {
-    program=$(basename "$0")
-    echo "$program
+  program=$(basename "$0")
+  echo "$program
 
 Test doj pkg tar export
 
@@ -18,30 +18,30 @@ ARGS:
 }
 
 if [ -n "${DEBUG:-}" ]; then
-    set -x
-    export DEBUG
+  set -x
+  export DEBUG
 fi
 
-if [[ $# -eq 0 ]] ; then
-    print_help
-    echo
-    echo "<PKG_IDENT> must be specified"
-    exit 1
+if [[ $# -eq 0 ]]; then
+  print_help
+  echo
+  echo "<PKG_IDENT> must be specified"
+  exit 1
 else
-    pkg_ident="$1"
+  pkg_ident="$1"
 fi
 
 # Remove tarball if already present
 rm -f ./*.tar.gz
 
-/src/target/debug/doj pkg export tar "$pkg_ident" 
+/src/target/debug/doj pkg export tar "$pkg_ident"
 
 # Check if tarball is present
 
-if [ "$(find . -maxdepth 1 -type f -name "*.tar.gz")" ] ; then
-    echo "Package was successfully exported to a tarball"
+if [ "$(find . -maxdepth 1 -type f -name "*.tar.gz")" ]; then
+  echo "Package was successfully exported to a tarball"
 else
-    echo "Package was NOT successfully exported" 
+  echo "Package was NOT successfully exported"
 fi
 
 echo "Woo!"

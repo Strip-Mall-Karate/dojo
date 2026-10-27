@@ -1,4 +1,4 @@
-# shellcheck disable=2086,2128,2207
+# shellcheck shell=bash disable=2086,2128,2207
 # Copyright:: Copyright (c) 2015-2016 The Dojo Maintainers
 #
 # The terms of the Evaluation Agreement (Dojo) between Chef Software Inc.
@@ -13,110 +13,107 @@
 #   source "`doj pkg path karate/bash-completion`/etc/profile.d/bash_completion.sh"
 
 # bash_completion for doj
-_doj()
-{
-    local cur prev
-    _get_comp_words_by_ref cur prev
+_doj() {
+  local cur prev
+  _get_comp_words_by_ref cur prev
 
-    COMPREPLY=()
-    cur=${COMP_WORDS[COMP_CWORD]}
-    prev=${COMP_WORDS[COMP_CWORD-1]}
-    len=${#COMP_WORDS[@]}
-    if [ $len -gt 2 ]
-    then
-        minus2=${COMP_WORDS[COMP_CWORD-2]}
-    fi
+  COMPREPLY=()
+  cur=${COMP_WORDS[COMP_CWORD]}
+  prev=${COMP_WORDS[COMP_CWORD - 1]}
+  len=${#COMP_WORDS[@]}
+  if [ $len -gt 2 ]; then
+    minus2=${COMP_WORDS[COMP_CWORD - 2]}
+  fi
 
-    if [ $COMP_CWORD -eq 1 ]; then
-        case $prev in
-            doj)
-                COMPREPLY=( $( compgen -W "apply artifact config file help install origin pkg ring svc setup start studio sup user" -- "$cur" ) )
-                ;;
-                   esac
-    elif [ $COMP_CWORD -eq 2 ]; then
-        case "$prev" in
-            artifact)
-                cmds=( "hash help sign upload verify" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            cli)
-                cmds=( "help setup" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            config)
-                cmds=( "apply help" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            file)
-                cmds=( "help upload" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            origin)
-                cmds=( "help key" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            pkg)
-                cmds=( "binlink build exec export help install path" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            ring)
-                cmds=( "help key" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            svc)
-                cmds=( "help key" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            studio)
-                cmds=( "build enter help new rm run version" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            sup)
-                cmds=( "bash config help sh start" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
-            user)
-                cmds=( "help key" )
-                COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                ;;
+  if [ $COMP_CWORD -eq 1 ]; then
+    case $prev in
+    doj)
+      COMPREPLY=($(compgen -W "apply artifact config file help install origin pkg ring svc setup start studio sup user" -- "$cur"))
+      ;;
+    esac
+  elif [ $COMP_CWORD -eq 2 ]; then
+    case "$prev" in
+    artifact)
+      cmds=("hash help sign upload verify")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    cli)
+      cmds=("help setup")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    config)
+      cmds=("apply help")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    file)
+      cmds=("help upload")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    origin)
+      cmds=("help key")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    pkg)
+      cmds=("binlink build exec export help install path")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    ring)
+      cmds=("help key")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    svc)
+      cmds=("help key")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    studio)
+      cmds=("build enter help new rm run version")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    sup)
+      cmds=("bash config help sh start")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
+    user)
+      cmds=("help key")
+      COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+      ;;
 
-
-        esac
-    elif [ $COMP_CWORD -eq 3 ]; then
-        case "$minus2" in
-            origin)
-                case "$prev" in
-                    key) #doj origin key
-                        cmds=( "download export generate help import upload" )
-                        COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                    ;;
-                esac
-            ;;
-            ring) # doj ring key
-                case "$prev" in
-                    key)
-                        cmds=( "export generate help import" )
-                        COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                    ;;
-                esac
-            ;;
-            svc) # doj svc key
-                case "$prev" in
-                    key)
-                        cmds=( "generate help" )
-                        COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                    ;;
-                esac
-            ;;
-            user) # doj user key
-                case "$prev" in
-                    key)
-                        cmds=( "generate help" )
-                        COMPREPLY=( $( compgen -W "$cmds" -- "$cur") )
-                    ;;
-                esac
-            ;;
-        esac
-    fi
+    esac
+  elif [ $COMP_CWORD -eq 3 ]; then
+    case "$minus2" in
+    origin)
+      case "$prev" in
+      key) #doj origin key
+        cmds=("download export generate help import upload")
+        COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+        ;;
+      esac
+      ;;
+    ring) # doj ring key
+      case "$prev" in
+      key)
+        cmds=("export generate help import")
+        COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+        ;;
+      esac
+      ;;
+    svc) # doj svc key
+      case "$prev" in
+      key)
+        cmds=("generate help")
+        COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+        ;;
+      esac
+      ;;
+    user) # doj user key
+      case "$prev" in
+      key)
+        cmds=("generate help")
+        COMPREPLY=($(compgen -W "$cmds" -- "$cur"))
+        ;;
+      esac
+      ;;
+    esac
+  fi
 }
 complete -F _doj doj

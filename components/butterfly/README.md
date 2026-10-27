@@ -6,11 +6,11 @@ that sends length-delimited rumors over TCP.
 
 ## Goals
 
-* Eventually consistent. Over a long enough time horizon, every living member
+- Eventually consistent. Over a long enough time horizon, every living member
   will converge on the same state.
-* Reasonably efficient. The protocol avoids any back-chatter; messages are
+- Reasonably efficient. The protocol avoids any back-chatter; messages are
   sent but never confirmed.
-* Reliable. As a building block, it should be safe and reliable to use.
+- Reliable. As a building block, it should be safe and reliable to use.
 
 ## Troubleshooting
 
@@ -20,23 +20,23 @@ between members.
 
 To use it, do the following:
 
-```
-$ mkdir -p /tmp/dojo-swim-trace
-$ env TRACE_SWIM=1 yourthing
+```sh
+mkdir -p /tmp/dojo-swim-trace
+env TRACE_SWIM=1 yourthing
 ```
 
 For example, to get a trace of a particular integration test:
 
-```
-$ mkdir -p /tmp/dojo-swim-trace
-$ env TRACE_SWIM=1 cargo test --test integration two_members_meshed
+```sh
+mkdir -p /tmp/dojo-swim-trace
+env TRACE_SWIM=1 cargo test --test integration two_members_meshed
 ```
 
 This will result in files populating in the `/tmp/dojo-swim-trace`
 directory. To look at the stream together as plain text:
 
-```
-$ cat /tmp/dojo-swim-trace/*.swimtrace | sort
+```sh
+cat /tmp/dojo-swim-trace/*.swimtrace | sort
 ```
 
 This will put all the trace files together, ordered by time.
@@ -45,8 +45,8 @@ You can turn this into a UML State Transition diagram by using
 [PlantUML](http://plantuml.com/). [Download the jar
 file](http://plantuml.com/download), and then do the following:
 
-```
-$ cat /tmp/dojo-swim-trace/*.swimtrace | sort | ruby ./bin/trace-sequence.rb > sequence.txt && java -DPLANTUML_LIMIT_SIZE=163840 -Xmx8024m -jar plantuml.jar -verbose sequence.txt
+```sh
+cat /tmp/dojo-swim-trace/*.swimtrace | sort | ruby ./bin/trace-sequence.rb > sequence.txt && java -DPLANTUML_LIMIT_SIZE=163840 -Xmx8024m -jar plantuml.jar -verbose sequence.txt
 ```
 
 Where `plantuml.jar` is the path to `plantuml`, and `./bin/trace-sequence.rb`

@@ -9,7 +9,7 @@ workspace = "../../"
 [dependencies]
 bimap = "0.6.3"
 bitflags = "2.13.2"
-clap = { version = "2.33.0", features = [ "suggestions", "color", "unstable" ] }
+clap = { version = "2.33.0", features = ["suggestions", "color", "unstable"] }
 glob = "0.3.4"
 handlebars = "6.4.4"
 indicatif = "0.18.6"

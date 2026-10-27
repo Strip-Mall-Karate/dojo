@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Sourced by build.sh and test.sh inside the builder VM: the build environment
 # for the tree (the Rust its rust-toolchain names) and run(), which runs a
 # command in it.

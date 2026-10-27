@@ -192,82 +192,82 @@ fetch_lock() {
 }
 
 case "${1-}" in
-  start)
-    [[ $# -eq 1 ]] || usage
-    start
-    ;;
-  stop)
-    [[ $# -eq 1 ]] || usage
-    stop
-    ;;
-  ssh)
-    require_running
-    shift
-    exec ssh -F "${state}/ssh_config" -t dojo-builder "$@"
-    ;;
-  payload)
-    [[ $# -le 2 ]] || usage
-    case "${2-}" in
-      "" | --update-lock) ;;
-      *) usage ;;
-    esac
-    require_running
-    sync_tree
-    payload "${2-}"
-    ;;
-  test)
-    [[ $# -ge 2 ]] || usage
-    require_running
-    shift
-    sync_tree
-    vm_ssh dojo/support/vm/guest/test.sh dojo "$@"
-    ;;
-  run)
-    [[ $# -ge 2 ]] || usage
-    require_running
-    shift
-    sync_tree
-    status=0
-    # env.sh's run() puts cargo and the C libraries on the path; a bare cargo
-    # exits 127. The command's words are quoted for the VM's shell.
-    vm_ssh "cd dojo && . support/vm/guest/env.sh >&2 && run $(printf '%q ' "$@")" || status=$?
-    fetch_lock
-    exit "${status}"
-    ;;
-  fmt)
-    [[ $# -ge 2 ]] || usage
-    require_running
-    shift
-    sync_tree
-    packages=()
-    for p in "$@"; do
-      packages+=(-p "$p")
-    done
-    # rustfmt writes only the files it changes; those, newer than the stamp,
-    # come back as a tar on stdout, so everything else goes to stderr.
-    vm_ssh "cd dojo && . support/vm/guest/env.sh >&2 && stamp=\$(mktemp) &&
+start)
+  [[ $# -eq 1 ]] || usage
+  start
+  ;;
+stop)
+  [[ $# -eq 1 ]] || usage
+  stop
+  ;;
+ssh)
+  require_running
+  shift
+  exec ssh -F "${state}/ssh_config" -t dojo-builder "$@"
+  ;;
+payload)
+  [[ $# -le 2 ]] || usage
+  case "${2-}" in
+  "" | --update-lock) ;;
+  *) usage ;;
+  esac
+  require_running
+  sync_tree
+  payload "${2-}"
+  ;;
+test)
+  [[ $# -ge 2 ]] || usage
+  require_running
+  shift
+  sync_tree
+  vm_ssh dojo/support/vm/guest/test.sh dojo "$@"
+  ;;
+run)
+  [[ $# -ge 2 ]] || usage
+  require_running
+  shift
+  sync_tree
+  status=0
+  # env.sh's run() puts cargo and the C libraries on the path; a bare cargo
+  # exits 127. The command's words are quoted for the VM's shell.
+  vm_ssh "cd dojo && . support/vm/guest/env.sh >&2 && run $(printf '%q ' "$@")" || status=$?
+  fetch_lock
+  exit "${status}"
+  ;;
+fmt)
+  [[ $# -ge 2 ]] || usage
+  require_running
+  shift
+  sync_tree
+  packages=()
+  for p in "$@"; do
+    packages+=(-p "$p")
+  done
+  # rustfmt writes only the files it changes; those, newer than the stamp,
+  # come back as a tar on stdout, so everything else goes to stderr.
+  vm_ssh "cd dojo && . support/vm/guest/env.sh >&2 && stamp=\$(mktemp) &&
             run env PATH=\"\${rustfmt_nightly}/bin:\${PATH}\" cargo-fmt fmt $(printf '%q ' "${packages[@]}") >&2 &&
             find . -path ./target -prune -o -name '*.rs' -newer \"\${stamp}\" -print0 |
               tar --null -T - -cf - && rm -f \"\${stamp}\"" |
-      /usr/bin/tar -xvf - -C "${repo}"
-    ;;
-  verify)
-    [[ $# -eq 1 ]] || usage
-    require_running
-    sync_tree
-    status=0
-    vm_ssh "dojo/support/vm/guest/verify.sh dojo verify-logs" || status=1
-    payload || status=1
-    for check in --check --check-reboot; do
-      log="${here}/out/boot${check}.log"
-      if "${here}/boot" "${check}" --payload "${here}/out/payload.cpio.gz" >"${log}" 2>&1; then
-        echo "builder: boot ${check} passed" >&2
-      else
-        echo "builder: boot ${check} FAILED; see ${log}" >&2
-        status=1
-      fi
-    done
-    exit "${status}"
-    ;;
-  *) usage ;;
+    /usr/bin/tar -xvf - -C "${repo}"
+  ;;
+verify)
+  [[ $# -eq 1 ]] || usage
+  require_running
+  sync_tree
+  status=0
+  vm_ssh "dojo/support/vm/guest/verify.sh dojo verify-logs" || status=1
+  payload || status=1
+  for check in --check --check-reboot; do
+    log="${here}/out/boot${check}.log"
+    if "${here}/boot" "${check}" --payload "${here}/out/payload.cpio.gz" >"${log}" 2>&1; then
+      echo "builder: boot ${check} passed" >&2
+    else
+      echo "builder: boot ${check} FAILED; see ${log}" >&2
+      status=1
+    fi
+  done
+  exit "${status}"
+  ;;
+*) usage ;;
 esac

@@ -15,10 +15,10 @@ echo "Environment   : $DOJ_BLDR_URL"
 echo "Are you sure?"
 
 select yn in "Yes" "No"; do
-    case $yn in
-        Yes ) break;;
-        No ) exit;;
-    esac
+  case $yn in
+  Yes) break ;;
+  No) exit ;;
+  esac
 done
 
 list=$(cat "$1")

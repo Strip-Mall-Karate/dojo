@@ -8,18 +8,18 @@ Every time you need to make a change to the Builder schema you will be required 
 
 For the service `builder-SERVICE` you will need to run:
 
-* `cd components/builder-SERVICE/src`
-* `diesel migration generate <your migration name>`
+- `cd components/builder-SERVICE/src`
+- `diesel migration generate <your migration name>`
 
 The migration name should describe what you are doing. Ex:
 
-* create-posts
-* add-user-select-v4
-* remove-user-select-43
+- create-posts
+- add-user-select-v4
+- remove-user-select-43
 
 This will generate something like
 
-```
+```text
 Creating migrations/20160815133237_create_posts/up.sql
 Creating migrations/20160815133237_create_posts/down.sql
 ```

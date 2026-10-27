@@ -10,89 +10,89 @@
 set -eou pipefail
 
 create_sup_binary_stub() {
-    version=${1?}
-    binary=$(mktemp)
+  version=${1?}
+  binary=$(mktemp)
 
-    cat <<EOF > "$binary"
+  cat <<EOF >"$binary"
 #!/bin/bash
 echo "doj-sup $version"
 EOF
 
-    chmod +x "$binary"
-    echo "$binary"
+  chmod +x "$binary"
+  echo "$binary"
 }
 
 launcher_exits_with_error() {
-    version=${1?}
-    sup_binary=$(create_sup_binary_stub "$version")
+  version=${1?}
+  sup_binary=$(create_sup_binary_stub "$version")
 
-    TESTING_FS_ROOT=$(mktemp -d)
-    export TESTING_FS_ROOT
-    sup_log=$(mktemp)
+  TESTING_FS_ROOT=$(mktemp -d)
+  export TESTING_FS_ROOT
+  sup_log=$(mktemp)
 
-    echo -n "Starting launcher with supervisor version \"$version\" (logging to $sup_log)..."
-    DOJ_SUP_BINARY="$sup_binary" doj sup run &> "$sup_log" &
-    launcher_pid=$!
+  echo -n "Starting launcher with supervisor version \"$version\" (logging to $sup_log)..."
+  DOJ_SUP_BINARY="$sup_binary" doj sup run &>"$sup_log" &
+  launcher_pid=$!
 
-    retries=0
-    max_retries=3
-    while ps -p "$launcher_pid" &>/dev/null; do
-        echo -n .
-        if [[ $((retries++)) -gt $max_retries ]]; then
-            echo
-            kill "$launcher_pid"
-            return 1
-        else
-            sleep 1
-        fi
-    done
-    echo
+  retries=0
+  max_retries=3
+  while ps -p "$launcher_pid" &>/dev/null; do
+    echo -n .
+    if [[ $((retries++)) -gt $max_retries ]]; then
+      echo
+      kill "$launcher_pid"
+      return 1
+    else
+      sleep 1
+    fi
+  done
+  echo
 
-    ! wait "$launcher_pid"
+  ! wait "$launcher_pid"
 }
 
 trap 'pgrep doj-launch &>/dev/null && pkill -9 doj-launch' INT TERM EXIT
 
 incompatible_version="0.55.0/20180321222338"
 if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$incompatible_version"; then
-    echo "Success! Launcher exited with error"
-    echo
+  echo "Success! Launcher exited with error"
+  echo
 else
-    echo "Failure! Expected launcher to exit with error"
-    exit 1
+  echo "Failure! Expected launcher to exit with error"
+  exit 1
 fi
 
 if DOJ_LAUNCH_NO_SUP_VERSION_CHECK=1 launcher_exits_with_error "$incompatible_version"; then
-    echo "Failure! Expected launcher remain running"
-    exit 1
+  echo "Failure! Expected launcher remain running"
+  exit 1
 else
-    echo "Success! Setting DOJ_LAUNCH_NO_SUP_VERSION_CHECK skips version check"
-    echo
+  echo "Success! Setting DOJ_LAUNCH_NO_SUP_VERSION_CHECK skips version check"
+  echo
 fi
 
 compatible_version="0.56.0/20180530235935"
 if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$compatible_version"; then
-    echo "Failure! Expected launcher remain running"
-    exit 1
+  echo "Failure! Expected launcher remain running"
+  exit 1
 else
-    echo "Success! Supervisor passed version check"
-    echo
+  echo "Success! Supervisor passed version check"
+  echo
 fi
 
 dev_version="0.62.0-dev"
 if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$dev_version"; then
-    echo "Failure! Expected launcher remain running"
-    exit 1
+  echo "Failure! Expected launcher remain running"
+  exit 1
 else
-    echo "Success! Supervisor passed version check"
-    echo
+  echo "Success! Supervisor passed version check"
+  echo
 fi
 
 invalid_version="one-point-twenty-one"
 if DOJ_LAUNCH_NO_SUP_VERSION_CHECK='' launcher_exits_with_error "$invalid_version"; then
-    echo "Success! Launcher exited with error"
-    echo
+  echo "Success! Launcher exited with error"
+  echo
 else
-    echo "Failure! Expected launcher to exit with error"
-    exit 1
+  echo "Failure! Expected launcher to exit with error"
+  exit 1
 fi

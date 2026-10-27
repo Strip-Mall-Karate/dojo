@@ -38,7 +38,7 @@ chrono = "0.4.6"
 
 [dependencies.clap]
 version = "2.33.0"
-features = [ "suggestions", "color", "unstable" ]
+features = ["suggestions", "color", "unstable"]
 
 [dependencies.dojo_core]
 path = "../core"

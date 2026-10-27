@@ -1,5 +1,4 @@
 version: '2'
-
 services:
   shell:
     image: dojo/devshell
@@ -13,25 +12,21 @@ services:
       - cache_keys
       - cargo
       - etc
-
   cache_artifacts:
     image: tianon/true
     command: /true
     volumes:
       - /doj/cache/artifacts
-
   cache_keys:
     image: tianon/true
     command: /true
     volumes:
       - /doj/cache/keys
-
   cargo:
     image: tianon/true
     command: /true
     volumes:
       - /cargo-cache
-
   etc:
     image: tianon/true
     command: /true

@@ -113,7 +113,9 @@ class ReportTests(unittest.TestCase):
             with open(empty, "w", encoding="utf-8"):
                 pass
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(report_tests.main(["report_tests.py", empty, empty, empty]), 1)
+                self.assertEqual(
+                    report_tests.main(["report_tests.py", empty, empty, empty]), 1
+                )
 
 
 if __name__ == "__main__":

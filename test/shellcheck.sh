@@ -24,7 +24,7 @@ shellcheck --version
 # https://github.com/koalaman/shellcheck/wiki/SC2034
 find . -type f \
   -and \( -name "*.*sh" \
-      -or -exec sh -c 'file -b "$1" | grep -q "shell script"' -- {} \; \) \
+  -or -exec sh -c 'file -b "$1" | grep -q "shell script"' -- {} \; \) \
   -and \! -path "*_template_plan.sh" \
   -and \! -path "*.sample" \
   -and \! -path "*.ps1" \
@@ -34,8 +34,8 @@ find . -type f \
   -and \! -path "./test/integration/test_helper/bats-support/*" \
   -and \! -path "./test/fixtures/render/consul/hooks/run" \
   -and \! -path "./test/fixtures/render/error/*" \
-  -print \
-  | xargs shellcheck --external-sources --exclude=1090,1091,1117,2148,2034
+  -print |
+  xargs shellcheck --external-sources --exclude=1090,1091,1117,2148,2034
 
 # This is a BATS file, so we need to override the interpreter
 # See: https://github.com/koalaman/shellcheck/issues/709

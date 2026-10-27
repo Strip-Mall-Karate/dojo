@@ -16,6 +16,7 @@ bin=$(realpath "$1")
 label=$2
 runs=$3
 
+# shellcheck source=env.sh
 . "${here}/env.sh"
 gdb=$(nix build --impure --no-link --print-out-paths "${np}#gdb")/bin/gdb
 

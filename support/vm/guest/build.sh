@@ -13,11 +13,12 @@ mkdir -p "$2"
 tree=$(realpath "$1") out=$(realpath "$2")
 lock=(--locked)
 case "${3-}" in
-  "") ;;
-  --update-lock) lock=() ;;
-  *) usage ;;
+"") ;;
+--update-lock) lock=() ;;
+*) usage ;;
 esac
 
+# shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 cd "$tree"
 toolchain=$(tr -d '[:space:]' <rust-toolchain)

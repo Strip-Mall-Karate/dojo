@@ -12,9 +12,9 @@ install_rust_toolchain "$toolchain"
 
 # TODO: these should be in a shared script?
 install_doj_pkg karate/bzip2 karate/libarchive karate/libsodium karate/openssl karate/xz karate/zeromq karate/protobuf
-export SODIUM_STATIC=true # so the libarchive crate links to sodium statically
+export SODIUM_STATIC=true     # so the libarchive crate links to sodium statically
 export LIBARCHIVE_STATIC=true # so the libarchive crate *builds* statically
-export OPENSSL_DIR # so the openssl crate knows what to build against
+export OPENSSL_DIR            # so the openssl crate knows what to build against
 OPENSSL_DIR="$(doj pkg path karate/openssl)"
 export OPENSSL_STATIC=true # so the openssl crate builds statically
 export LIBZMQ_PREFIX
@@ -34,25 +34,24 @@ echo "--- :rust: Installing clippy"
 rustup component add clippy
 
 # Lints we need to work through and decide as a team whether to allow or fix
-mapfile -t unexamined_lints < "$2"
+mapfile -t unexamined_lints <"$2"
 
 # Lints we disagree with and choose to keep in our code with no warning
-mapfile -t allowed_lints < "$3"
+mapfile -t allowed_lints <"$3"
 
 # Known failing lints we want to receive warnings for, but not fail the build
-mapfile -t lints_to_fix < "$4"
+mapfile -t lints_to_fix <"$4"
 
 # Lints we don't expect to have in our code at all and want to avoid adding
 # even at the cost of failing the build
-mapfile -t denied_lints < "$5"
+mapfile -t denied_lints <"$5"
 
 clippy_args=()
 
 add_lints_to_clippy_args() {
   flag=$1
   shift
-  for lint
-  do
+  for lint; do
     clippy_args+=("$flag" "${lint}")
   done
 }
