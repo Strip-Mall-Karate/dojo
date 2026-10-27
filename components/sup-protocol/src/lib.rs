@@ -45,7 +45,6 @@ use dojo_core as core;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-extern crate prost_derive;
 
 #[macro_use]
 extern crate serde_derive;

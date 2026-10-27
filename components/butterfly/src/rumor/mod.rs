@@ -30,6 +30,7 @@ pub mod service_file;
 
 use std::{collections::{hash_map::Entry,
                         HashMap},
+          convert::TryFrom,
           default::Default,
           ops::Deref,
           result,
@@ -38,7 +39,6 @@ use std::{collections::{hash_map::Entry,
                  Arc,
                  RwLock}};
 
-use bytes::BytesMut;
 use prometheus::IntCounterVec;
 use prost::Message as ProstMessage;
 use serde::{ser::{SerializeMap,
@@ -464,7 +464,8 @@ pub struct RumorEnvelope {
 impl RumorEnvelope {
     pub fn decode(bytes: &[u8]) -> Result<Self> {
         let proto = ProtoRumor::decode(bytes)?;
-        let r#type = RumorType::from_i32(proto.r#type).ok_or(Error::ProtocolMismatch("type"))?;
+        let r#type =
+            RumorType::try_from(proto.r#type).map_err(|_| Error::ProtocolMismatch("type"))?;
         let from_id = proto.from_id
                            .clone()
                            .ok_or(Error::ProtocolMismatch("from-id"))?;
@@ -487,9 +488,7 @@ impl RumorEnvelope {
 
     pub fn encode(self) -> Result<Vec<u8>> {
         let proto: ProtoRumor = self.into();
-        let mut buf = BytesMut::with_capacity(proto.encoded_len());
-        proto.encode(&mut buf)?;
-        Ok(buf.to_vec())
+        Ok(proto.encode_to_vec())
     }
 }
 

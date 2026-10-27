@@ -10,7 +10,7 @@ futures = "0.1.26"
 dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
 dojo_common = { path = "../common" }
 log = "0.4"
-prost = "0.5.0"
+prost = "0.14.4"
 termcolor = "1.0.4"
 tokio = "0.1.18"
 tokio-core = "0.1.17"

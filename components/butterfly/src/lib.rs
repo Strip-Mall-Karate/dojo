@@ -47,7 +47,6 @@ extern crate log;
 #[macro_use]
 extern crate prometheus;
 extern crate prost;
-extern crate prost_derive;
 
 #[macro_use]
 extern crate serde_derive;

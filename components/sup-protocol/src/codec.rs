@@ -249,7 +249,7 @@ impl SrvMessage {
     pub fn parse<T>(&self) -> Result<T, prost::DecodeError>
         where T: Message + MessageStatic + Default
     {
-        T::decode(&self.body)
+        T::decode(&self.body[..])
     }
 
     /// Update the message as a reply for the given transaction. The `complete` argument will
@@ -287,7 +287,7 @@ impl SrvMessage {
     /// fail out if the received message contains an error.
     pub fn try_ok(&self) -> NetResult<()> {
         if self.message_id() == NetErr::MESSAGE_ID {
-            let err = NetErr::decode(self.body()).expect("try_ok bad NetErr");
+            let err = NetErr::decode(&self.body()[..]).expect("try_ok bad NetErr");
             return Err(err);
         }
         Ok(())
@@ -305,9 +305,7 @@ impl fmt::Debug for SrvMessage {
 impl<T> From<T> for SrvMessage where T: Message + MessageStatic
 {
     fn from(msg: T) -> Self {
-        let mut buf = BytesMut::with_capacity(msg.encoded_len());
-        msg.encode(&mut buf).unwrap();
-        let body = buf.freeze();
+        let body = Bytes::from(msg.encode_to_vec());
         let message_id = T::MESSAGE_ID.to_string();
         SrvMessage { header: SrvHeader::new(body.len() as u32, message_id.len() as u32, false),
                      transaction: None,
