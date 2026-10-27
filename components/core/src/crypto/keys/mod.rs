@@ -621,7 +621,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Can\\'t read key bytes")]
+    #[should_panic(expected = "Can't read key bytes")]
     fn read_key_bytes_empty_file() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let keyfile = cache.path().join("not-much-here");
@@ -642,7 +642,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Can\\'t read raw key")]
+    #[should_panic(expected = "Can't read raw key")]
     fn read_key_bytes_malformed_base64() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let keyfile = cache.path().join("missing-newlines");

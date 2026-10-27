@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs inside the builder VM. Builds doj-launch, doj-sup and doj with Rust
-# 1.33.0 and packs them, with every shared library they load, into
+# Runs inside the builder VM. Builds doj-launch, doj-sup and doj with the Rust
+# the tree's rust-toolchain names and packs them, with every shared library they load, into
 # <out-dir>/payload.cpio.gz for support/vm/boot --payload.
 set -euo pipefail
 
@@ -20,8 +20,9 @@ esac
 
 . "$(dirname "$0")/env.sh"
 cd "$tree"
-run rustup toolchain install 1.33.0 --profile minimal
-run cargo +1.33.0 build --release "${lock[@]}" -p dojo-launcher -p dojo_sup -p doj
+toolchain=$(tr -d '[:space:]' <rust-toolchain)
+run rustup toolchain install "$toolchain" --profile minimal
+run cargo "+$toolchain" build --release "${lock[@]}" -p dojo-launcher -p dojo_sup -p doj
 
 # The binaries keep their /nix/store paths in the VM. Store paths are copied
 # read-only, so make the last staging tree writable before replacing it.

@@ -13,13 +13,14 @@
 #   builder test <package>...      test packages and check their formatting
 #
 # The VM's disk, ssh key and log live in DOJO_BUILDER_STATE (default
-# ~/.local/state/dojo-builder). Its ssh port listens on localhost only.
+# ~/.local/state/dojo-builder). Its ssh port, DOJO_BUILDER_PORT (default 31022),
+# listens on localhost only; a second builder takes another port and state.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "${here}/../.." && pwd)"
 state="${DOJO_BUILDER_STATE:-${XDG_STATE_HOME:-${HOME}/.local/state}/dojo-builder}"
-port=31022
+port="${DOJO_BUILDER_PORT:-31022}"
 
 usage() {
   sed -n '5,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
@@ -75,7 +76,7 @@ CONFIG
     's/accel=hvf:tcg/accel=hvf/'
     's/-m 3072 /-m 32768 /'
     's/-smp 1 /-smp 8 /'
-    's/hostfwd=tcp::31022-:22/hostfwd=tcp:127.0.0.1:31022-:22/'
+    "s/hostfwd=tcp::31022-:22/hostfwd=tcp:127.0.0.1:${port}-:22/"
     's/"20480M"/"122880M"/'
   )
   local edit

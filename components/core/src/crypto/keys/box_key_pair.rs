@@ -903,7 +903,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Can\\'t decode nonce")]
+    #[should_panic(expected = "Can't decode nonce")]
     fn decrypt_invalid_nonce_decode() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let sender = BoxKeyPair::generate_pair_for_user("wecoyote").unwrap();
@@ -933,7 +933,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Can\\'t decode ciphertext")]
+    #[should_panic(expected = "Can't decode ciphertext")]
     fn decrypt_invalid_ciphertext_decode() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let sender = BoxKeyPair::generate_pair_for_user("wecoyote").unwrap();

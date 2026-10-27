@@ -54,3 +54,6 @@ longer story.
 - **Real `karate` base packages come before the Launcher proof.** The Fennel-built Launcher is
   compared with the bash-built one using real dependencies (`karate/glibc`, `karate/rust` and the
   rest), not stubs over nixpkgs, so the stage-0 bootstrap of the base packages comes first.
+- **Everything moves to current tooling.** The whole tree builds with the newest stable Rust
+  (1.99.1, read from `rust-toolchain`), then moves to current nixpkgs and OpenSSL 3, current
+  versions of every crate, and edition 2024, a phase at a time, each phase passing the boot checks.
