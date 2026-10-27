@@ -440,8 +440,23 @@ impl Package<'_> {
 
     fn doj(&self) -> String { self.options.doj.to_string_lossy().into_owned() }
 
+    /// `doj` signs with the builder's `PATH`, as the packager's tools run.
     fn doj_env(&self) -> Vec<(String, String)> {
-        vec![("DOJ_CACHE_KEY_PATH".to_string(), self.options.keys.to_string_lossy().into_owned())]
+        let mut env = self.builder_path();
+        env.push(("DOJ_CACHE_KEY_PATH".to_string(), self.options.keys.to_string_lossy().into_owned()));
+        env
+    }
+
+    /// The `PATH` the builder was started with: a dependency's tools
+    /// (busybox's xz, which only decompresses) are the build's, not the
+    /// packager's, and an isolated build has none of the builder's.
+    fn builder_path(&self) -> Vec<(String, String)> {
+        self.options
+            .env
+            .iter()
+            .filter(|(name, _)| name == "PATH")
+            .cloned()
+            .collect()
     }
 
     fn write_manifest(&self) -> Result<(), String> {
@@ -545,15 +560,7 @@ impl Package<'_> {
         let level = self.env_var("DOJ_HART_COMPRESSION_LEVEL")
                         .unwrap_or_else(|| "6".to_string());
         let text = |path: &Path| path.to_string_lossy().into_owned();
-        // The builder's own tar and xz, from the PATH it was started with: a
-        // dependency's tools (busybox's xz, which only decompresses) are the
-        // build's, not the packager's.
-        let builder_path: Vec<(String, String)> = self.options
-                                                      .env
-                                                      .iter()
-                                                      .filter(|(name, _)| name == "PATH")
-                                                      .cloned()
-                                                      .collect();
+        let builder_path = self.builder_path();
         self.state
             .run(&["tar".into(), "-cf".into(), text(&tar), text(self.prefix)],
                  Some(self.work),

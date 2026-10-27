@@ -107,8 +107,33 @@ pub fn set_path(env: &mut Env,
             }
         }
     }
-    paths.push(initial.to_string());
+    if !initial.is_empty() {
+        paths.push(initial.to_string());
+    }
     env.set("PATH", paths.join(separator));
+}
+
+/// What an isolated build keeps of the builder's environment besides Dojo's
+/// own `DOJ_` settings: who it runs as, where its home and scratch space
+/// are, its locale and time zone, and the shell configure scripts use. The
+/// rest, `PATH` among it, comes from the build's dependencies.
+const KEPT_WHEN_ISOLATED: [&str; 10] = ["HOME",
+                                        "USER",
+                                        "LOGNAME",
+                                        "TERM",
+                                        "LANG",
+                                        "LC_ALL",
+                                        "TZ",
+                                        "TMPDIR",
+                                        "SOURCE_DATE_EPOCH",
+                                        "CONFIG_SHELL"];
+
+/// The part of `vars` an isolated build starts from.
+pub fn isolated(vars: &[(String, String)]) -> Vec<(String, String)> {
+    vars.iter()
+        .filter(|(name, _)| name.starts_with("DOJ_") || KEPT_WHEN_ISOLATED.contains(&name.as_str()))
+        .cloned()
+        .collect()
 }
 
 /// Sets `LD_RUN_PATH`, the C compiler flags, `PKG_CONFIG_PATH` and
