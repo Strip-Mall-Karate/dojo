@@ -15,7 +15,8 @@
 use std::{collections::BTreeMap,
           path::Path};
 
-use crate::hcore::package::{PackageIdent,
+use crate::hcore::package::{install::list_separator,
+                            PackageIdent,
                             PackageInstall};
 
 use crate::error::{Error,
@@ -33,12 +34,33 @@ pub fn start(idents: &[PackageIdent], fs_root_path: &Path) -> Result<()> {
 }
 
 pub(crate) fn render_environment(env: &BTreeMap<String, String>) -> Result<String> {
+    render(env, false)
+}
+
+/// The environment as `render_environment` prints it, but laid over the one the shell has: a
+/// list variable's entries go in front of what it already holds, so `PATH` keeps the shell's own
+/// directories after the packages'. A list with no entries prints nothing, rather than an export
+/// whose empty first entry would put the current directory on `PATH`.
+pub(crate) fn render_overlay(env: &BTreeMap<String, String>) -> Result<String> { render(env, true) }
+
+fn render(env: &BTreeMap<String, String>, overlay: bool) -> Result<String> {
     let mut text = String::new();
     for (name, value) in env {
         if !is_shell_name(name) {
             return Err(Error::InvalidEnvironmentName(name.clone()));
         }
-        text.push_str(&format!("export {}={}\n", name, single_quoted(value)));
+        match list_separator(name) {
+            Some(separator) if overlay => {
+                if value.is_empty() {
+                    continue;
+                }
+                text.push_str(&format!("export {name}={}\"${{{name}:+{separator}${{{name}}}}}\"\n",
+                                       single_quoted(value),
+                                       name = name,
+                                       separator = separator));
+            }
+            _ => text.push_str(&format!("export {}={}\n", name, single_quoted(value))),
+        }
     }
     Ok(text)
 }
@@ -79,6 +101,32 @@ mod tests {
     fn values_are_quoted_against_expansion() {
         let text = render_environment(&env(&[("V", "it's $HOME `id` \"x\"\nnext")])).unwrap();
         assert_eq!("export V='it'\\''s $HOME `id` \"x\"\nnext'\n", text);
+    }
+
+    #[test]
+    fn an_overlay_puts_list_entries_in_front_of_the_shells_own() {
+        let text = render_overlay(&env(&[("PATH", "/doj/pkgs/a/bin"),
+                                         ("CLASSPATH", "/a.jar"),
+                                         ("PYTHONPATH", ""),
+                                         ("FOO", "bar")])).unwrap();
+        assert_eq!("export CLASSPATH='/a.jar'\"${CLASSPATH:+;${CLASSPATH}}\"\nexport \
+                    FOO='bar'\nexport PATH='/doj/pkgs/a/bin'\"${PATH:+:${PATH}}\"\n",
+                   text);
+    }
+
+    #[test]
+    fn a_shell_evaluating_an_overlay_keeps_its_own_path_after_the_packages() {
+        let text = render_overlay(&env(&[("PATH", "/doj/pkgs/a/bin"),
+                                         ("PYTHONPATH", "/doj/pkgs/a/lib")])).unwrap();
+        let script = format!("{}printf '%s|%s' \"$PATH\" \"$PYTHONPATH\"", text);
+        let out = std::process::Command::new("/bin/sh").arg("-c")
+                                                       .arg(&script)
+                                                       .env_clear()
+                                                       .env("PATH", "/usr/bin:/bin")
+                                                       .output()
+                                                       .unwrap();
+        assert_eq!("/doj/pkgs/a/bin:/usr/bin:/bin|/doj/pkgs/a/lib",
+                   String::from_utf8(out.stdout).unwrap());
     }
 
     #[test]
