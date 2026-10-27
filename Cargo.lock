@@ -1445,7 +1445,6 @@ dependencies = [
  "log 0.4.34",
  "notify",
  "num_cpus",
- "proc_self",
  "prometheus",
  "prost",
  "protobuf 1.7.4",
@@ -3088,19 +3087,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nix"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d37e713a259ff641624b6cb20e3b12b2952313ba36b6823c0f16e6cfd9e5de17"
-dependencies = [
- "bitflags 1.0.4",
- "cc",
- "cfg-if 0.1.7",
- "libc",
- "void",
-]
-
-[[package]]
 name = "nkeys"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3658,15 +3644,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "proc_self"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2783d12f3d437a1f2f31494927acbee8c39689a55ba306b913002be77fca9dcd"
-dependencies = [
- "nix",
 ]
 
 [[package]]
@@ -5752,12 +5729,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "void"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "vsimd"

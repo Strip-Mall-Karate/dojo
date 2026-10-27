@@ -84,7 +84,6 @@ use dojo_launcher_client::{LauncherCli,
 use dojo_sup_protocol;
 use num_cpus;
 #[cfg(unix)]
-use proc_self;
 use prometheus::{HistogramVec,
                  IntGauge,
                  IntGaugeVec};
@@ -1603,8 +1602,24 @@ fn write_process_lock<T>(lock_path: T) -> Result<()>
     }
 }
 
+/// The directory listing this process's open file descriptors, one entry per descriptor.
+#[cfg(target_os = "linux")]
+const FD_DIR: &str = "/proc/self/fd";
+#[cfg(target_os = "macos")]
+const FD_DIR: &str = "/dev/fd";
+
+/// How many file descriptors the Supervisor has open, not counting the one the count opens to
+/// read `FD_DIR`, which the listing includes while it is read.
 #[cfg(unix)]
-fn get_fd_count() -> std::io::Result<usize> { proc_self::FdIter::new().map(|f| f.count()) }
+fn get_fd_count() -> std::io::Result<usize> {
+    let mut count: usize = 0;
+    for entry in std::fs::read_dir(FD_DIR)? {
+        if entry?.file_name().to_string_lossy().parse::<u32>().is_ok() {
+            count += 1;
+        }
+    }
+    Ok(count.saturating_sub(1))
+}
 
 #[cfg(unix)]
 fn track_memory_stats() {
@@ -1667,6 +1682,39 @@ mod test {
     use dojo_core::fs::cache_key_path;
     use dojo_sup_protocol::STATE_PATH_PREFIX;
     use std::path::PathBuf;
+
+    /// Tests run in parallel threads that open files of their own, so the count is taken in a
+    /// child that runs this one test alone.
+    #[test]
+    fn fd_count_rises_by_one_for_each_file_opened() {
+        const CHILD: &str = "DOJ_TEST_FD_COUNT_CHILD";
+        if std::env::var_os(CHILD).is_none() {
+            let out = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(&["--exact",
+                        "manager::test::fd_count_rises_by_one_for_each_file_opened",
+                        "--test-threads=1",
+                        "--nocapture"])
+                .env(CHILD, "1")
+                .output()
+                .unwrap();
+            assert!(out.status.success(),
+                    "{}{}",
+                    String::from_utf8_lossy(&out.stdout),
+                    String::from_utf8_lossy(&out.stderr));
+            assert!(String::from_utf8_lossy(&out.stdout).contains("fd counts: "),
+                    "the child ran no test: {}",
+                    String::from_utf8_lossy(&out.stdout));
+            return;
+        }
+        let before = get_fd_count().unwrap();
+        let files: Vec<_> = (0..5).map(|_| tempfile::tempfile().unwrap()).collect();
+        let during = get_fd_count().unwrap();
+        drop(files);
+        let after = get_fd_count().unwrap();
+        println!("fd counts: {} {} {}", before, during, after);
+        assert_eq!(before + 5, during);
+        assert_eq!(before, after);
+    }
 
     mod reconciliation_flag {
         use super::*;

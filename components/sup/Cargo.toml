@@ -85,7 +85,6 @@ valico = "3.0.0"
 caps = "0.3.0"
 
 [target.'cfg(target_family = "unix")'.dependencies]
-proc_self = "0.1.0"    # pinning this explicitly because newer versions switched to a different crate that doesn't support stable rust
 jemallocator = "0.1.9"
 jemalloc-ctl = "0.2.0"
 
