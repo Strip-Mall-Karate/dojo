@@ -17,11 +17,12 @@ use std::{fmt,
           path::{Path,
                  PathBuf}};
 
-use base64;
+use crate::crypto::sodium::{randombytes,
+                            secretbox::{self,
+                                        Key as SymSecretKey}};
+use base64::{engine::general_purpose::STANDARD as BASE64,
+             Engine};
 use hex;
-use sodiumoxide::{crypto::secretbox::{self,
-                                      Key as SymSecretKey},
-                  randombytes::randombytes};
 
 use super::{super::{hash,
                     SECRET_SYM_KEY_SUFFIX,
@@ -225,7 +226,7 @@ impl SymKey {
                 Ok(format!("{}\n{}\n\n{}",
                            SECRET_SYM_KEY_VERSION,
                            self.name_with_rev(),
-                           &base64::encode(&sk[..])))
+                           &BASE64.encode(&sk[..])))
             }
             None => {
                 Err(Error::CryptoError(format!("No secret key present for {}",

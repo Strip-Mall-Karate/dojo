@@ -72,8 +72,7 @@ mod inner {
                 error::{Error,
                         Result},
                 exec,
-                hcore::{crypto::init,
-                        env as henv,
+                hcore::{env as henv,
                         fs::{am_i_root,
                              find_command},
                         os::process,
@@ -95,7 +94,6 @@ mod inner {
             let command = match henv::var(super::STUDIO_CMD_ENVVAR) {
                 Ok(command) => PathBuf::from(command),
                 Err(_) => {
-                    init();
                     let version: Vec<&str> = VERSION.split('/').collect();
                     let ident = PackageIdent::from_str(&format!("{}/{}",
                                                                 super::STUDIO_PACKAGE_IDENT,

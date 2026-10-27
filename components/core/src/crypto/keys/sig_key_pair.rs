@@ -16,12 +16,13 @@ use std::{fs,
           path::{Path,
                  PathBuf}};
 
-use base64;
+use crate::crypto::sodium::{randombytes,
+                            sign::{self,
+                                   PublicKey as SigPublicKey,
+                                   SecretKey as SigSecretKey}};
+use base64::{engine::general_purpose::STANDARD as BASE64,
+             Engine};
 use hex;
-use sodiumoxide::{crypto::sign::{self,
-                                 ed25519::{PublicKey as SigPublicKey,
-                                           SecretKey as SigSecretKey}},
-                  randombytes::randombytes};
 
 use super::{super::{hash,
                     PUBLIC_KEY_SUFFIX,
@@ -264,11 +265,11 @@ impl SigKeyPair {
 
     pub fn to_public_string(&self) -> Result<String> {
         match self.public {
-            Some(pk) => {
+            Some(ref pk) => {
                 Ok(format!("{}\n{}\n\n{}",
                            PUBLIC_SIG_KEY_VERSION,
                            self.name_with_rev(),
-                           &base64::encode(&pk[..])))
+                           &BASE64.encode(&pk[..])))
             }
             None => {
                 Err(Error::CryptoError(format!("No public key present for {}",
@@ -283,7 +284,7 @@ impl SigKeyPair {
                 Ok(format!("{}\n{}\n\n{}",
                            SECRET_SIG_KEY_VERSION,
                            self.name_with_rev(),
-                           &base64::encode(&sk[..])))
+                           &BASE64.encode(&sk[..])))
             }
             None => {
                 Err(Error::CryptoError(format!("No secret key present for {}",

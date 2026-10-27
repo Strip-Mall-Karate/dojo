@@ -27,8 +27,7 @@ mod inner {
               str::FromStr};
 
     use crate::{common::ui::UI,
-                hcore::{crypto::init,
-                        env as henv,
+                hcore::{env as henv,
                         fs::find_command,
                         os::process,
                         package::PackageIdent}};
@@ -46,7 +45,6 @@ mod inner {
     const LAUNCH_PKG_IDENT: &str = "karate/doj-launcher";
 
     pub fn start(ui: &mut UI, args: &[OsString]) -> Result<()> {
-        init();
         if henv::var(SUP_CMD_ENVVAR).is_err() {
             let version: Vec<&str> = VERSION.split('/').collect();
             exec::command_from_min_pkg(ui,
@@ -58,7 +56,6 @@ mod inner {
         let command = match henv::var(LAUNCH_CMD_ENVVAR) {
             Ok(command) => PathBuf::from(command),
             Err(_) => {
-                init();
                 exec::command_from_min_pkg(ui,
                                            LAUNCH_CMD,
                                            &PackageIdent::from_str(LAUNCH_PKG_IDENT)?)?

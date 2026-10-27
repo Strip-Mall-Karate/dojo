@@ -144,7 +144,7 @@ impl From<termcolor::ParseColorError> for SrvClientError {
 pub struct SrvClient {
     /// Sending and receiving framed socket pair for connecting and communicating to a remote
     /// server.
-    socket: SrvStream,
+    socket:      SrvStream,
     /// Transaction ID counter.
     ///
     /// Useful for determining the next transaction ID in sequence embed in

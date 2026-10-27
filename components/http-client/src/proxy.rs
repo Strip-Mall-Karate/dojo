@@ -71,7 +71,7 @@ use crate::error::{Error,
 #[derive(Debug, PartialEq)]
 pub struct ProxyInfo {
     /// Url for the proxy server.
-    url: Url,
+    url:           Url,
     /// Optional basic authorization credentials for the proxy server.
     authorization: Option<ProxyBasicAuthorization>,
 }

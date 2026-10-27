@@ -6,37 +6,31 @@ authors = []
 workspace = "../../"
 
 [dependencies]
-base64 = "*"
-dirs = "*"
-errno = "*"
-hex = "*"
-lazy_static = "*"
-libarchive = "*"
-libc = "*"
-libsodium-sys = "0.0.16"
-log = "*"
-rand = "*"
-regex = "*"
-serde = "*"
-serde_derive = "*"
-serde_json = "*"
-sodiumoxide = "0.0.16"
-tempfile = "*"
-time = "*"
-toml = { version = "*", default-features = false }
-typemap = "*"
-url = "*"
+base64 = "0.23.1"
+blake2 = "0.11.0"
+crypto_box = { version = "0.9.1", features = ["seal"] }
+crypto_secretbox = "0.1.1"
+dirs = "7.0.0"
+ed25519-dalek = "3.0.0"
+errno = "0.3.14"
+getrandom = "0.4.3"
+hex = "0.4.3"
+jiff = "0.2.38"
+libc = "0.2.191"
+liblzma = "0.4.9"
+log = "0.4.34"
+regex = "1.13.1"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+subtle = "2.6.1"
+tar = "0.4.46"
+tempfile = "3.27.0"
+toml = "1.1.8"
+zeroize = "1.9.1"
 
 [target.'cfg(unix)'.dependencies]
-users = "*"
+uzers = "0.12.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-caps = "*"
+caps = "0.5.6"
 
-[dev-dependencies]
-# Pending upgrade activities
-hyper = "0.10"
-
-[features]
-default = []
-functional = []

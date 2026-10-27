@@ -86,7 +86,5 @@ mod test {
                                                  .split_whitespace());
             assert!(cli().get_matches_from_safe(cmd_vec).is_err());
         }
-
     }
-
 }

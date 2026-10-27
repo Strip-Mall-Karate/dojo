@@ -8,7 +8,7 @@ workspace = "../../"
 
 [dependencies]
 base64 = "*"
-log = "*"
+log = "0.4"
 httparse = "*"
 # Pending upgrade activities
 hyper = "0.10"

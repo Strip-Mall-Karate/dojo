@@ -25,7 +25,8 @@ use errno::errno;
 pub fn uname() -> Result<Uname> { unsafe { uname_libc() } }
 
 unsafe fn uname_libc() -> Result<Uname> {
-    let mut utsname: libc::utsname = mem::uninitialized();
+    // All-zero bytes are a valid utsname: every field is a C character array.
+    let mut utsname: libc::utsname = mem::zeroed();
     let rv = libc::uname(&mut utsname);
     if rv < 0 {
         let errno = errno();

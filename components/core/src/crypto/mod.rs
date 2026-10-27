@@ -14,8 +14,8 @@
 
 //! Dojo core encryption and cryptography.
 //!
-//! This module uses [libsodium](https://github.com/jedisct1/libsodium) and its Rust counterpart
-//! [sodiumoxide](https://github.com/dnaq/sodiumoxide) for cryptographic operations.
+//! Keys, signatures and encrypted messages use libsodium's constructions, implemented in
+//! [`sodium`] with RustCrypto and byte for byte compatible with libsodium.
 //!
 //! # Concepts and terminology:
 //!
@@ -228,7 +228,6 @@ use std::path::{Path,
                 PathBuf};
 
 use crate::env as henv;
-pub use sodiumoxide::init;
 
 pub use self::keys::{box_key_pair::BoxKeyPair,
                      sig_key_pair::SigKeyPair,
@@ -264,6 +263,7 @@ pub const SECRET_SYM_KEY_VERSION: &str = "SYM-SEC-1";
 pub mod artifact;
 pub mod hash;
 pub mod keys;
+pub mod sodium;
 
 pub fn default_cache_key_path(fs_root_path: Option<&Path>) -> PathBuf {
     match henv::var(CACHE_KEY_PATH_ENV_VAR) {
@@ -280,7 +280,7 @@ pub fn secure_eq<T, U>(t: T, u: U) -> bool
     where T: AsRef<[u8]>,
           U: AsRef<[u8]>
 {
-    sodiumoxide::utils::memcmp(t.as_ref(), u.as_ref())
+    sodium::memcmp(t.as_ref(), u.as_ref())
 }
 
 #[cfg(test)]
@@ -288,8 +288,6 @@ pub mod test_support {
     use std::{fs::File,
               io::Read,
               path::PathBuf};
-
-    use time;
 
     use crate::error as herror;
 
@@ -313,10 +311,8 @@ pub mod test_support {
     pub fn wait_until_ok<F, T>(some_fn: F) -> Option<T>
         where F: Fn() -> Result<T, herror::Error>
     {
-        let wait_duration = time::Duration::seconds(30);
-        let current_time = time::now_utc().to_timespec();
-        let stop_time = current_time + wait_duration;
-        while time::now_utc().to_timespec() < stop_time {
+        let stop_time = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while std::time::Instant::now() < stop_time {
             if let Ok(s) = some_fn() {
                 return Some(s);
             }

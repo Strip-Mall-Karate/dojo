@@ -12,7 +12,7 @@ bytes = "*"
 futures = "*"
 dojo_core = { path = "../core" }
 lazy_static = "*"
-log = "*"
+log = "0.4"
 prost = "*"
 prost-derive = "*"
 rand = "*"

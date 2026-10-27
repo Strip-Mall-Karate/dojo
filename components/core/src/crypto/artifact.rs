@@ -19,8 +19,9 @@ use std::{fs::File,
                BufWriter},
           path::Path};
 
-use base64;
-use sodiumoxide::crypto::sign;
+use super::sodium::sign;
+use base64::{engine::general_purpose::STANDARD as BASE64,
+             Engine};
 
 use super::{hash,
             keys::parse_name_with_rev,
@@ -46,7 +47,7 @@ pub fn sign<P1: ?Sized, P2: ?Sized>(src: &P1, dst: &P2, pair: &SigKeyPair) -> Re
            HART_FORMAT_VERSION,
            pair.name_with_rev(),
            SIG_HASH_TYPE,
-           base64::encode(&signature))?;
+           BASE64.encode(&signature))?;
     let mut file = File::open(src)?;
     io::copy(&mut file, &mut writer)?;
     Ok(())
@@ -201,7 +202,7 @@ pub fn verify<P1: ?Sized, P2: ?Sized>(src: &P1, cache_key_path: &P2) -> Result<(
                 ));
             }
             Ok(_) => {
-                base64::decode(buffer.trim()).map_err(|e| {
+                BASE64.decode(buffer.trim()).map_err(|e| {
                                                  Error::CryptoError(format!("Can't decode \
                                                                              signature: {}",
                                                                             e))

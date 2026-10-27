@@ -17,15 +17,16 @@ use std::{borrow::Cow,
                  PathBuf},
           str};
 
-use base64;
-use serde_derive::{Deserialize,
-                   Serialize};
-use sodiumoxide::crypto::{box_::{self,
-                                 curve25519xsalsa20poly1305::{gen_nonce,
-                                                              Nonce,
-                                                              PublicKey as BoxPublicKey,
-                                                              SecretKey as BoxSecretKey}},
-                          sealedbox};
+use crate::crypto::sodium::{box_::{self,
+                                   gen_nonce,
+                                   Nonce,
+                                   PublicKey as BoxPublicKey,
+                                   SecretKey as BoxSecretKey},
+                            sealedbox};
+use base64::{engine::general_purpose::STANDARD as BASE64,
+             Engine};
+use serde::{Deserialize,
+            Serialize};
 
 use super::{super::{ANONYMOUS_BOX_FORMAT_VERSION,
                     BOX_FORMAT_VERSION,
@@ -55,7 +56,7 @@ pub struct BoxSecret<'a> {
 
 pub type BoxKeyPair = KeyPair<BoxPublicKey, BoxSecretKey>;
 
-// A sodiumoxide sealed box that has been base64-encoded together with
+// A sealed box that has been base64-encoded together with
 // metadata to indicate how it should be decrypted
 #[derive(Serialize, Deserialize)]
 pub struct WrappedSealedBox<'a>(Cow<'a, str>);
@@ -194,7 +195,7 @@ impl BoxKeyPair {
     ///
     /// Since the returned string contains both plaintext metadata and ciphertext
     /// The ciphertext (and nonce, when present) is already base64-encoded.
-    pub fn encrypt(&self, data: &[u8], receiver: Option<&Self>) -> Result<WrappedSealedBox> {
+    pub fn encrypt(&self, data: &[u8], receiver: Option<&Self>) -> Result<WrappedSealedBox<'_>> {
         match receiver {
             Some(r) => self.encrypt_box(data, r),
             None => self.encrypt_anonymous_box(data),
@@ -203,11 +204,11 @@ impl BoxKeyPair {
 
     pub fn to_public_string(&self) -> Result<String> {
         match self.public {
-            Some(pk) => {
+            Some(ref pk) => {
                 Ok(format!("{}\n{}\n\n{}",
                            PUBLIC_BOX_KEY_VERSION,
                            self.name_with_rev(),
-                           &base64::encode(&pk[..])))
+                           &BASE64.encode(&pk[..])))
             }
             None => {
                 Err(Error::CryptoError(format!("No public key present for {}",
@@ -222,7 +223,7 @@ impl BoxKeyPair {
                 Ok(format!("{}\n{}\n\n{}",
                            SECRET_BOX_KEY_VERSION,
                            self.name_with_rev(),
-                           &base64::encode(&sk[..])))
+                           &BASE64.encode(&sk[..])))
             }
             None => {
                 Err(Error::CryptoError(format!("No secret key present for {}",
@@ -248,8 +249,8 @@ impl BoxKeyPair {
                    BOX_FORMAT_VERSION,
                    &self.name_with_rev(),
                    &receiver.name_with_rev(),
-                   base64::encode(&nonce[..]),
-                   base64::encode(&ciphertext)))
+                   BASE64.encode(&nonce[..]),
+                   BASE64.encode(&ciphertext)))
     }
 
     fn encrypt_anonymous_box(&self, data: &[u8]) -> Result<String> {
@@ -258,7 +259,7 @@ impl BoxKeyPair {
         Ok(format!("{}\n{}\n{}",
                    ANONYMOUS_BOX_FORMAT_VERSION,
                    &self.name_with_rev(),
-                   base64::encode(&ciphertext)))
+                   BASE64.encode(&ciphertext)))
     }
 
     pub fn box_key_format_version(version: Option<&str>) -> Result<&str> {
@@ -299,9 +300,8 @@ impl BoxKeyPair {
         match nonce {
             Some(val) => {
                 let decoded =
-                    base64::decode(val).map_err(|e| {
-                                           Error::CryptoError(format!("Can't decode nonce: {}", e))
-                                       })?;
+                    BASE64.decode(val)
+                          .map_err(|e| Error::CryptoError(format!("Can't decode nonce: {}", e)))?;
                 match Nonce::from_slice(&decoded) {
                     Some(nonce) => Ok(nonce),
                     None => Err(Error::CryptoError("Invalid size of nonce".to_string())),
@@ -314,10 +314,10 @@ impl BoxKeyPair {
     pub fn box_key_ciphertext(ciphertext: Option<&str>) -> Result<Vec<u8>> {
         match ciphertext {
             Some(val) => {
-                Ok(base64::decode(val).map_err(|e| {
-                                          Error::CryptoError(format!("Can't decode ciphertext: {}",
-                                                                     e))
-                                      })?)
+                Ok(BASE64.decode(val)
+                         .map_err(|e| {
+                             Error::CryptoError(format!("Can't decode ciphertext: {}", e))
+                         })?)
             }
             None => Err(Error::CryptoError("Corrupt payload, can't read ciphertext".to_string())),
         }

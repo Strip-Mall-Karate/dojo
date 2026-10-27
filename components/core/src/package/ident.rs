@@ -17,20 +17,19 @@ use std::{borrow::Cow,
                 PartialOrd},
           fmt,
           result,
-          str::FromStr};
+          str::FromStr,
+          sync::LazyLock};
 
 use regex::Regex;
-use serde_derive::{Deserialize,
-                   Serialize};
+use serde::{Deserialize,
+            Serialize};
 
 use crate::{error::{Error,
                     Result},
             package::PackageTarget};
 
-lazy_static::lazy_static! {
-    static ref ORIGIN_NAME_RE: Regex =
-        Regex::new(r"\A[a-z0-9][a-z0-9_-]*\z").expect("Unable to compile regex");
-}
+static ORIGIN_NAME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\A[a-z0-9][a-z0-9_-]*\z").expect("Unable to compile regex"));
 
 #[derive(Deserialize, Serialize, Eq, PartialEq, Debug, Clone, Hash)]
 pub struct PackageIdent {
@@ -335,7 +334,7 @@ pub struct Iter<'a> {
     // The ident to iterate over
     ident: &'a PackageIdent,
     // The position through the ident
-    pos: usize,
+    pos:   usize,
 }
 
 impl<'a> Iterator for Iter<'a> {

@@ -146,23 +146,23 @@ pub struct Service {
     pub user_config_updated: bool,
 
     #[serde(skip_serializing)]
-    config_renderer: CfgRenderer,
-    health_check: HealthCheck,
-    last_election_status: ElectionStatus,
-    needs_reload: bool,
-    needs_reconfiguration: bool,
+    config_renderer:        CfgRenderer,
+    health_check:           HealthCheck,
+    last_election_status:   ElectionStatus,
+    needs_reload:           bool,
+    needs_reconfiguration:  bool,
     /// The mapping of bind name to a service group, specified by the
     /// user when the service definition was loaded into the Supervisor.
-    binds: Vec<ServiceBind>,
+    binds:                  Vec<ServiceBind>,
     /// The binds that the current service package declares, both
     /// required and optional. We don't differentiate because this is
     /// used to validate the user-specified bindings against the
     /// current state of the census; once you get into the actual
     /// running of the service, the distinction is immaterial.
-    all_pkg_binds: Vec<Bind>,
+    all_pkg_binds:          Vec<Bind>,
     /// Controls how the presence or absence of bound service groups
     /// impacts the service's start-up.
-    binding_mode: BindingMode,
+    binding_mode:           BindingMode,
     /// Binds specified by the user that are currently mapped to
     /// service groups that do _not_ satisfy the bind's contract, as
     /// defined in the service's current package.
@@ -175,22 +175,22 @@ pub struct Service {
     /// that should be reconciled against the current state of the
     /// census.
     #[serde(skip_serializing)]
-    unsatisfied_binds: HashSet<ServiceBind>,
-    hooks: HookTable,
-    config_from: Option<PathBuf>,
+    unsatisfied_binds:      HashSet<ServiceBind>,
+    hooks:                  HookTable,
+    config_from:            Option<PathBuf>,
     #[serde(skip_serializing)]
     scheduled_health_check: Option<Instant>,
-    manager_fs_cfg: Arc<FsCfg>,
+    manager_fs_cfg:         Arc<FsCfg>,
     #[serde(rename = "process")]
-    supervisor: Supervisor,
-    health_check_interval: HealthCheckInterval,
+    supervisor:             Supervisor,
+    health_check_interval:  HealthCheckInterval,
 
     #[serde(skip_serializing)]
     /// Whether a service's default configuration changed on a package
     /// update. Used to control when templates are re-rendered.
     defaults_updated: bool,
     #[serde(skip_serializing)]
-    gateway_state: Arc<RwLock<GatewayState>>,
+    gateway_state:    Arc<RwLock<GatewayState>>,
 }
 
 impl Service {

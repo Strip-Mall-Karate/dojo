@@ -52,8 +52,7 @@ mod inner {
               ffi::OsString};
 
     use crate::{common::ui::UI,
-                hcore::{crypto::init,
-                        env::Config,
+                hcore::{env::Config,
                         fs::find_command,
                         package::PackageIdent,
                         url::BLDR_URL_ENVVAR,
@@ -75,7 +74,6 @@ mod inner {
                  ident: &PackageIdent,
                  format: &ExportFormat)
                  -> Result<()> {
-        init();
         let command = exec::command_from_min_pkg(ui, format.cmd(), format.pkg_ident())?;
 
         if let Some(cmd) = find_command(command.to_string_lossy().as_ref()) {

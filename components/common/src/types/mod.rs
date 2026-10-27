@@ -27,11 +27,11 @@ pub use self::listen_ctl_addr::ListenCtlAddr;
 #[derive(Debug, Default)]
 pub struct UserInfo {
     /// Optional
-    pub username: Option<String>,
+    pub username:  Option<String>,
     /// Preferred
-    pub uid: Option<u32>,
+    pub uid:       Option<u32>,
     /// Optional
     pub groupname: Option<String>,
     /// Preferred
-    pub gid: Option<u32>,
+    pub gid:       Option<u32>,
 }

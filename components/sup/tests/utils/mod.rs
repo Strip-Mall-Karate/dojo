@@ -69,12 +69,11 @@ pub fn setup_package_files(origin_name: &str,
     copy_dir(&expanded_fixture_dir, &doj_pkg_path);
     write_default_svc_user_and_group_metafiles(&doj_root, &origin_name, &package_name);
 
-    let install =
-        PackageInstall::load(&doj_root.pkg_ident(&origin_name, &package_name),
-                             Some(doj_root.as_ref())).unwrap_or_else(|_| {
-                                                         panic!("Could not load package {:?}/{:?}",
-                                                                &origin_name, &package_name)
-                                                     });
+    let install = PackageInstall::load(&doj_root.pkg_ident(&origin_name, &package_name),
+                                       Some(doj_root.as_ref())).unwrap_or_else(|_| {
+                      panic!("Could not load package {:?}/{:?}",
+                             &origin_name, &package_name)
+                  });
     if let Ok(tdeps) = install.tdeps() {
         for dependency in tdeps.iter() {
             let fixture_dir = fixture_root.expanded_package_dir(&dependency.name);

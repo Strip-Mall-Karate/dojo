@@ -67,9 +67,11 @@ impl fmt::Display for Error {
             Error::KeyReadError(ref p, ref e) => {
                 format!("Failed to read origin key, {}, {}", p.display(), e)
             }
-            Error::NoFilePart => "An invalid path was passed - we needed a filename, and this \
+            Error::NoFilePart => {
+                "An invalid path was passed - we needed a filename, and this \
                                   path does not have one"
-                                                         .to_string(),
+                                                         .to_string()
+            }
             Error::PackageReadError(ref p, ref e) => {
                 format!("Failed to read package artifact, {}, {}", p.display(), e)
             }

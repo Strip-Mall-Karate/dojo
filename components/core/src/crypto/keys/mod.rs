@@ -22,11 +22,12 @@ use std::{collections::HashSet,
           path::{Path,
                  PathBuf},
           result,
-          str::FromStr};
+          str::FromStr,
+          sync::LazyLock};
 
-use base64;
+use base64::{engine::general_purpose::STANDARD as BASE64,
+             Engine};
 use regex::Regex;
-use time;
 
 use crate::error::{Error,
                    Result};
@@ -41,11 +42,12 @@ use super::{PUBLIC_BOX_KEY_VERSION,
             SECRET_SYM_KEY_SUFFIX,
             SECRET_SYM_KEY_VERSION};
 
-lazy_static::lazy_static! {
-    static ref NAME_WITH_REV_RE: Regex = Regex::new(r"\A(?P<name>.+)-(?P<rev>\d{14})\z").unwrap();
-    static ref KEYFILE_RE: Regex =
-        Regex::new(r"\A(?P<name>.+)-(?P<rev>\d{14})\.(?P<suffix>[a-z]+(\.[a-z]+)?)\z").unwrap();
-}
+static NAME_WITH_REV_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\A(?P<name>.+)-(?P<rev>\d{14})\z").unwrap());
+
+static KEYFILE_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\A(?P<name>.+)-(?P<rev>\d{14})\.(?P<suffix>[a-z]+(\.[a-z]+)?)\z").unwrap()
+});
 
 pub mod box_key_pair;
 pub mod sig_key_pair;
@@ -119,9 +121,9 @@ impl Drop for TmpKeyfile {
 #[derive(Clone)]
 pub struct KeyPair<P, S> {
     /// The name of the key, ex: "dojo"
-    pub name: String,
+    pub name:   String,
     /// The revision of the key, which is a timestamp, ex: "201604051449"
-    pub rev: String,
+    pub rev:    String,
     /// The public key component, if relevant
     pub public: Option<P>,
     /// The private key component, if relevant
@@ -327,12 +329,9 @@ fn mk_key_filename<P, S1, S2>(path: P, keyname: S1, suffix: S2) -> PathBuf
 /// `{year}{month}{day}{hour24}{minute}{second}`
 /// Timestamps are in UTC time.
 fn mk_revision_string() -> Result<String> {
-    let now = time::now_utc();
-    // https://github.com/rust-lang-deprecated/time/blob/master/src/display.rs
-    // http://man7.org/linux/man-pages/man3/strftime.3.html
-    match now.strftime("%Y%m%d%H%M%S") {
-        Ok(result) => Ok(result.to_string()),
-        Err(_) => Err(Error::CryptoError("Can't parse system time".to_string())),
+    match Some(jiff::Timestamp::now().strftime("%Y%m%d%H%M%S").to_string()) {
+        Some(result) => Ok(result),
+        None => Err(Error::CryptoError("Can't parse system time".to_string())),
     }
 }
 
@@ -445,7 +444,7 @@ pub fn parse_key_str(content: &str) -> Result<(PairType, String, String)> {
     };
     match lines.nth(1) {
         Some(val) => {
-            base64::decode(val.trim()).map_err(|_| {
+            BASE64.decode(val.trim()).map_err(|_| {
                                           Error::CryptoError(format!("write_key_from_str:3 \
                                                                       Malformed key string:\n({})",
                                                                      content))
@@ -471,10 +470,8 @@ fn read_key_bytes(keyfile: &Path) -> Result<Vec<u8>> {
 fn read_key_bytes_from_str(key: &str) -> Result<Vec<u8>> {
     match key.lines().nth(3) {
         Some(encoded) => {
-            let v = base64::decode(encoded).map_err(|e| {
-                                               Error::CryptoError(format!("Can't read raw key {}",
-                                                                          e))
-                                           })?;
+            let v = BASE64.decode(encoded)
+                          .map_err(|e| Error::CryptoError(format!("Can't read raw key {}", e)))?;
             Ok(v)
         }
         None => Err(Error::CryptoError("Malformed key contents".to_string())),

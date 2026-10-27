@@ -80,7 +80,8 @@
 use std::{fmt,
           ops::Deref,
           result,
-          str::FromStr};
+          str::FromStr,
+          sync::LazyLock};
 
 use regex::Regex;
 use serde;
@@ -247,9 +248,9 @@ macro_rules! supported_package_targets {
 // 4. The Rust string value to be used in the target's `cfg!(target_arch = "<arch>")` macro. This
 //    will be used to conditionally compile the correct and appropriate active package target at
 //    compile time.
-// 5. The Rust string value to be used in the target's `cfg!(target_os = "<arch>")` macro. This
-//    will be used to conditionally compile the correct and appropriate active package target at
-//    compile time.
+// 5. The Rust string value to be used in the target's `cfg!(target_os = "<arch>")` macro. This will
+//    be used to conditionally compile the correct and appropriate active package target at compile
+//    time.
 //
 // Note that some package targets may overlap on the same underlying `target_arch`/`target_os`
 // system. These are still distinct and exclusive package targets and will operate in isolation as
@@ -321,16 +322,16 @@ supported_package_targets! {
     ("x86_64-linux-kernel2", X86_64_Linux_Kernel2, X86_64_LINUX_KERNEL2, "x86_64", "linux");
 }
 
-lazy_static::lazy_static! {
-    /// A compiled regular expression that can parse the internal components of a `Type`.
-    static ref TYPE_FROM_STR_RE: Regex = Regex::new(
+/// A compiled regular expression that can parse the internal components of a `Type`.
+static TYPE_FROM_STR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
         r"\A(?P<architecture>[a-z0-9_]+)-(?P<system>[a-z0-9_]+)(-(?P<variant>[a-z0-9_]+))?\z"
-    ).unwrap();
+    ).unwrap()
+});
 
-    /// The `PackageTarget` that is determined at compile time for the currently running system
-    /// architecture.
-    static ref ACTIVE_PACKAGE_TARGET: PackageTarget = active_package_target();
-}
+/// The `PackageTarget` that is determined at compile time for the currently running system
+/// architecture.
+static ACTIVE_PACKAGE_TARGET: LazyLock<PackageTarget> = LazyLock::new(|| active_package_target());
 
 /// Represents a specific system architecture.
 ///
@@ -538,8 +539,8 @@ impl<'a> Iterator for Iter<'a> {
 mod test {
     use super::*;
 
-    use serde_derive::{Deserialize,
-                       Serialize};
+    use serde::{Deserialize,
+                Serialize};
     use toml;
 
     // This test explicitly runs the function which returns the active `PackageTarget` for the

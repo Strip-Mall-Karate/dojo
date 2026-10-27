@@ -439,7 +439,7 @@ pub struct HookTable {
     pub post_run:     Option<PostRunHook>,
     // This Arc<> business is a possibly-temporary state while
     // we refactor hooks to be able to run asynchronously.
-    pub post_stop: Option<Arc<PostStopHook>>,
+    pub post_stop:    Option<Arc<PostStopHook>>,
 }
 
 impl HookTable {

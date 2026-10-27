@@ -27,7 +27,8 @@ use std::{env,
                Write},
           path::{Path,
                  PathBuf},
-          str::FromStr};
+          str::FromStr,
+          sync::LazyLock};
 use tempfile;
 
 /// The default root path of the Dojo filesystem
@@ -59,76 +60,72 @@ pub const USER_CONFIG_FILE: &str = "user.toml";
 /// have. The user and group will be `SVC_USER` / `SVC_GROUP`.
 const SVC_DIR_PERMISSIONS: u32 = 0o770;
 
-lazy_static::lazy_static! {
-    /// The default filesystem root path.
-    pub static ref FS_ROOT_PATH: PathBuf = fs_root_path();
+/// The default filesystem root path.
+pub static FS_ROOT_PATH: LazyLock<PathBuf> = LazyLock::new(|| fs_root_path());
 
-    /// The root path containing all runtime service directories and files
-    pub static ref SVC_ROOT: PathBuf = {
-        Path::new(&*FS_ROOT_PATH).join("doj").join("svc")
-    };
+/// The root path containing all runtime service directories and files
+pub static SVC_ROOT: LazyLock<PathBuf> =
+    LazyLock::new(|| Path::new(&*FS_ROOT_PATH).join("doj").join("svc"));
 
-    pub static ref USER_ROOT: PathBuf = {
-        Path::new(&*FS_ROOT_PATH).join("doj").join("user")
-    };
+pub static USER_ROOT: LazyLock<PathBuf> =
+    LazyLock::new(|| Path::new(&*FS_ROOT_PATH).join("doj").join("user"));
 
-    static ref EUID: u32 = users::get_effective_uid();
+static EUID: LazyLock<u32> = LazyLock::new(|| users::get_effective_uid());
 
-    static ref MY_CACHE_ANALYTICS_PATH: PathBuf = {
-        if am_i_root() {
-            PathBuf::from(CACHE_ANALYTICS_PATH)
-        } else {
-            match dirs::home_dir() {
-                Some(home) => home.join(format!(".{}", CACHE_ANALYTICS_PATH)),
-                None => PathBuf::from(CACHE_ANALYTICS_PATH),
-            }
+static MY_CACHE_ANALYTICS_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    if am_i_root() {
+        PathBuf::from(CACHE_ANALYTICS_PATH)
+    } else {
+        match dirs::home_dir() {
+            Some(home) => home.join(format!(".{}", CACHE_ANALYTICS_PATH)),
+            None => PathBuf::from(CACHE_ANALYTICS_PATH),
         }
-    };
+    }
+});
 
-    static ref MY_CACHE_ARTIFACT_PATH: PathBuf = {
-        if am_i_root() {
-            PathBuf::from(CACHE_ARTIFACT_PATH)
-        } else {
-            match dirs::home_dir() {
-                Some(home) => home.join(format!(".{}", CACHE_ARTIFACT_PATH)),
-                None => PathBuf::from(CACHE_ARTIFACT_PATH),
-            }
+static MY_CACHE_ARTIFACT_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    if am_i_root() {
+        PathBuf::from(CACHE_ARTIFACT_PATH)
+    } else {
+        match dirs::home_dir() {
+            Some(home) => home.join(format!(".{}", CACHE_ARTIFACT_PATH)),
+            None => PathBuf::from(CACHE_ARTIFACT_PATH),
         }
-    };
+    }
+});
 
-    static ref MY_CACHE_KEY_PATH: PathBuf = {
-        if am_i_root() {
-            PathBuf::from(CACHE_KEY_PATH)
-        } else {
-            match dirs::home_dir() {
-                Some(home) => home.join(format!(".{}", CACHE_KEY_PATH)),
-                None => PathBuf::from(CACHE_KEY_PATH),
-            }
+static MY_CACHE_KEY_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    if am_i_root() {
+        PathBuf::from(CACHE_KEY_PATH)
+    } else {
+        match dirs::home_dir() {
+            Some(home) => home.join(format!(".{}", CACHE_KEY_PATH)),
+            None => PathBuf::from(CACHE_KEY_PATH),
         }
-    };
+    }
+});
 
-    static ref MY_CACHE_SRC_PATH: PathBuf = {
-        if am_i_root() {
-            PathBuf::from(CACHE_SRC_PATH)
-        } else {
-            match dirs::home_dir() {
-                Some(home) => home.join(format!(".{}", CACHE_SRC_PATH)),
-                None => PathBuf::from(CACHE_SRC_PATH),
-            }
+static MY_CACHE_SRC_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    if am_i_root() {
+        PathBuf::from(CACHE_SRC_PATH)
+    } else {
+        match dirs::home_dir() {
+            Some(home) => home.join(format!(".{}", CACHE_SRC_PATH)),
+            None => PathBuf::from(CACHE_SRC_PATH),
         }
-    };
+    }
+});
 
-    static ref MY_CACHE_SSL_PATH: PathBuf = {
-        if am_i_root() {
-            PathBuf::from(CACHE_SSL_PATH)
-        } else {
-            match dirs::home_dir() {
-                Some(home) => home.join(format!(".{}", CACHE_SSL_PATH)),
-                None => PathBuf::from(CACHE_SSL_PATH),
-            }
+static MY_CACHE_SSL_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    if am_i_root() {
+        PathBuf::from(CACHE_SSL_PATH)
+    } else {
+        match dirs::home_dir() {
+            Some(home) => home.join(format!(".{}", CACHE_SSL_PATH)),
+            None => PathBuf::from(CACHE_SSL_PATH),
         }
-    };
-}
+    }
+});
 
 /// Returns the path to the analytics cache, optionally taking a custom filesystem root.
 pub fn cache_analytics_path<T>(fs_root_path: Option<T>) -> PathBuf
@@ -513,7 +510,7 @@ pub fn find_command_in_pkg<T, U>(command: T,
 
 /// Resolves the absolute path to a program in the given package identifier string.
 ///
-/// Note: this function is designed to be callable in `lazy_static!` blocks, meaning that if it
+/// Note: this function is designed to be callable in static initializers, meaning that if it
 /// can't make forward progress, it will panic and possibly termine the program. This is by design.
 ///
 /// # Panics
@@ -528,21 +525,21 @@ pub fn resolve_cmd_in_pkg(program: &str, ident_str: &str) -> PathBuf {
             match find_command_in_pkg(program, pkg_install, Path::new(&*FS_ROOT_PATH)) {
                 Ok(Some(p)) => p,
                 Ok(None) => {
-                    panic!(format!("Could not find '{}' in the '{}' package! This is required \
+                    panic!("Could not find '{}' in the '{}' package! This is required \
                                     for the proper operation of this program.",
-                                   program, &ident))
+                                   program, &ident)
                 }
                 Err(err) => {
-                    panic!(format!("Error finding '{}' in the '{}' package! This is required for \
+                    panic!("Error finding '{}' in the '{}' package! This is required for \
                                     the proper operation of this program. (Err: {:?})",
-                                   program, &ident, err))
+                                   program, &ident, err)
                 }
             }
         }
         Err(err) => {
-            panic!(format!("Package installation for '{}' not found on disk! This is required \
+            panic!("Package installation for '{}' not found on disk! This is required \
                             for the proper operation of this program (Err: {:?})",
-                           &ident, err))
+                           &ident, err)
         }
     };
     debug!("resolved absolute path to program, program={}, ident={}, abs_path={}",
@@ -822,7 +819,6 @@ mod test_find_command {
             }
         }
     }
-
 }
 
 #[cfg(test)]
@@ -834,8 +830,7 @@ mod test_atomic_writer {
               io::{Read,
                    Seek,
                    SeekFrom,
-                   Write},
-              panic};
+                   Write}};
     use tempfile;
 
     const EXPECTED_CONTENT: &str = "A very good file format";

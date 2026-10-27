@@ -155,22 +155,22 @@ impl IntoServiceSpec for dojo_sup_protocol::ctl::SvcLoad {
 pub struct ServiceSpec {
     #[serde(deserialize_with = "deserialize_using_from_str",
             serialize_with = "serialize_using_to_string")]
-    pub ident: PackageIdent,
-    pub group: String,
+    pub ident:                   PackageIdent,
+    pub group:                   String,
     #[serde(deserialize_with = "deserialize_application_environment",
             skip_serializing_if = "Option::is_none")]
     pub application_environment: Option<ApplicationEnvironment>,
-    pub bldr_url: String,
-    pub channel: ChannelIdent,
-    pub topology: Topology,
-    pub update_strategy: UpdateStrategy,
-    pub binds: Vec<ServiceBind>,
-    pub binding_mode: BindingMode,
-    pub config_from: Option<PathBuf>,
+    pub bldr_url:                String,
+    pub channel:                 ChannelIdent,
+    pub topology:                Topology,
+    pub update_strategy:         UpdateStrategy,
+    pub binds:                   Vec<ServiceBind>,
+    pub binding_mode:            BindingMode,
+    pub config_from:             Option<PathBuf>,
     #[serde(deserialize_with = "deserialize_using_from_str",
             serialize_with = "serialize_using_to_string")]
-    pub desired_state: DesiredState,
-    pub health_check_interval: HealthCheckInterval,
+    pub desired_state:           DesiredState,
+    pub health_check_interval:   HealthCheckInterval,
 }
 
 impl ServiceSpec {

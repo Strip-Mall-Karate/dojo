@@ -54,23 +54,23 @@ const DEFAULT_SUP_IDENT: &str = "karate/doj-sup";
 #[derive(Debug)]
 pub struct BuildSpec<'a> {
     /// A string representation of a Dojo Package Identifer for the Dojo CLI package.
-    pub doj: &'a str,
+    pub doj:               &'a str,
     /// A string representation of a Dojo Package Identifer for the Dojo Launcher package.
-    pub doj_launcher: &'a str,
+    pub doj_launcher:      &'a str,
     /// A string representation of a Dojo Package Identifer for the Dojo Supervisor package.
-    pub doj_sup: &'a str,
+    pub doj_sup:           &'a str,
     /// The Builder URL which is used to install all service and extra Dojo packages.
-    pub url: &'a str,
+    pub url:               &'a str,
     /// The Dojo release channel which is used to install all service and extra Dojo
     /// packages.
-    pub channel: ChannelIdent,
+    pub channel:           ChannelIdent,
     /// The Builder URL which is used to install all base Dojo packages.
-    pub base_pkgs_url: &'a str,
+    pub base_pkgs_url:     &'a str,
     /// The Dojo release channel which is used to install all base Dojo packages.
     pub base_pkgs_channel: ChannelIdent,
     /// A Dojo Package Identifer or local path to a Dojo Artifact file which
     /// will be installed.
-    pub ident_or_archive: &'a str,
+    pub ident_or_archive:  &'a str,
 }
 
 impl<'a> BuildSpec<'a> {
@@ -237,11 +237,11 @@ impl<'a> BuildSpec<'a> {
 #[derive(Debug)]
 struct BasePkgIdents {
     /// Installed package identifer for the Dojo CLI package.
-    pub doj: PackageIdent,
+    pub doj:      PackageIdent,
     /// Installed package identifer for the Supervisor package.
-    pub sup: PackageIdent,
+    pub sup:      PackageIdent,
     /// Installed package identifer for the Launcher package.
     pub launcher: PackageIdent,
     /// Installed package identifer for the Busybox package.
-    pub busybox: Option<PackageIdent>,
+    pub busybox:  Option<PackageIdent>,
 }
