@@ -47,9 +47,7 @@ pub fn deserialize_using_from_str<'de, T, E, D>(d: D) -> result::Result<T, D::Er
             match FromStr::from_str(value) {
                 Ok(t) => Ok(t),
                 Err(err) => {
-                    Err(R::custom(format!("string cannot be parsed: \"{}\" ({})",
-                                          value,
-                                          err)))
+                    Err(R::custom(format!("string cannot be parsed: \"{}\" ({})", value, err)))
                 }
             }
         }

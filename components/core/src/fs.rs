@@ -527,19 +527,19 @@ pub fn resolve_cmd_in_pkg(program: &str, ident_str: &str) -> PathBuf {
                 Ok(None) => {
                     panic!("Could not find '{}' in the '{}' package! This is required \
                                     for the proper operation of this program.",
-                                   program, &ident)
+                           program, &ident)
                 }
                 Err(err) => {
                     panic!("Error finding '{}' in the '{}' package! This is required for \
                                     the proper operation of this program. (Err: {:?})",
-                                   program, &ident, err)
+                           program, &ident, err)
                 }
             }
         }
         Err(err) => {
             panic!("Package installation for '{}' not found on disk! This is required \
                             for the proper operation of this program (Err: {:?})",
-                           &ident, err)
+                   &ident, err)
         }
     };
     debug!("resolved absolute path to program, program={}, ident={}, abs_path={}",
