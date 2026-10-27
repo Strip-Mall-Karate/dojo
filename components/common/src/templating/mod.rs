@@ -22,10 +22,12 @@ pub mod test_helpers;
 use std::{fmt,
           ops::{Deref,
                 DerefMut},
+          path::Path,
           result};
 
-use handlebars::{Handlebars,
-                 RenderError};
+use handlebars::{no_escape,
+                 Handlebars,
+                 TemplateError};
 use serde::Serialize;
 use serde_json;
 
@@ -60,9 +62,7 @@ pub fn compile_for_package_install(package: &PackageInstall) -> Result<()> {
     Ok(())
 }
 
-pub type RenderResult<T> = result::Result<T, RenderError>;
-
-pub struct TemplateRenderer(Handlebars);
+pub struct TemplateRenderer(Handlebars<'static>);
 
 impl TemplateRenderer {
     pub fn new() -> Self {
@@ -78,8 +78,30 @@ impl TemplateRenderer {
         handlebars.register_helper("toToml", Box::new(helpers::TO_TOML));
         handlebars.register_helper("toYaml", Box::new(helpers::TO_YAML));
 
-        handlebars.register_escape_fn(never_escape);
+        // Templates render configuration files and hooks, not HTML.
+        handlebars.register_escape_fn(no_escape);
         TemplateRenderer(handlebars)
+    }
+
+    /// Registers a template, first applying `standalone_tags_keep_newline`.
+    pub fn register_template_string(&mut self,
+                                    name: &str,
+                                    template: impl AsRef<str>)
+                                    -> result::Result<(), TemplateError> {
+        self.0
+            .register_template_string(name, standalone_tags_keep_newline(template.as_ref()))
+    }
+
+    /// Registers the template in a file, first applying `standalone_tags_keep_newline`.
+    pub fn register_template_file(&mut self,
+                                  name: &str,
+                                  path: impl AsRef<Path>)
+                                  -> result::Result<(), TemplateError> {
+        let template =
+            std::fs::read_to_string(path.as_ref()).map_err(|e| {
+                                                      TemplateError::from((e, name.to_string()))
+                                                  })?;
+        self.register_template_string(name, template)
     }
 
     pub fn render<T>(&self, template: &str, ctx: &T) -> Result<String>
@@ -93,6 +115,80 @@ impl TemplateRenderer {
     }
 }
 
+/// Keeps the output Dojo's templates were written for when a block tag stands alone on its
+/// line with a tilde on one side only, as in
+///
+/// ```text
+/// # a comment
+/// {{~#if cfg.enabled}}
+/// enabled = true
+/// {{~/if}}
+/// ```
+///
+/// Handlebars removes a line that holds nothing but a block tag, its indentation and newline
+/// included, and the tilde then also removes the whitespace beside the line, so the lines
+/// either side are joined. Templates were written for a renderer that never removed such a
+/// line: a tilde on the left removed the whitespace before the tag and kept the newline after
+/// it, and a tilde on the right kept the tag's indentation and removed the whitespace after it,
+/// so that the next line took the tag's indentation. This rewrites the template so that
+/// Handlebars produces that output. A tag with tildes on both sides, or none, is left alone.
+fn standalone_tags_keep_newline(template: &str) -> String {
+    let mut out = String::with_capacity(template.len());
+    // The indentation a right tilde gives the next line that holds more than whitespace.
+    let mut carried: Option<String> = None;
+    for line in template.split_inclusive('\n') {
+        let line = match carried.take() {
+            Some(indent) if line.trim().is_empty() => {
+                carried = Some(indent);
+                continue;
+            }
+            Some(indent) => indent + line.trim_start(),
+            None => line.to_string(),
+        };
+        match standalone_tilde(&line) {
+            Some(Tilde::Left) => {
+                out.truncate(out.trim_end().len());
+                if !out.is_empty() {
+                    out.push('\n');
+                }
+                out.push_str(&line.replacen("{{~", "{{", 1));
+            }
+            Some(Tilde::Right) => {
+                carried = Some(line[..line.len() - line.trim_start().len()].to_string());
+                let at = line.rfind("~}}").expect("the tag ends with a tilde");
+                out.push_str(&line[..at]);
+                out.push_str(&line[at + 1..]);
+            }
+            None => out.push_str(&line),
+        }
+    }
+    out
+}
+
+enum Tilde {
+    Left,
+    Right,
+}
+
+/// Which side the tilde is on, if `line` holds nothing but a block tag with a tilde on one
+/// side.
+fn standalone_tilde(line: &str) -> Option<Tilde> {
+    let inner = line.trim().strip_prefix("{{")?.strip_suffix("}}")?;
+    if inner.contains("{{") {
+        return None;
+    }
+    let body = inner.trim_matches('~').trim_start();
+    let block = ["#", "^", "/", "!", ">"].iter()
+                                         .any(|k| body.starts_with(k))
+                || body.trim_end() == "else"
+                || body.starts_with("else ");
+    match (block, inner.starts_with('~'), inner.ends_with('~')) {
+        (true, true, false) => Some(Tilde::Left),
+        (true, false, true) => Some(Tilde::Right),
+        _ => None,
+    }
+}
+
 impl fmt::Debug for TemplateRenderer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Handlebars TemplateRenderer")
@@ -100,17 +196,14 @@ impl fmt::Debug for TemplateRenderer {
 }
 
 impl Deref for TemplateRenderer {
-    type Target = Handlebars;
+    type Target = Handlebars<'static>;
 
-    fn deref(&self) -> &Handlebars { &self.0 }
+    fn deref(&self) -> &Handlebars<'static> { &self.0 }
 }
 
 impl DerefMut for TemplateRenderer {
-    fn deref_mut(&mut self) -> &mut Handlebars { &mut self.0 }
+    fn deref_mut(&mut self) -> &mut Handlebars<'static> { &mut self.0 }
 }
-
-/// Disables HTML escaping which is enabled by default in Handlebars.
-fn never_escape(data: &str) -> String { String::from(data) }
 
 #[cfg(test)]
 mod test {
@@ -210,6 +303,66 @@ mod test {
         );
     }
 
+    fn render_with_cfg(template: &str, cfg: serde_json::Value) -> String {
+        let mut renderer = TemplateRenderer::new();
+        renderer.register_template_string("t", template).unwrap();
+        renderer.render("t", &serde_json::json!({ "cfg": cfg }))
+                .unwrap()
+    }
+
+    #[test]
+    fn a_standalone_block_tag_with_a_left_tilde_keeps_the_lines_apart() {
+        let template = "# comment\n\n{{~#if cfg.on}}\non = true\n{{~/if}}\n\nlast\n";
+        assert_eq!(render_with_cfg(template, serde_json::json!({ "on": true })),
+                   "# comment\non = true\n\nlast\n");
+        assert_eq!(render_with_cfg(template, serde_json::json!({ "on": false })),
+                   "# comment\n\nlast\n");
+    }
+
+    #[test]
+    fn standalone_each_with_a_left_tilde_puts_each_member_on_its_own_line() {
+        let template = "first\n{{~#each cfg.hosts as |host|}}\nhost {{host}}\n{{~/each}}\nlast";
+        assert_eq!(render_with_cfg(template, serde_json::json!({ "hosts": ["a", "b"] })),
+                   "first\nhost a\nhost b\nlast");
+    }
+
+    #[test]
+    fn a_standalone_block_tag_with_a_right_tilde_keeps_the_next_line_indented() {
+        let template = "start \\\n  {{#if cfg.on ~}}\n  --on \\\n  {{else ~}}\n  --off \\\n  \
+                        {{/if ~}}\n  --last\n";
+        assert_eq!(render_with_cfg(template, serde_json::json!({ "on": true })),
+                   "start \\\n  --on \\\n  --last\n");
+        assert_eq!(render_with_cfg(template, serde_json::json!({ "on": false })),
+                   "start \\\n  --off \\\n  --last\n");
+    }
+
+    #[test]
+    fn a_right_tilde_gives_the_next_line_the_tags_indentation() {
+        let template = "# Node Types\n{{#if cfg.leader ~}}\n  master: true\n{{else ~}}\n  \
+                        master: false\n{{/if ~}}\n\n  data: true\n";
+        assert_eq!(render_with_cfg(template, serde_json::json!({ "leader": false })),
+                   "# Node Types\nmaster: false\ndata: true\n");
+    }
+
+    #[test]
+    fn a_tilde_may_be_spaced_from_the_block_tag() {
+        assert_eq!(render_with_cfg("a\n\n{{~ #unless cfg.on }}\nb\n{{~/unless}}\n",
+                                   serde_json::json!({ "on": false })),
+                   "a\nb\n");
+    }
+
+    #[test]
+    fn tildes_off_standalone_lines_keep_their_meaning() {
+        assert_eq!(render_with_cfg("a\n{{~#if cfg.on~}}\nb\n{{~/if~}}\nc",
+                                   serde_json::json!({ "on": true })),
+                   "abc");
+        assert_eq!(render_with_cfg("a\n {{~cfg.x}}\n", serde_json::json!({ "x": "b" })),
+                   "ab\n");
+        assert_eq!(render_with_cfg("a {{~#if cfg.on}} b{{/if}}\n",
+                                   serde_json::json!({ "on": true })),
+                   "a b\n");
+    }
+
     #[test]
     fn test_handlebars_yaml_helper() {
         let content = "{{toYaml x}}".to_string();
@@ -224,12 +377,7 @@ mod test {
 
         let r = renderer.render("t", &m);
 
-        assert_eq!(
-                   r.ok().unwrap(),
-                   r#"---
-test: something"#
-                   .to_string()
-        );
+        assert_eq!(r.ok().unwrap(), "test: something\n");
     }
 
     #[test]
@@ -272,7 +420,7 @@ test: something"#
 
     #[test]
     fn bind_variable() {
-        let content = "{{bind.foo.members[0].sys.ip}}";
+        let content = "{{bind.foo.members.[0].sys.ip}}";
         let mut renderer = TemplateRenderer::new();
         let data = service_config_json_from_toml_file("complex_config.toml");
 
@@ -354,7 +502,7 @@ test: something"#
 
     #[test]
     fn render_package_install() {
-        let root = TempDir::new().expect("create temp dir").into_path();
+        let root = TempDir::new().expect("create temp dir").keep();
         env::set_var(fs::FS_ROOT_ENVVAR, &root);
         let pg_id = PackageIdent::new("testing", "test", Some("1.0.0"), Some("20170712000000"));
 

@@ -12,33 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use handlebars::{Handlebars,
+use handlebars::{Context,
+                 Handlebars,
                  Helper,
                  HelperDef,
-                 RenderContext,
-                 RenderError};
+                 HelperResult,
+                 Output,
+                 RenderContext};
 
-use super::super::RenderResult;
+use super::render_error;
 
 #[derive(Clone, Copy)]
 pub struct StrJoinHelper;
 
 impl HelperDef for StrJoinHelper {
-    fn call(&self, h: &Helper<'_>, _: &Handlebars, rc: &mut RenderContext<'_>) -> RenderResult<()> {
+    fn call<'reg: 'rc, 'rc>(&self,
+                            h: &Helper<'rc>,
+                            _: &'reg Handlebars<'reg>,
+                            _: &'rc Context,
+                            _: &mut RenderContext<'reg, 'rc>,
+                            out: &mut dyn Output)
+                            -> HelperResult {
         let list: Vec<String> =
             h.param(0)
              .and_then(|v| v.value().as_array())
-             .ok_or_else(|| RenderError::new("Expected 2 parameters for \"strJoin\""))?
+             .ok_or_else(|| render_error("Expected 2 parameters for \"strJoin\""))?
              .iter()
              .filter(|v| !v.is_object())
              .map(|v| v.to_string().replace("\"", ""))
              .collect();
-        let seperator = h.param(1)
+        let separator = h.param(1)
                          .and_then(|v| v.value().as_str())
-                         .ok_or_else(|| RenderError::new("Expected 2 parameters for \"strJoin\""))?;
-
-        rc.writer
-          .write_all(list.join(seperator).into_bytes().as_ref())?;
+                         .ok_or_else(|| render_error("Expected 2 parameters for \"strJoin\""))?;
+        out.write(&list.join(separator))?;
         Ok(())
     }
 }
@@ -58,7 +64,7 @@ mod test {
         handlebars.register_helper("strJoin", Box::new(STR_JOIN));
         let expected = "foo,bar,baz";
         assert_eq!(expected,
-                   handlebars.template_render("{{strJoin list \",\"}}", &json)
+                   handlebars.render_template("{{strJoin list \",\"}}", &json)
                              .unwrap());
     }
 
@@ -72,7 +78,7 @@ mod test {
         let mut handlebars = Handlebars::new();
         handlebars.register_helper("strJoin", Box::new(STR_JOIN));
         assert_eq!("",
-                   handlebars.template_render("{{strJoin list \",\"}}", &json)
+                   handlebars.render_template("{{strJoin list \",\"}}", &json)
                              .unwrap());
     }
 }

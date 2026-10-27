@@ -12,27 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use handlebars::{Handlebars,
+use handlebars::{Context,
+                 Handlebars,
                  Helper,
                  HelperDef,
-                 RenderContext,
-                 RenderError};
+                 HelperResult,
+                 Output,
+                 RenderContext};
 
-use super::super::RenderResult;
+use super::render_error;
 
 #[derive(Clone, Copy)]
 pub struct ToUppercaseHelper;
 
 impl HelperDef for ToUppercaseHelper {
-    fn call(&self, h: &Helper<'_>, _: &Handlebars, rc: &mut RenderContext<'_>) -> RenderResult<()> {
+    fn call<'reg: 'rc, 'rc>(&self,
+                            h: &Helper<'rc>,
+                            _: &'reg Handlebars<'reg>,
+                            _: &'rc Context,
+                            _: &mut RenderContext<'reg, 'rc>,
+                            out: &mut dyn Output)
+                            -> HelperResult {
         let param =
-            h.param(0).and_then(|v| v.value().as_str()).ok_or_else(|| {
-                                                            RenderError::new("Expected a string \
-                                                                              parameter for \
-                                                                              \"toUppercase\"")
-                                                        })?;
-        rc.writer
-          .write_all(param.to_uppercase().into_bytes().as_ref())?;
+            h.param(0)
+             .and_then(|v| v.value().as_str())
+             .ok_or_else(|| render_error("Expected a string parameter for \"toUppercase\""))?;
+        out.write(&param.to_uppercase())?;
         Ok(())
     }
 }
