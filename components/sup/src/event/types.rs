@@ -35,7 +35,7 @@ pub struct ServiceStarted<'a> {
     pub ident: &'a PackageIdent,
     /// The identifier the service was loaded as. This could be (and
     /// often is) an abbreviated identifier, like "karate/redis".
-    pub spec_ident: &'a PackageIdent,
+    pub spec_ident:    &'a PackageIdent,
     /// The service group of the running service
     pub service_group: &'a ServiceGroup,
 }
@@ -44,7 +44,7 @@ impl<'a> Event for ServiceStarted<'a> {}
 #[derive(Debug)]
 pub struct ServiceStopped<'a> {
     /// The fully-qualified identifier of the service that has just started
-    pub ident: &'a PackageIdent,
+    pub ident:         &'a PackageIdent,
     //    pub spec_ident: &'a PackageIdent,
     /// The service group of the running service
     pub service_group: &'a ServiceGroup,

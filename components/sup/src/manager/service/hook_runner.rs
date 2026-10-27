@@ -14,7 +14,6 @@
 
 //! Runs a service lifecycle hook on a separate thread, and wraps the
 //! whole execution in a future.
-//!
 
 use super::{hook_timer,
             spawned_future::SpawnedFuture,

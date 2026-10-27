@@ -324,8 +324,8 @@ impl ReconciliationFlag {
 /// state gets shared with all the CtlGateway handlers.
 pub struct ManagerState {
     /// The configuration used to instantiate this Manager instance
-    pub cfg: ManagerConfig,
-    pub services: Arc<RwLock<HashMap<PackageIdent, Service>>>,
+    pub cfg:           ManagerConfig,
+    pub services:      Arc<RwLock<HashMap<PackageIdent, Service>>>,
     pub gateway_state: Arc<RwLock<GatewayState>>,
 }
 
@@ -339,14 +339,14 @@ pub struct GatewayState {
 }
 
 pub struct Manager {
-    pub state:    Arc<ManagerState>,
-    butterfly:    dojo_butterfly::Server,
-    census_ring:  CensusRing,
-    fs_cfg:       Arc<FsCfg>,
-    launcher:     LauncherCli,
-    updater:      Arc<Mutex<ServiceUpdater>>,
-    peer_watcher: Option<PeerWatcher>,
-    spec_watcher: SpecWatcher,
+    pub state:           Arc<ManagerState>,
+    butterfly:           dojo_butterfly::Server,
+    census_ring:         CensusRing,
+    fs_cfg:              Arc<FsCfg>,
+    launcher:            LauncherCli,
+    updater:             Arc<Mutex<ServiceUpdater>>,
+    peer_watcher:        Option<PeerWatcher>,
+    spec_watcher:        SpecWatcher,
     // This Arc<RwLock<>> business is a potentially temporary
     // change. Right now, in order to asynchronously shut down
     // services, we need to be able to have a safe reference to this
@@ -1827,7 +1827,6 @@ mod test {
             assert_ne!(TokioThreadCount::configured_value().0, 0);
             assert_eq!(TokioThreadCount::configured_value().0, num_cpus::get());
         }
-
     }
 
     mod specs_to_operations {

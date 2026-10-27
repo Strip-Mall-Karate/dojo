@@ -135,7 +135,7 @@ pub struct CtlCommand {
     // argument passed to this closure until `FnOnce<Box>` stabilizes.
     //
     // https://github.com/rust-lang/rust/issues/28796
-    fun: Box<dyn Fn(&ManagerState, &mut CtlRequest) -> NetResult<()> + Send>,
+    fun:     Box<dyn Fn(&ManagerState, &mut CtlRequest) -> NetResult<()> + Send>,
 }
 
 impl CtlCommand {

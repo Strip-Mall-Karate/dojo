@@ -20,8 +20,7 @@ done
 
 toolchain=$(tr -d '[:space:]' <rust-toolchain)
 run rustup toolchain install "$toolchain" --profile minimal
-run rustup toolchain install nightly-2019-04-09 --profile minimal -c rustfmt
 status=0
 run cargo "+$toolchain" test --locked "${packages[@]}" || status=1
-run cargo +nightly-2019-04-09 fmt "${packages[@]}" -- --check || status=1
+run env PATH="${rustfmt_nightly}/bin:${PATH}" cargo-fmt fmt "${packages[@]}" -- --check || status=1
 exit "$status"

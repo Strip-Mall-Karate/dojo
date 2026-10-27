@@ -29,8 +29,8 @@ type Env = HashMap<String, String>;
 type IpcServer = IpcOneShotServer<Vec<u8>>;
 
 pub struct LauncherCli {
-    tx: IpcSender<Vec<u8>>,
-    rx: IpcReceiver<Vec<u8>>,
+    tx:   IpcSender<Vec<u8>>,
+    rx:   IpcReceiver<Vec<u8>>,
     // We persist the pipe identifier so we can delete the file on drop.
     pipe: String,
 }

@@ -85,10 +85,12 @@ impl fmt::Display for Error {
                         path.display(),
                         err)
             }
-            Error::InvalidIncarnationSynchronization => "Tried to synchronize own member \
+            Error::InvalidIncarnationSynchronization => {
+                "Tried to synchronize own member \
                                                          incarnation from non-existent \
                                                          incarnation store"
-                                                                           .to_string(),
+                                                                           .to_string()
+            }
             Error::InvalidRumorShareLimit => {
                 "Rumor share limit should be a positive integer".to_string()
             }

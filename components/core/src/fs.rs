@@ -822,7 +822,6 @@ mod test_find_command {
             }
         }
     }
-
 }
 
 #[cfg(test)]

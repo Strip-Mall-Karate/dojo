@@ -298,10 +298,9 @@ impl BoxKeyPair {
     pub fn box_key_nonce(nonce: Option<&str>) -> Result<Nonce> {
         match nonce {
             Some(val) => {
-                let decoded =
-                    base64::decode(val).map_err(|e| {
-                                           Error::CryptoError(format!("Can't decode nonce: {}", e))
-                                       })?;
+                let decoded = base64::decode(val).map_err(|e| {
+                                  Error::CryptoError(format!("Can't decode nonce: {}", e))
+                              })?;
                 match Nonce::from_slice(&decoded) {
                     Some(nonce) => Ok(nonce),
                     None => Err(Error::CryptoError("Invalid size of nonce".to_string())),

@@ -39,12 +39,10 @@ use std::{fs,
 /// 1. We find the fully qualified package ident and all its dependencies
 /// 2. We find all packages on the filesystem and convert them into a graph
 /// 3. We do a BFS on the graph to get the dependencies in order
-/// 4. We check if the specified package has any reverse deps
-///     4a. If there are, we throw an error
-///     4b. If not, we delete the package
-/// 5. For each dependency we check if there are any packages which depend on it
-///     5a. If there are, we skip it
-///     5b. If there are not, we delete it from disk and the graph
+/// 4. We check if the specified package has any reverse deps 4a. If there are, we throw an error
+///    4b. If not, we delete the package
+/// 5. For each dependency we check if there are any packages which depend on it 5a. If there are,
+///    we skip it 5b. If there are not, we delete it from disk and the graph
 ///
 /// `excludes` is a list of user-supplied `PackageIdent`s.
 /// `services` is a list of fully-qualified `PackageIdent`s which are currently

@@ -39,7 +39,7 @@ pub fn start(ui: &mut UI, cache_path: &Path) -> Result<()> {
 
     ui.heading("Dojo Builder Instance")?;
     ui.para(
-        "Dojo packages can be stored in either the public builder instance \
+            "Dojo packages can be stored in either the public builder instance \
          https://bldr.karate.company or in an on-premises builder depot instance. If \
          you do not set a builder URL now, the `doj` CLI will default to using \
          the public builder instance. This can be overridden at any time after setup.",

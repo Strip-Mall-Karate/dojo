@@ -75,7 +75,7 @@ impl fmt::Display for Bind {
 #[derive(Debug, PartialEq)]
 pub struct BindMapping {
     /// The name of the bind of a given service.
-    pub bind_name: String,
+    pub bind_name:          String,
     /// The identifier of the service within the composite package
     /// that should satisfy the named bind.
     pub satisfying_service: PackageIdent,
@@ -339,8 +339,7 @@ port=front-end.port
         // Sort the result by key, so we have a guarantee of order
         result.sort_by_key(|v| v.key.to_owned());
 
-        let expected =
-            vec![EnvVar { key:       "PATH".to_string(),
+        let expected = vec![EnvVar { key:       "PATH".to_string(),
                           value:
                               "/doj/pkgs/python/setuptools/35.0.1/20170424072606/bin".to_string(),
                           separator: Some(':'), },
@@ -412,5 +411,4 @@ port=front-end.port
 
         assert!(bind_map.is_err());
     }
-
 }

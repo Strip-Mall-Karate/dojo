@@ -24,7 +24,7 @@ pub struct EtcPasswdEntry {
     pub name: String,
     pub uid:  u32,
     // Primary GID
-    pub gid: u32,
+    pub gid:  u32,
 }
 
 impl EtcPasswdEntry {

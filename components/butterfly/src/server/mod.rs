@@ -123,7 +123,7 @@ pub trait Suitability: Debug + Send + Sync {
 /// persistence logic.
 #[derive(Clone, Debug)]
 pub struct Myself {
-    member: Member,
+    member:            Member,
     // TODO (CM): This is only optional because the current
     // implementation of Server requires it. See note there for more.
     incarnation_store: Option<incarnation_store::IncarnationStore>,
@@ -242,8 +242,8 @@ impl Myself {
 /// The server struct. Is thread-safe.
 #[derive(Debug)]
 pub struct Server {
-    name:      Arc<String>,
-    member_id: Arc<String>,
+    name:                     Arc<String>,
+    member_id:                Arc<String>,
     // TODO (CM): This is currently public because butterfly-test
     // depends on it being so. Refactor so it can be private.
     pub member:               Arc<RwLock<Myself>>,
@@ -264,12 +264,12 @@ pub struct Server {
     socket:                   Option<UdpSocket>,
     departed:                 Arc<AtomicBool>,
     // These are all here for testing support
-    pause:           Arc<AtomicBool>,
-    pub trace:       Arc<RwLock<Trace>>,
-    swim_rounds:     Arc<AtomicIsize>,
-    gossip_rounds:   Arc<AtomicIsize>,
-    block_list:      Arc<RwLock<HashSet<String>>>,
-    election_timers: Arc<Mutex<HashMap<String, ElectionTimer>>>,
+    pause:                    Arc<AtomicBool>,
+    pub trace:                Arc<RwLock<Trace>>,
+    swim_rounds:              Arc<AtomicIsize>,
+    gossip_rounds:            Arc<AtomicIsize>,
+    block_list:               Arc<RwLock<HashSet<String>>>,
+    election_timers:          Arc<Mutex<HashMap<String, ElectionTimer>>>,
 }
 
 impl Clone for Server {
@@ -336,7 +336,9 @@ impl Server {
                 // in the testing framework.
                 let myself = Myself::new(member, None);
 
-                Ok(Server { name: Arc::new(name.unwrap_or_else(|| member_id.clone())),
+                Ok(Server { name:                 Arc::new(name.unwrap_or_else(|| {
+                                                                   member_id.clone()
+                                                               })),
                             // TODO (CM): could replace this with an accessor
                             // on member, if we have a better type
                             member_id:            Arc::new(member_id),
@@ -1476,7 +1478,6 @@ mod tests {
                        incarnation_to_refute + 1,
                        "Incarnation should be one greater than the refuted incarnation");
         }
-
     }
 
     mod server {

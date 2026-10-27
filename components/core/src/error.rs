@@ -323,10 +323,12 @@ impl fmt::Display for Error {
             Error::ParseIntError(ref e) => format!("{}", e),
             Error::PlanMalformed => "Failed to read or parse contents of Plan file".to_string(),
             Error::PermissionFailed(ref e) => e.to_string(),
-            Error::PrivilegeNotHeld => "Current user must possess the 'SE_INCREASE_QUOTA_NAME' \
+            Error::PrivilegeNotHeld => {
+                "Current user must possess the 'SE_INCREASE_QUOTA_NAME' \
                                         and 'SE_ASSIGNPRIMARYTOKEN_NAME' privilege to spawn a new \
                                         process as a different user"
-                                                                    .to_string(),
+                                                                    .to_string()
+            }
             Error::RegexParse(ref e) => format!("{}", e),
             Error::StringFromUtf8Error(ref e) => format!("{}", e),
             Error::TargetMatchError(ref e) => e.to_string(),

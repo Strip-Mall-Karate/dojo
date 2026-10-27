@@ -186,7 +186,8 @@ impl fmt::Display for SupError {
         let content = match self.err {
             Error::APIClient(ref err) => err.to_string(),
             Error::BadAddress(ref err) => format!("Unable to bind to address {}.", err),
-            Error::Departed => "This Supervisor has been manually departed.\n\nFor the safety of \
+            Error::Departed => {
+                "This Supervisor has been manually departed.\n\nFor the safety of \
                                 the system, this Supervisor cannot be started (if we did, we \
                                 would risk the services on this machine behaving badly without \
                                 our knowledge.) If you know that the services on this system are \
@@ -195,7 +196,8 @@ impl fmt::Display for SupError {
                                 will cause the Supervisor to join the ring as a new member.\n\n \
                                 If you are in doubt, it is better to consider the services \
                                 managed by this Supervisor as unsafe to run."
-                                                                             .to_string(),
+                                                                             .to_string()
+            }
             Error::BadDataFile(ref path, ref err) => {
                 format!("Unable to read or write to data file, {}, {}",
                         path.display(),

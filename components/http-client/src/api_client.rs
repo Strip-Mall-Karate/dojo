@@ -57,14 +57,14 @@ header! { (ProxyAuthorization, "Proxy-Authorization") => [String] }
 #[derive(Debug)]
 pub struct ApiClient {
     /// The base URL for the client.
-    endpoint: Url,
+    endpoint:          Url,
     /// An instance of a `hyper::Client` which is configured with an SSL context and optionally
     /// using an HTTP proxy.
-    inner: HyperClient,
+    inner:             HyperClient,
     /// Proxy information, if a proxy is being used.
-    proxy: Option<ProxyInfo>,
+    proxy:             Option<ProxyInfo>,
     /// The URL scheme of the endpoint.
-    target_scheme: String,
+    target_scheme:     String,
     /// The `User-Agent` header string to use for HTTP calls.
     user_agent_header: UserAgent,
 }
@@ -223,11 +223,11 @@ impl ApiClient {
 ///    `cacert.pem` file.
 /// 4. If none of the conditions above are met, then a `cacert.pem` will be written in an SSL cache
 ///    directory (by default `/doj/cache/ssl` for a root user and `$HOME/.doj/cache/ssl` for a
-///    non-root user) and this will be used. The contents of this file will be inlined in this
-///    crate at build time as a fallback insurance policy, meaning that if the a program using this
-///    code is operating in a minimal environment which may not contain system certificates, it can
-///    still operate. Once a `karate/cacerts` Dojo package is present, the logic would fall back
-///    to preferring the package version to the cached/inline file version.
+///    non-root user) and this will be used. The contents of this file will be inlined in this crate
+///    at build time as a fallback insurance policy, meaning that if the a program using this code
+///    is operating in a minimal environment which may not contain system certificates, it can still
+///    operate. Once a `karate/cacerts` Dojo package is present, the logic would fall back to
+///    preferring the package version to the cached/inline file version.
 ///
 /// ## Mac Platforms
 ///
