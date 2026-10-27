@@ -33,6 +33,7 @@ uuid = { version = "1.29.0", features = ["v4"] }
 
 [dev-dependencies]
 dojo_butterfly_test = { path = "../butterfly-test" }
+tokio = { version = "1.54.1", features = ["rt-multi-thread"] }
 
 [build-dependencies]
 prost-build = "0.14.4"

@@ -50,9 +50,7 @@ use dojo_core::{self,
                           Identifiable}};
 use dojo_launcher_client;
 use dojo_sup_protocol;
-use futures::sync::oneshot;
 use glob;
-use nitox;
 use notify;
 use rustls;
 use serde_json;
@@ -121,8 +119,7 @@ pub enum Error {
     APIClient(dojo_api_client::Error),
     EnvJoinPathsError(env::JoinPathsError),
     ExecCommandNotFound(String),
-    EventError(nitox::NatsError),
-    EventStreamError(nitox::streaming::error::NatsStreamingError),
+    EventError(async_nats::ConnectError),
     FileNotFound(String),
     FileWatcherFileIsRoot,
     GroupNotFound(String),
@@ -150,7 +147,7 @@ pub enum Error {
     NotifyCreateError(notify::Error),
     NotifyError(notify::Error),
     NulError(ffi::NulError),
-    OneshotCanceled(oneshot::Canceled),
+    TaskJoin(tokio::task::JoinError),
     PackageNotFound(package::PackageIdent),
     PackageNotRunnable(package::PackageIdent),
     Permissions(String),
@@ -172,7 +169,7 @@ pub enum Error {
     SpecWatcherGlob(glob::PatternError),
     StrFromUtf8Error(str::Utf8Error),
     StringFromUtf8Error(string::FromUtf8Error),
-    TLSError(rustls::TLSError),
+    TLSError(rustls::Error),
     TomlEncode(toml::ser::Error),
     TryRecvError(mpsc::TryRecvError),
     UnpackFailed,
@@ -231,7 +228,6 @@ impl fmt::Display for SupError {
                 format!("`{}' was not found on the filesystem or in PATH", c)
             }
             Error::EventError(ref err) => err.to_string(),
-            Error::EventStreamError(ref err) => err.to_string(),
             Error::Permissions(ref err) => err.to_string(),
             Error::DojoCommon(ref err) => err.to_string(),
             Error::DojoCore(ref err) => err.to_string(),
@@ -269,7 +265,7 @@ impl fmt::Display for SupError {
             Error::NotifyCreateError(ref e) => format!("Notify create error: {}", e),
             Error::NotifyError(ref e) => format!("Notify error: {}", e),
             Error::NulError(ref e) => e.to_string(),
-            Error::OneshotCanceled(ref e) => e.to_string(),
+            Error::TaskJoin(ref e) => e.to_string(),
             Error::PackageNotFound(ref pkg) => {
                 if pkg.fully_qualified() {
                     format!("Cannot find package: {}", pkg)
@@ -361,9 +357,7 @@ impl error::Error for SupError {
             Error::ButterflyError(ref err) => err.description(),
             Error::CtlSecretIo(..) => "IoError while reading ctl secret",
             Error::ExecCommandNotFound(_) => "Exec command was not found on filesystem or in PATH",
-            Error::EventError(_) => "event error", // underlying NATS error doesn't implement Error
-            Error::EventStreamError(_) => "event streaming error", // underlying NATS error
-            // doesn't implement Error
+            Error::EventError(_) => "Could not connect to the event stream",
             Error::GroupNotFound(_) => "No matching GID for group found",
             Error::DojoCommon(ref err) => err.description(),
             Error::DojoCore(ref err) => err.description(),
@@ -400,7 +394,7 @@ impl error::Error for SupError {
             Error::NulError(_) => {
                 "An attempt was made to build a CString with a null byte inside it"
             }
-            Error::OneshotCanceled(ref e) => e.description(),
+            Error::TaskJoin(_) => "A Supervisor task failed",
             Error::PackageNotFound(_) => "Cannot find a package",
             Error::PackageNotRunnable(_) => "The package is not runnable",
             Error::Permissions(_) => "File system permissions error",
@@ -431,8 +425,8 @@ impl error::Error for SupError {
     }
 }
 
-impl From<rustls::TLSError> for SupError {
-    fn from(err: rustls::TLSError) -> SupError { sup_error!(Error::TLSError(err)) }
+impl From<rustls::Error> for SupError {
+    fn from(err: rustls::Error) -> SupError { sup_error!(Error::TLSError(err)) }
 }
 
 impl From<dojo_api_client::Error> for SupError {
@@ -511,16 +505,10 @@ impl From<dojo_sup_protocol::net::NetErr> for SupError {
     fn from(err: dojo_sup_protocol::net::NetErr) -> Self { sup_error!(Error::NetErr(err)) }
 }
 
-impl From<oneshot::Canceled> for SupError {
-    fn from(err: oneshot::Canceled) -> Self { sup_error!(Error::OneshotCanceled(err)) }
+impl From<tokio::task::JoinError> for SupError {
+    fn from(err: tokio::task::JoinError) -> Self { sup_error!(Error::TaskJoin(err)) }
 }
 
-impl From<nitox::NatsError> for SupError {
-    fn from(err: nitox::NatsError) -> Self { sup_error!(Error::EventError(err)) }
-}
-
-impl From<nitox::streaming::error::NatsStreamingError> for SupError {
-    fn from(err: nitox::streaming::error::NatsStreamingError) -> Self {
-        sup_error!(Error::EventStreamError(err))
-    }
+impl From<async_nats::ConnectError> for SupError {
+    fn from(err: async_nats::ConnectError) -> Self { sup_error!(Error::EventError(err)) }
 }

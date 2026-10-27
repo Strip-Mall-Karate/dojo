@@ -26,7 +26,6 @@ mod context;
 mod health;
 mod hook_runner;
 mod hooks;
-mod spawned_future;
 pub mod spec;
 mod supervisor;
 mod terminator;
@@ -75,9 +74,6 @@ use dojo_sup_protocol::types::BindingMode;
 pub use dojo_sup_protocol::types::{ProcessState,
                                    Topology,
                                    UpdateStrategy};
-use futures::{future,
-              Future,
-              IntoFuture};
 use prometheus::{HistogramTimer,
                  HistogramVec};
 use serde::{ser::SerializeStruct,
@@ -87,6 +83,7 @@ use std::{self,
           collections::HashSet,
           fmt,
           fs,
+          future::Future,
           path::{Path,
                  PathBuf},
           result,
@@ -297,29 +294,29 @@ impl Service {
 
     /// Return a future that will shut down a service, performing any
     /// necessary cleanup, and run its post-stop hook, if any.
-    pub fn stop(&self) -> impl Future<Item = (), Error = SupError> {
+    pub fn stop(&self) -> impl Future<Output = Result<()>> + Send + 'static {
         let service_group = self.service_group.clone();
         let gs = Arc::clone(&self.gateway_state);
+        let stop_supervisor = self.supervisor.stop();
+        let post_stop = self.post_stop();
 
-        let f = self.supervisor.stop().and_then(move |_| {
-                                          gs.write()
-                                            .expect("GatewayState lock is poisoned")
-                                            .health_check_data
-                                            .remove(&service_group);
-                                          Ok(())
-                                      });
-
-        // eww
-        let service_group_2 = self.service_group.clone();
-        match self.post_stop() {
-            None => future::Either::A(f),
-            Some(hook) => {
-                future::Either::B(f.and_then(|_| hook.into_future().map(|_exitvalue| ())))
+        async move {
+            let stopped = async {
+                              stop_supervisor.await?;
+                              gs.write()
+                                .expect("GatewayState lock is poisoned")
+                                .health_check_data
+                                .remove(&service_group);
+                              if let Some(hook) = post_stop {
+                                  hook.run().await?;
+                              }
+                              Ok(())
+                          }.await;
+            if let Err(ref e) = stopped {
+                outputln!(preamble service_group, "Service stop failed: {}", e);
             }
-        }.map_err(move |e| {
-             outputln!(preamble service_group_2, "Service stop failed: {}", e);
-             e
-         })
+            stopped
+        }
     }
 
     /// Runs the reconfigure hook if present, otherwise restarts the service.
@@ -932,7 +929,7 @@ impl Service {
     }
 
     fn schedule_health_check(&mut self, interval: HealthCheckInterval) {
-        let instant_to_schedule = Instant::now() + interval.into();
+        let instant_to_schedule = Instant::now() + Duration::from(interval);
         match self.scheduled_health_check {
             Some(already_scheduled_instant) if instant_to_schedule > already_scheduled_instant => {
                 trace!("Skipping health check schedule request for {:?}; there is already one \

@@ -17,40 +17,38 @@ use crate::{error::{Result,
             manager::{self,
                       service::{HealthCheck,
                                 HealthCheckHook}}};
-use actix;
-use actix_web::{http::{self,
-                       StatusCode},
-                middleware::{Finished,
-                             Middleware,
-                             Started},
-                pred::Predicate,
-                server,
-                App,
-                FromRequest,
-                HttpRequest,
-                HttpResponse,
-                Path,
-                Request};
+use axum::{extract::{Path,
+                     Request,
+                     State},
+           http::{header,
+                  StatusCode},
+           middleware::{self,
+                        Next},
+           response::{Html,
+                      IntoResponse,
+                      Response},
+           routing::get,
+           Json,
+           Router};
 use dojo_common::{cli::{LISTEN_HTTP_ADDRESS_ENVVAR,
                         LISTEN_HTTP_DEFAULT_IP,
                         LISTEN_HTTP_DEFAULT_PORT},
                   templating::hooks,
                   FeatureFlag};
 use dojo_core::{crypto,
-                env as henv,
                 env::Config as EnvConfig,
                 service::ServiceGroup};
+use hyper_util::{rt::TokioIo,
+                 service::TowerToHyperService};
 use prometheus::{self,
                  CounterVec,
                  Encoder,
-                 HistogramTimer,
                  HistogramVec,
                  TextEncoder};
 use rustls::ServerConfig;
 use serde_json::{self,
-                 Value as Json};
-use std::{cell::Cell,
-          fmt,
+                 Value};
+use std::{fmt,
           fs::File,
           io::{self,
                Read},
@@ -64,14 +62,12 @@ use std::{cell::Cell,
           result,
           str::FromStr,
           sync::{Arc,
-                 Condvar,
-                 Mutex,
                  RwLock},
-          thread};
+          time::Duration};
+use tokio::net::TcpListener;
+use tokio_rustls::TlsAcceptor;
 
 const APIDOCS: &str = include_str!(concat!(env!("OUT_DIR"), "/api.html"));
-pub const HTTP_THREADS_ENVVAR: &str = "DOJ_SUP_HTTP_THREADS";
-pub const HTTP_THREAD_COUNT: usize = 2;
 
 /// Default listening port for the HTTPGateway listener.
 pub const DEFAULT_PORT: u16 = 9631;
@@ -144,9 +140,9 @@ struct HealthCheckBody {
     stderr: String,
 }
 
-impl Into<StatusCode> for HealthCheck {
-    fn into(self) -> StatusCode {
-        match self {
+impl From<HealthCheck> for StatusCode {
+    fn from(health_check: HealthCheck) -> Self {
+        match health_check {
             HealthCheck::Ok | HealthCheck::Warning => StatusCode::OK,
             HealthCheck::Critical => StatusCode::SERVICE_UNAVAILABLE,
             HealthCheck::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
@@ -154,338 +150,277 @@ impl Into<StatusCode> for HealthCheck {
     }
 }
 
+#[derive(Clone)]
 struct AppState {
     gateway_state: Arc<RwLock<manager::GatewayState>>,
-    timer:         Cell<Option<HistogramTimer>>,
-    feature_flags: FeatureFlag,
-}
-
-impl AppState {
-    fn new(gs: Arc<RwLock<manager::GatewayState>>, feature_flags: FeatureFlag) -> Self {
-        AppState { gateway_state: gs,
-                   timer: Cell::new(None),
-                   feature_flags }
-    }
 }
 
 // Begin middleware
-struct Authentication;
-
-impl Middleware<AppState> for Authentication {
-    fn start(&self, req: &HttpRequest<AppState>) -> actix_web::Result<Started> {
-        let current_token = &req.state()
-                                .gateway_state
-                                .read()
-                                .expect("GatewayState lock is poisoned")
-                                .auth_token;
-
-        let current_token = match current_token.as_ref() {
-            Some(t) => t,
-            // If there's no auth token in the state, just return. Everything will continue to
-            // function unauthenticated.
+async fn authentication(State(state): State<AppState>, req: Request, next: Next) -> Response {
+    let authorized = {
+        let gateway_state = state.gateway_state
+                                 .read()
+                                 .expect("GatewayState lock is poisoned");
+        match gateway_state.auth_token.as_ref() {
+            // If there's no auth token in the state, everything will continue to function
+            // unauthenticated.
             None => {
                 debug!("No auth token present. HTTP gateway starting in unauthenticated mode.");
-                return Ok(Started::Done);
+                true
             }
-        };
-
-        // From this point forward, we know that we have an auth token in the state. Therefore,
-        // anything short of a fully formed Authorization header containing a Bearer token that
-        // matches the value we have in our state, results in an Unauthorized response.
-
-        let hdr = match req.headers()
-                           .get(http::header::AUTHORIZATION)
-                           .ok_or("header missing")
-                           .and_then(|hv| hv.to_str().or(Err("can't convert to str")))
-        {
-            Ok(h) => h,
-            Err(e) => {
-                debug!("Error reading required Authorization header: {:?}.", e);
-                return Ok(Started::Response(HttpResponse::Unauthorized().finish()));
-            }
-        };
-
-        let hdr_components: Vec<&str> = hdr.split_whitespace().collect();
-
-        match hdr_components.as_slice() {
-            ["Bearer", incoming_token] if crypto::secure_eq(current_token, incoming_token) => {
-                Ok(Started::Done)
-            }
-            _ => Ok(Started::Response(HttpResponse::Unauthorized().finish())),
-        }
-    }
-}
-
-struct Metrics;
-
-impl Middleware<AppState> for Metrics {
-    fn start(&self, req: &HttpRequest<AppState>) -> actix_web::Result<Started> {
-        let label_values = &[req.path()];
-
-        HTTP_GATEWAY_REQUESTS.with_label_values(label_values).inc();
-        let timer = HTTP_GATEWAY_REQUEST_DURATION.with_label_values(label_values)
-                                                 .start_timer();
-        req.state().timer.set(Some(timer));
-
-        Ok(Started::Done)
-    }
-
-    fn finish(&self, req: &HttpRequest<AppState>, _resp: &HttpResponse) -> Finished {
-        let timer = req.state().timer.replace(None);
-
-        if timer.is_some() {
-            timer.unwrap().observe_duration();
-        }
-
-        Finished::Done
-    }
-}
-
-// End middleware
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum ServerStartup {
-    NotStarted,
-    Started,
-    BindFailed,
-}
-
-pub struct Server;
-
-impl Server {
-    pub fn run(listen_addr: ListenAddr,
-               tls_config: Option<ServerConfig>,
-               gateway_state: Arc<RwLock<manager::GatewayState>>,
-               feature_flags: FeatureFlag,
-               control: Arc<(Mutex<ServerStartup>, Condvar)>) {
-        thread::spawn(move || {
-            let &(ref lock, ref cvar) = &*control;
-            let sys = actix::System::new("sup-http-gateway");
-            let thread_count = match henv::var(HTTP_THREADS_ENVVAR) {
-                Ok(val) => {
-                    match val.parse::<usize>() {
-                        Ok(v) => v,
-                        Err(_) => HTTP_THREAD_COUNT,
+            // With an auth token in the state, anything short of a fully formed Authorization
+            // header containing a Bearer token that matches it results in an Unauthorized
+            // response.
+            Some(current_token) => {
+                match req.headers()
+                         .get(header::AUTHORIZATION)
+                         .ok_or("header missing")
+                         .and_then(|hv| hv.to_str().or(Err("can't convert to str")))
+                {
+                    Ok(hdr) => {
+                        let hdr_components: Vec<&str> = hdr.split_whitespace().collect();
+                        match hdr_components.as_slice() {
+                            ["Bearer", incoming_token] => {
+                                crypto::secure_eq(current_token, incoming_token)
+                            }
+                            _ => false,
+                        }
+                    }
+                    Err(e) => {
+                        debug!("Error reading required Authorization header: {:?}.", e);
+                        false
                     }
                 }
-                Err(_) => HTTP_THREAD_COUNT,
-            };
+            }
+        }
+    };
 
-            let server = server::new(move || {
-                             let app_state = AppState::new(gateway_state.clone(), feature_flags);
-                             App::with_state(app_state).middleware(Authentication)
-                                                       .middleware(Metrics)
-                                                       .configure(routes)
-                         }).workers(thread_count);
+    if authorized {
+        next.run(req).await
+    } else {
+        StatusCode::UNAUTHORIZED.into_response()
+    }
+}
 
-            let bind = match tls_config {
-                Some(c) => server.bind_rustls(listen_addr.to_string(), c),
-                None => server.bind(listen_addr.to_string()),
-            };
+async fn metrics_middleware(req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_string();
+    let label_values = &[path.as_str()];
 
-            *lock.lock().expect("Control mutex is poisoned") = match bind {
-                Ok(b) => {
-                    b.start();
-                    ServerStartup::Started
-                }
+    HTTP_GATEWAY_REQUESTS.with_label_values(label_values).inc();
+    let timer = HTTP_GATEWAY_REQUEST_DURATION.with_label_values(label_values)
+                                             .start_timer();
+    let response = next.run(req).await;
+    timer.observe_duration();
+    response
+}
+// End middleware
+
+/// Serve the HTTP gateway on `listener` until the runtime shuts down.
+pub async fn run(listener: TcpListener,
+                 tls_config: Option<ServerConfig>,
+                 gateway_state: Arc<RwLock<manager::GatewayState>>,
+                 feature_flags: FeatureFlag) {
+    let app = routes(AppState { gateway_state }, feature_flags);
+    match tls_config {
+        Some(c) => serve_tls(listener, TlsAcceptor::from(Arc::new(c)), app).await,
+        None => {
+            if let Err(e) = axum::serve(listener, app).await {
+                error!("HTTP gateway stopped: {}", e);
+            }
+        }
+    }
+}
+
+async fn serve_tls(listener: TcpListener, acceptor: TlsAcceptor, app: Router) {
+    loop {
+        let (socket, addr) = match listener.accept().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                // Running out of file descriptors fails accept until some close.
+                error!("HTTP gateway accept failed: {}", e);
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                continue;
+            }
+        };
+        let acceptor = acceptor.clone();
+        let app = app.clone();
+        tokio::spawn(async move {
+            let stream = match acceptor.accept(socket).await {
+                Ok(stream) => stream,
                 Err(e) => {
-                    error!("HTTP gateway failed to bind: {}", e);
-                    ServerStartup::BindFailed
+                    debug!("TLS handshake with {} failed: {}", addr, e);
+                    return;
                 }
             };
-
-            cvar.notify_one();
-            sys.run();
+            if let Err(e) =
+                hyper::server::conn::http1::Builder::new().serve_connection(TokioIo::new(stream),
+                                                                            TowerToHyperService::new(app))
+                                                          .await
+            {
+                debug!("HTTP gateway connection from {} ended: {}", addr, e);
+            }
         });
     }
 }
 
-struct RedactHTTP;
-
-impl Predicate<AppState> for RedactHTTP {
-    fn check(&self, _req: &Request, state: &AppState) -> bool {
-        !state.feature_flags.contains(FeatureFlag::REDACT_HTTP)
+fn routes(state: AppState, feature_flags: FeatureFlag) -> Router {
+    let mut app = Router::new().route("/", get(doc))
+                               .route("/services", get(services))
+                               .route("/services/{svc}/{group}", get(service_without_org))
+                               .route("/services/{svc}/{group}/config", get(config_without_org))
+                               .route("/services/{svc}/{group}/health", get(health_without_org))
+                               .route("/services/{svc}/{group}/{org}", get(service_with_org))
+                               .route("/services/{svc}/{group}/{org}/config", get(config_with_org))
+                               .route("/services/{svc}/{group}/{org}/health", get(health_with_org))
+                               .route("/metrics", get(metrics));
+    if !feature_flags.contains(FeatureFlag::REDACT_HTTP) {
+        app = app.route("/butterfly", get(butterfly))
+                 .route("/census", get(census));
     }
+    // The last layer added runs first: authentication, then metrics.
+    app.layer(middleware::from_fn(metrics_middleware))
+       .layer(middleware::from_fn_with_state(state.clone(), authentication))
+       .with_state(state)
 }
 
-fn routes(app: App<AppState>) -> App<AppState> {
-    app.resource("/", |r| r.get().f(doc))
-       .resource("/services", |r| r.get().f(services))
-       .resource("/services/{svc}/{group}", |r| {
-           r.get().f(service_without_org)
-       })
-       .resource("/services/{svc}/{group}/config", |r| {
-           r.get().f(config_without_org)
-       })
-       .resource("/services/{svc}/{group}/health", |r| {
-           r.get().f(health_without_org)
-       })
-       .resource("/services/{svc}/{group}/{org}", |r| {
-           r.get().f(service_with_org)
-       })
-       .resource("/services/{svc}/{group}/{org}/config", |r| {
-           r.get().f(config_with_org)
-       })
-       .resource("/services/{svc}/{group}/{org}/health", |r| {
-           r.get().f(health_with_org)
-       })
-       .resource("/butterfly", |r| r.get().filter(RedactHTTP).f(butterfly))
-       .resource("/census", |r| r.get().filter(RedactHTTP).f(census))
-       .resource("/metrics", |r| r.get().f(metrics))
-}
-
-fn json_response(data: String) -> HttpResponse {
-    HttpResponse::Ok().content_type("application/json")
-                      .body(data)
+fn json_response(data: String) -> Response {
+    ([(header::CONTENT_TYPE, "application/json")], data).into_response()
 }
 
 // Begin route handlers
-fn butterfly(req: &HttpRequest<AppState>) -> HttpResponse {
-    let data = &req.state()
-                   .gateway_state
-                   .read()
-                   .expect("GatewayState lock is poisoned")
-                   .butterfly_data;
-    json_response(data.to_string())
+async fn butterfly(State(state): State<AppState>) -> Response {
+    let data = state.gateway_state
+                    .read()
+                    .expect("GatewayState lock is poisoned")
+                    .butterfly_data
+                    .clone();
+    json_response(data)
 }
 
-fn census(req: &HttpRequest<AppState>) -> HttpResponse {
-    let data = &req.state()
-                   .gateway_state
-                   .read()
-                   .expect("GatewayState lock is poisoned")
-                   .census_data;
-    json_response(data.to_string())
+async fn census(State(state): State<AppState>) -> Response {
+    let data = state.gateway_state
+                    .read()
+                    .expect("GatewayState lock is poisoned")
+                    .census_data
+                    .clone();
+    json_response(data)
 }
 
-fn services(req: &HttpRequest<AppState>) -> HttpResponse {
-    let data = &req.state()
-                   .gateway_state
-                   .read()
-                   .expect("GatewayState lock is poisoned")
-                   .services_data;
-    json_response(data.to_string())
+async fn services(State(state): State<AppState>) -> Response {
+    let data = state.gateway_state
+                    .read()
+                    .expect("GatewayState lock is poisoned")
+                    .services_data
+                    .clone();
+    json_response(data)
 }
 
-// Honestly, this doesn't feel great, but it's the pattern builder-api uses, and at the
-// moment, I don't have a better way of doing it.
-fn config_with_org(req: &HttpRequest<AppState>) -> HttpResponse {
-    let (svc, group, org) = Path::<(String, String, String)>::extract(&req).unwrap()
-                                                                           .into_inner();
-    config(req, svc, group, Some(&org))
+async fn config_with_org(State(state): State<AppState>,
+                         Path((svc, group, org)): Path<(String, String, String)>)
+                         -> Response {
+    config(&state, svc, group, Some(&org))
 }
 
-fn config_without_org(req: &HttpRequest<AppState>) -> HttpResponse {
-    let (svc, group) = Path::<(String, String)>::extract(&req).unwrap()
-                                                              .into_inner();
-    config(req, svc, group, None)
+async fn config_without_org(State(state): State<AppState>,
+                            Path((svc, group)): Path<(String, String)>)
+                            -> Response {
+    config(&state, svc, group, None)
 }
 
-fn config(req: &HttpRequest<AppState>,
-          svc: String,
-          group: String,
-          org: Option<&str>)
-          -> HttpResponse {
-    let data = &req.state()
-                   .gateway_state
-                   .read()
-                   .expect("GatewayState lock is poisoned")
-                   .services_data;
+fn config(state: &AppState, svc: String, group: String, org: Option<&str>) -> Response {
     let service_group = match ServiceGroup::new(None, svc, group, org) {
         Ok(sg) => sg,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
+    let data = &state.gateway_state
+                     .read()
+                     .expect("GatewayState lock is poisoned")
+                     .services_data;
 
     match service_from_services(&service_group, &data) {
-        Some(mut s) => HttpResponse::Ok().json(s["cfg"].take()),
-        None => HttpResponse::NotFound().finish(),
+        Some(mut s) => Json(s["cfg"].take()).into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
     }
 }
 
-fn health_with_org(req: &HttpRequest<AppState>) -> HttpResponse {
-    let (svc, group, org) = Path::<(String, String, String)>::extract(&req).unwrap()
-                                                                           .into_inner();
-    health(req, svc, group, Some(&org))
+async fn health_with_org(State(state): State<AppState>,
+                         Path((svc, group, org)): Path<(String, String, String)>)
+                         -> Response {
+    health(&state, svc, group, Some(&org))
 }
 
-fn health_without_org(req: &HttpRequest<AppState>) -> HttpResponse {
-    let (svc, group) = Path::<(String, String)>::extract(&req).unwrap()
-                                                              .into_inner();
-    health(req, svc, group, None)
+async fn health_without_org(State(state): State<AppState>,
+                            Path((svc, group)): Path<(String, String)>)
+                            -> Response {
+    health(&state, svc, group, None)
 }
 
-fn health(req: &HttpRequest<AppState>,
-          svc: String,
-          group: String,
-          org: Option<&str>)
-          -> HttpResponse {
+fn health(state: &AppState, svc: String, group: String, org: Option<&str>) -> Response {
     let service_group = match ServiceGroup::new(None, svc, group, org) {
         Ok(sg) => sg,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let gateway_state = &req.state()
-                            .gateway_state
+    let health_check = state.gateway_state
                             .read()
-                            .expect("GatewayState lock is poisoned");
-    let health_check = gateway_state.health_check_data.get(&service_group);
+                            .expect("GatewayState lock is poisoned")
+                            .health_check_data
+                            .get(&service_group)
+                            .cloned();
 
-    if health_check.is_some() {
-        let mut body = HealthCheckBody::default();
-        let stdout_path = hooks::stdout_log_path::<HealthCheckHook>(&service_group);
-        let stderr_path = hooks::stderr_log_path::<HealthCheckHook>(&service_group);
-        let http_status: StatusCode = health_check.unwrap().clone().into();
+    match health_check {
+        Some(health_check) => {
+            let mut body = HealthCheckBody::default();
+            let stdout_path = hooks::stdout_log_path::<HealthCheckHook>(&service_group);
+            let stderr_path = hooks::stderr_log_path::<HealthCheckHook>(&service_group);
 
-        body.status = health_check.unwrap().to_string();
-        if let Ok(mut file) = File::open(&stdout_path) {
-            let _ = file.read_to_string(&mut body.stdout);
+            body.status = health_check.to_string();
+            if let Ok(mut file) = File::open(&stdout_path) {
+                let _ = file.read_to_string(&mut body.stdout);
+            }
+            if let Ok(mut file) = File::open(&stderr_path) {
+                let _ = file.read_to_string(&mut body.stderr);
+            }
+
+            (StatusCode::from(health_check), Json(body)).into_response()
         }
-        if let Ok(mut file) = File::open(&stderr_path) {
-            let _ = file.read_to_string(&mut body.stderr);
+        None => {
+            debug!("Didn't find any health data for service group {:?}",
+                   &service_group);
+            StatusCode::NOT_FOUND.into_response()
         }
-
-        HttpResponse::build(http_status).json(&body)
-    } else {
-        debug!("Didn't find any health data for service group {:?}",
-               &service_group);
-        HttpResponse::NotFound().finish()
     }
 }
 
-fn service_with_org(req: &HttpRequest<AppState>) -> HttpResponse {
-    let (svc, group, org) = Path::<(String, String, String)>::extract(&req).unwrap()
-                                                                           .into_inner();
-    service(req, svc, group, Some(&org))
+async fn service_with_org(State(state): State<AppState>,
+                          Path((svc, group, org)): Path<(String, String, String)>)
+                          -> Response {
+    service(&state, svc, group, Some(&org))
 }
 
-fn service_without_org(req: &HttpRequest<AppState>) -> HttpResponse {
-    let (svc, group) = Path::<(String, String)>::extract(&req).unwrap()
-                                                              .into_inner();
-    service(req, svc, group, None)
+async fn service_without_org(State(state): State<AppState>,
+                             Path((svc, group)): Path<(String, String)>)
+                             -> Response {
+    service(&state, svc, group, None)
 }
 
-fn service(req: &HttpRequest<AppState>,
-           svc: String,
-           group: String,
-           org: Option<&str>)
-           -> HttpResponse {
-    let data = &req.state()
-                   .gateway_state
-                   .read()
-                   .expect("GatewayState lock is poisoned")
-                   .services_data;
+fn service(state: &AppState, svc: String, group: String, org: Option<&str>) -> Response {
     let service_group = match ServiceGroup::new(None, svc, group, org) {
         Ok(sg) => sg,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
+    let data = &state.gateway_state
+                     .read()
+                     .expect("GatewayState lock is poisoned")
+                     .services_data;
 
     match service_from_services(&service_group, &data) {
-        Some(s) => HttpResponse::Ok().json(s),
-        None => HttpResponse::NotFound().finish(),
+        Some(s) => Json(s).into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
     }
 }
 
-fn metrics(_req: &HttpRequest<AppState>) -> HttpResponse {
+async fn metrics() -> Response {
     let encoder = TextEncoder::new();
     let metric_families = prometheus::gather();
     let mut buffer = vec![];
@@ -502,18 +437,15 @@ fn metrics(_req: &HttpRequest<AppState>) -> HttpResponse {
         }
     };
 
-    HttpResponse::Ok().content_type(encoder.format_type())
-                      .body(resp)
+    ([(header::CONTENT_TYPE, encoder.format_type().to_string())], resp).into_response()
 }
 
-fn doc(_req: &HttpRequest<AppState>) -> HttpResponse {
-    HttpResponse::Ok().content_type("text/html").body(APIDOCS)
-}
+async fn doc() -> Html<&'static str> { Html(APIDOCS) }
 // End route handlers
 
-fn service_from_services(service_group: &ServiceGroup, services_json: &str) -> Option<Json> {
+fn service_from_services(service_group: &ServiceGroup, services_json: &str) -> Option<Value> {
     match serde_json::from_str(services_json) {
-        Ok(Json::Array(services)) => {
+        Ok(Value::Array(services)) => {
             services.into_iter()
                     .find(|s| s["service_group"] == service_group.as_ref())
         }
@@ -645,5 +577,103 @@ mod tests {
         let failure = validate_string(r#"[{"lulz": true}]"#, "http_gateway_services_schema.json");
         assert!(!failure.is_valid(),
                 "Expected schema validation to fail, but it succeeded");
+    }
+}
+
+#[cfg(test)]
+mod route_tests {
+    use super::*;
+    use axum::body::{self,
+                     Body};
+    use tower::ServiceExt;
+
+    const TOKEN: &str = "the-token";
+
+    fn app(auth_token: Option<&str>, feature_flags: FeatureFlag) -> Router {
+        let mut gateway_state = manager::GatewayState::default();
+        gateway_state.auth_token = auth_token.map(String::from);
+        gateway_state.butterfly_data = r#"{"member": {}}"#.to_string();
+        gateway_state.services_data =
+            r#"[{"service_group": "redis.default", "cfg": {"port": 6379}}]"#.to_string();
+        routes(AppState { gateway_state: Arc::new(RwLock::new(gateway_state)), },
+               feature_flags)
+    }
+
+    async fn get(app: Router, uri: &str, bearer: Option<&str>) -> (StatusCode, String) {
+        let mut req = axum::http::Request::get(uri);
+        if let Some(token) = bearer {
+            req = req.header(header::AUTHORIZATION, format!("Bearer {}", token));
+        }
+        let res = app.oneshot(req.body(Body::empty()).unwrap()).await.unwrap();
+        let status = res.status();
+        let bytes = body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8(bytes.to_vec()).unwrap())
+    }
+
+    #[tokio::test]
+    async fn a_configured_token_is_required() {
+        let flags = FeatureFlag::empty();
+        assert_eq!(get(app(Some(TOKEN), flags), "/services", None).await.0,
+                   StatusCode::UNAUTHORIZED);
+        assert_eq!(get(app(Some(TOKEN), flags), "/services", Some("wrong")).await
+                                                                           .0,
+                   StatusCode::UNAUTHORIZED);
+        assert_eq!(get(app(Some(TOKEN), flags), "/services", Some(TOKEN)).await
+                                                                         .0,
+                   StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn without_a_token_every_request_is_served() {
+        assert_eq!(get(app(None, FeatureFlag::empty()), "/services", None).await
+                                                                          .0,
+                   StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn redaction_hides_butterfly_and_census() {
+        let (status, body) = get(app(None, FeatureFlag::empty()), "/butterfly", None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, r#"{"member": {}}"#);
+
+        for path in &["/butterfly", "/census"] {
+            assert_eq!(get(app(None, FeatureFlag::REDACT_HTTP), path, None).await.0,
+                       StatusCode::NOT_FOUND);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_service_and_its_config_are_found_by_group() {
+        let (status, body) = get(app(None, FeatureFlag::empty()),
+                                 "/services/redis/default/config",
+                                 None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, r#"{"port":6379}"#);
+
+        let (status, body) = get(app(None, FeatureFlag::empty()),
+                                 "/services/redis/default",
+                                 None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains(r#""service_group":"redis.default""#),
+                "{}",
+                body);
+
+        assert_eq!(get(app(None, FeatureFlag::empty()),
+                       "/services/memcached/default",
+                       None).await
+                            .0,
+                   StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn metrics_are_prometheus_text() {
+        let res = app(None, FeatureFlag::empty()).oneshot(axum::http::Request::get("/metrics").body(Body::empty())
+                                                                                    .unwrap())
+                                                 .await
+                                                 .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        assert!(res.headers()[header::CONTENT_TYPE].to_str()
+                                                   .unwrap()
+                                                   .starts_with("text/plain"));
     }
 }

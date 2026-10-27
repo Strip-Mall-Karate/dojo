@@ -14,32 +14,30 @@
 
 //! Client for connecting and communicating with a server listener which speaks SrvProtocol.
 //!
-//! Currently all functions will block and wait for a response from the remote. This is likely to
-//! change to a futures based implementation as our needs increase.
+//! All calls block until the remote answers. The Supervisor serves one request per connection,
+//! so a client connects, makes one call and drops the connection.
 //!
 //! # RPC Call Example
 //!
 //! ```ignore
-//! let conn = SrvClient::connect(&listen_addr, secret_key).wait()?;
-//! let msg = protocols::ctl::ServiceGetDefaultCfg::new();
-//! conn.call(msg).for_each(|reply| {
+//! let mut conn = SrvClient::connect(&listen_addr, secret_key)?;
+//! let msg = protocols::ctl::SvcGetDefaultCfg::default();
+//! for reply in conn.call(msg)? {
+//!     let reply = reply?;
 //!     match reply.message_id() {
 //!         "ServiceCfg" => {
-//!             let m = reply.parse::<protocols::types::ServiceCfg>().unwrap();
-//!             println!("{}", m.get_default());
+//!             let m = reply.parse::<protocols::types::ServiceCfg>()?;
+//!             println!("{:?}", m.default);
 //!         }
 //!         "NetErr" => {
-//!             let m = reply.parse::<protocols::net::NetErr>().unwrap();
+//!             let m = reply.parse::<protocols::net::NetErr>()?;
 //!             println!("{}", m);
 //!         }
 //!         _ => (),
 //!     }
-//!     Ok(())
-//! })
+//! }
 //! ```
 
-#[macro_use]
-extern crate futures;
 use dojo_sup_protocol as protocol;
 #[macro_use]
 extern crate log;
@@ -47,19 +45,22 @@ use dojo_common as common;
 
 use std::{error,
           fmt,
-          io,
+          io::{self,
+               Read,
+               Write},
+          net::TcpStream,
           path::PathBuf};
 
 use crate::protocol::{codec::*,
                       net::NetErr};
-use futures::{prelude::*,
-              sink};
-use tokio::net::TcpStream;
-use tokio_codec::Framed;
+use bytes::BytesMut;
+use tokio_util::codec::{Decoder,
+                        Encoder};
 
 use crate::common::types::ListenCtlAddr;
 
-pub type SrvSend = sink::Send<SrvStream>;
+/// Bytes read from the socket at a time.
+const READ_CHUNK: usize = 8 * 1024;
 
 /// Error types returned by a [`SrvClient`].
 #[derive(Debug)]
@@ -78,18 +79,7 @@ pub enum SrvClientError {
     ParseColor(termcolor::ParseColorError),
 }
 
-impl error::Error for SrvClientError {
-    fn description(&self) -> &str {
-        match *self {
-            SrvClientError::ConnectionClosed => "Connection closed",
-            SrvClientError::CtlSecretNotFound(_) => "Ctl secret key not found",
-            SrvClientError::Decode(ref err) => err.description(),
-            SrvClientError::Io(ref err) => err.description(),
-            SrvClientError::NetErr(ref err) => err.description(),
-            SrvClientError::ParseColor(ref err) => err.description(),
-        }
-    }
-}
+impl error::Error for SrvClientError {}
 
 impl fmt::Display for SrvClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -142,9 +132,10 @@ impl From<termcolor::ParseColorError> for SrvClientError {
 ///
 /// See module doc for usage.
 pub struct SrvClient {
-    /// Sending and receiving framed socket pair for connecting and communicating to a remote
-    /// server.
-    socket:      SrvStream,
+    /// Socket connected to a remote server.
+    socket:      TcpStream,
+    /// Bytes read from the socket but not yet decoded into a message.
+    read_buf:    BytesMut,
     /// Transaction ID counter.
     ///
     /// Useful for determining the next transaction ID in sequence embed in
@@ -154,31 +145,18 @@ pub struct SrvClient {
 
 impl SrvClient {
     /// Connect to the given remote server and authenticate with the given secret_key.
-    pub fn connect(addr: &ListenCtlAddr,
-                   secret_key: &str)
-                   -> Box<dyn Future<Item = SrvClient, Error = SrvClientError> + 'static> {
-        let secret_key = secret_key.to_string();
-        let conn = TcpStream::connect(addr.as_ref()).map_err(SrvClientError::from)
-                                                    .and_then(move |socket| {
-                                                        let client = Self::new(socket, None);
-                                                        let mut request =
-                                                            protocol::ctl::Handshake::default();
-                                                        request.secret_key = Some(secret_key);
-                                                        client.call(request)
-                                                              .into_future()
-                                                              .map_err(|(err, _)| err)
-                                                              .and_then(move |(m, io)| {
-                                                                  m.map_or_else(
-                            || Err(SrvClientError::ConnectionClosed),
-                            move |m| {
-                                m.try_ok()
-                                    .map_err(SrvClientError::from)
-                                    .and_then(|()| Ok(io.into_inner()))
-                            },
-                        )
-                                                              })
-                                                    });
-        Box::new(conn)
+    pub fn connect(addr: &ListenCtlAddr, secret_key: &str) -> Result<SrvClient, SrvClientError> {
+        let socket = TcpStream::connect(addr.as_ref())?;
+        let mut client = SrvClient { socket,
+                                     read_buf: BytesMut::new(),
+                                     current_txn: SrvTxn::default() };
+        let mut request = protocol::ctl::Handshake::default();
+        request.secret_key = Some(secret_key.to_string());
+        let reply = client.call(request)?
+                          .next()
+                          .unwrap_or(Err(SrvClientError::ConnectionClosed))?;
+        reply.try_ok()?;
+        Ok(client)
     }
 
     pub fn read_secret_key() -> Result<String, SrvClientError> {
@@ -188,89 +166,64 @@ impl SrvClient {
         Ok(buf)
     }
 
-    fn new(socket: TcpStream, current_txn: Option<SrvTxn>) -> Self {
-        SrvClient { socket:      Framed::new(socket, SrvCodec::new()),
-                    current_txn: current_txn.unwrap_or_default(), }
-    }
-
-    /// Send a transactional request to the connected server. The returned `SrvReply` is a Stream
-    /// containing one or more `SrvMessage` responses for the given request.
-    pub fn call<T>(mut self, request: T) -> SrvReply
+    /// Send a transactional request to the connected server. The returned `SrvReply` yields one
+    /// or more `SrvMessage` responses for the given request.
+    pub fn call<T>(&mut self, request: T) -> Result<SrvReply<'_>, SrvClientError>
         where T: Into<SrvMessage> + fmt::Debug
     {
         self.current_txn.increment();
         let mut msg: SrvMessage = request.into();
         msg.set_transaction(self.current_txn);
-        trace!("Sending SrvMessage -> {:?}", msg);
-        SrvReply::new(self.socket.send(msg), self.current_txn)
+        self.send(msg)?;
+        Ok(SrvReply { client:   self,
+                      complete: false, })
     }
 
     /// Send a non-transactional request to the connected server.
-    pub fn cast<T>(self, request: T) -> SrvSend
+    pub fn cast<T>(&mut self, request: T) -> Result<(), SrvClientError>
         where T: Into<SrvMessage> + fmt::Debug
     {
-        let message: SrvMessage = request.into();
-        self.socket.send(message)
-    }
-}
-
-/// A `Future` that will resolve into a stream of one or more `SrvMessage` replies.
-#[must_use = "futures do nothing unless polled"]
-pub struct SrvReply {
-    io:     sink::Send<SrvStream>,
-    state:  SrvReplyState,
-    txn_id: SrvTxn,
-}
-
-impl SrvReply {
-    fn new(io: sink::Send<SrvStream>, txn_id: SrvTxn) -> Self {
-        SrvReply { io,
-                   state: SrvReplyState::Sending,
-                   txn_id }
+        self.send(request.into())
     }
 
-    /// Consume the `SrvReply` and return the contained `SrvClient`.
-    pub fn into_inner(self) -> SrvClient {
-        match self.state {
-            SrvReplyState::Receiving(io, true) => {
-                SrvClient::new(io.into_inner(), Some(self.txn_id))
-            }
-            _ => panic!("into_inner called before complete"),
-        }
+    fn send(&mut self, msg: SrvMessage) -> Result<(), SrvClientError> {
+        trace!("Sending SrvMessage -> {:?}", msg);
+        let mut buf = BytesMut::with_capacity(msg.size());
+        SrvCodec::new().encode(msg, &mut buf)?;
+        self.socket.write_all(&buf)?;
+        Ok(())
     }
-}
 
-impl Stream for SrvReply {
-    type Error = SrvClientError;
-    type Item = SrvMessage;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    /// Block until the next whole message arrives.
+    fn receive(&mut self) -> Result<SrvMessage, SrvClientError> {
+        let mut chunk = [0; READ_CHUNK];
         loop {
-            match self.state {
-                SrvReplyState::Sending => {
-                    let io = try_ready!(self.io.poll());
-                    self.state = SrvReplyState::Receiving(io, false);
-                    continue;
-                }
-                SrvReplyState::Receiving(_, true) => return Ok(Async::Ready(None)),
-                SrvReplyState::Receiving(ref mut io, ref mut complete) => {
-                    match try_ready!(io.poll()) {
-                        Some(msg) => {
-                            *complete = msg.is_complete();
-                            return Ok(Async::Ready(Some(msg)));
-                        }
-                        None => return Err(SrvClientError::ConnectionClosed),
-                    }
-                }
+            if let Some(msg) = SrvCodec::new().decode(&mut self.read_buf)? {
+                return Ok(msg);
+            }
+            match self.socket.read(&mut chunk)? {
+                0 => return Err(SrvClientError::ConnectionClosed),
+                n => self.read_buf.extend_from_slice(&chunk[..n]),
             }
         }
     }
 }
 
-enum SrvReplyState {
-    /// Request is sending.
-    Sending,
-    /// Request is sent and awaiting message(s). Receiving is complete when the bool at `self.1`
-    /// is true.
-    Receiving(SrvStream, bool),
+/// The replies to one transactional request, ending after the message marked complete.
+pub struct SrvReply<'a> {
+    client:   &'a mut SrvClient,
+    complete: bool,
+}
+
+impl Iterator for SrvReply<'_> {
+    type Item = Result<SrvMessage, SrvClientError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.complete {
+            return None;
+        }
+        let reply = self.client.receive();
+        self.complete = reply.as_ref().map_or(true, SrvMessage::is_complete);
+        Some(reply)
+    }
 }

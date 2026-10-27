@@ -11,5 +11,9 @@ path = "../butterfly"
 [dependencies.dojo_core]
 path = "../core"
 
+[dependencies.tokio]
+version = "1.54.1"
+features = ["rt-multi-thread"]
+
 [features]
 default = []

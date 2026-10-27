@@ -61,17 +61,13 @@ use bytes::{Buf,
             BufMut,
             Bytes,
             BytesMut};
-use futures;
 use prost::{self,
             Message};
 use std::{fmt,
-          io::{self,
-               Cursor},
+          io,
           str};
-use tokio::net::TcpStream;
-use tokio_codec::{Decoder,
-                  Encoder,
-                  Framed};
+use tokio_util::codec::{Decoder,
+                        Encoder};
 
 const BODY_LEN_MASK: u32 = 0xF_FFFF;
 const HEADER_LEN: usize = 4;
@@ -85,13 +81,6 @@ const RESPONSE_OFFSET: u32 = 31;
 const RESPONSE_MASK: u32 = 0x1;
 const COMPLETE_OFFSET: u32 = 30;
 const COMPLETE_MASK: u32 = 0x1;
-
-/// A `TcpStream` framed with `SrvCodec`. This is the base socket connection that the CtlGateway
-/// client and server speak.
-pub type SrvStream = Framed<TcpStream, SrvCodec>;
-
-/// Sending half of `SrvStream`.
-pub type SrvSink = futures::stream::SplitSink<SrvStream>;
 
 /// An unsigned 32-bit integer packed with transaction information which is present if a request
 /// should receive a response from the destination.
@@ -315,70 +304,64 @@ impl<T> From<T> for SrvMessage where T: Message + MessageStatic
 }
 
 /// Binary encoder decoder for the `SrvProtocol` binary protocol.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct SrvCodec {
-    recv_buf: Vec<u8>,
-}
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct SrvCodec;
 
 impl SrvCodec {
     /// Creates a new `SrvCodec` for shipping around `SrvMessage`s.
-    pub fn new() -> SrvCodec { SrvCodec { recv_buf: vec![0; BODY_LEN_MASK as usize], } }
+    pub fn new() -> SrvCodec { SrvCodec }
 }
 
 impl Decoder for SrvCodec {
     type Error = io::Error;
     type Item = SrvMessage;
 
-    fn decode(&mut self, bytes: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
-        if bytes.len() < HEADER_LEN {
-            trace!("Got fewer than HEADER_LEN bytes: {}", bytes.len());
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
+        if src.len() < HEADER_LEN {
+            trace!("Got fewer than HEADER_LEN bytes: {}", src.len());
             return Ok(None);
         }
-        trace!("Decoding SrvMessage\n  -> Bytes: {:?}", bytes);
-        let mut buf = Cursor::new(bytes);
-        let header = SrvHeader(buf.get_u32_be());
-        trace!("  -> SrvHeader: {:?}", header);
-        let txn = if header.is_transaction() {
-            if buf.remaining() < TXN_LEN {
-                return Ok(None);
-            }
-            let t = SrvTxn(buf.get_u32_be());
+        let mut peek = &src[..];
+        let header = SrvHeader(peek.get_u32());
+        trace!("Decoding SrvMessage\n  -> SrvHeader: {:?}", header);
+        let txn_len = if header.is_transaction() { TXN_LEN } else { 0 };
+        let len = HEADER_LEN + txn_len + header.message_id_len() + header.body_len();
+        if src.len() < len {
+            trace!("  -> Have {} of {} bytes", src.len(), len);
+            src.reserve(len - src.len());
+            return Ok(None);
+        }
+        src.advance(HEADER_LEN);
+        let transaction = if header.is_transaction() {
+            let t = SrvTxn(src.get_u32());
             trace!("  -> SrvTxn: {:?}", t);
             Some(t)
         } else {
             None
         };
-        if buf.remaining() < (header.message_id_len() + header.body_len()) {
-            trace!("  -> Not enough bytes to read message_id and body");
-            return Ok(None);
-        }
-        buf.copy_to_slice(&mut self.recv_buf[0..header.message_id_len()]);
-        let message_id = str::from_utf8(&self.recv_buf[0..header.message_id_len()]).map_err(|e| {
-                             trace!("  -> Invalid message data: {}", e);
-                             io::Error::new(io::ErrorKind::InvalidData, e)
-                         })?
-                         .to_string();
-        buf.copy_to_slice(&mut self.recv_buf[0..header.body_len()]);
-        let position = buf.position() as usize;
-        let bytes = buf.into_inner();
-        bytes.split_to(position);
+        let message_id = src.split_to(header.message_id_len());
+        let message_id = str::from_utf8(&message_id).map_err(|e| {
+                                                        trace!("  -> Invalid message data: {}", e);
+                                                        io::Error::new(io::ErrorKind::InvalidData,
+                                                                       e)
+                                                    })?
+                                                    .to_string();
+        let body = src.split_to(header.body_len()).freeze();
         Ok(Some(SrvMessage { header,
-                             transaction: txn,
+                             transaction,
                              message_id,
-                             body:
-                                 Bytes::from(&self.recv_buf[0..header.body_len()]) }))
+                             body }))
     }
 }
 
-impl Encoder for SrvCodec {
+impl Encoder<SrvMessage> for SrvCodec {
     type Error = io::Error;
-    type Item = SrvMessage;
 
-    fn encode(&mut self, msg: Self::Item, buf: &mut BytesMut) -> io::Result<()> {
+    fn encode(&mut self, msg: SrvMessage, buf: &mut BytesMut) -> io::Result<()> {
         buf.reserve(msg.size());
-        buf.put_u32_be(msg.header().0);
+        buf.put_u32(msg.header().0);
         if let Some(txn) = msg.transaction {
-            buf.put_u32_be(txn.0);
+            buf.put_u32(txn.0);
         }
         buf.put_slice(msg.message_id().as_bytes());
         buf.put_slice(msg.body());
@@ -460,5 +443,48 @@ mod test {
         assert_eq!(decoded.message_id(), msg.message_id());
         assert_eq!(decoded.transaction(), msg.transaction());
         assert_eq!(decoded.body(), msg.body());
+    }
+
+    #[test]
+    fn test_codec_waits_for_a_whole_frame() {
+        let mut codec = SrvCodec::new();
+        let mut inner = net::NetErr::default();
+        inner.msg = "split across reads".to_string();
+        let mut msg = SrvMessage::from(inner);
+        let mut txn = SrvTxn::default();
+        txn.increment();
+        msg.set_transaction(txn);
+        let mut wire = BytesMut::new();
+        codec.encode(msg.clone(), &mut wire).unwrap();
+
+        let mut buf = BytesMut::new();
+        for byte in &wire[..wire.len() - 1] {
+            buf.put_u8(*byte);
+            assert!(codec.decode(&mut buf).unwrap().is_none());
+        }
+        buf.put_u8(wire[wire.len() - 1]);
+        let decoded = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(buf.is_empty());
+        assert_eq!(decoded.transaction(), Some(txn));
+        assert_eq!(decoded.message_id(), msg.message_id());
+        assert_eq!(decoded.body(), msg.body());
+    }
+
+    #[test]
+    fn test_codec_decodes_back_to_back_frames() {
+        let mut codec = SrvCodec::new();
+        let mut buf = BytesMut::new();
+        for text in &["first", "second"] {
+            let mut inner = net::NetErr::default();
+            inner.msg = text.to_string();
+            codec.encode(SrvMessage::from(inner), &mut buf).unwrap();
+        }
+
+        for text in &["first", "second"] {
+            let decoded = codec.decode(&mut buf).unwrap().unwrap();
+            assert_eq!(decoded.parse::<net::NetErr>().unwrap().msg, *text);
+        }
+        assert!(codec.decode(&mut buf).unwrap().is_none());
     }
 }

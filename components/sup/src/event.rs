@@ -15,35 +15,26 @@
 //! Main interface for a stream of events the Supervisor can send out
 //! in the course of its operations.
 //!
-//! Currently, the Supervisor is able to send events to a [NATS
-//! Streaming][1] server. The `init_stream` function must be called
-//! before sending events to initialize the publishing thread in the
-//! background. Thereafter, you can pass "event" structs to the
-//! `event` function, which will publish the event to the stream.
+//! Currently, the Supervisor is able to send events to a [NATS][1]
+//! server. The `init_stream` function must be called before sending
+//! events to start the publishing task on the Supervisor's runtime.
+//! Thereafter, you can pass "event" structs to the `event` function,
+//! which will publish the event to the stream.
 //!
-//! All events are published under the "dojo" subject.
+//! All events are published under the "dojo" subject. A JetStream
+//! stream on that subject keeps them, if the server has one.
 //!
-//! [1]:https://github.com/nats-io/nats-streaming-server
+//! [1]:https://nats.io
 
 mod types;
 
 use crate::error::Result;
-use futures::{sync::{mpsc as futures_mpsc,
-                     mpsc::UnboundedSender},
-              Future,
-              Stream};
-use nitox::{commands::ConnectCommand,
-            streaming::{client::NatsStreamingClient,
-                        error::NatsStreamingError},
-            NatsClient,
-            NatsClientOptions};
 use state::Container;
 use std::{fmt::Debug,
-          sync::{mpsc as std_mpsc,
-                 Once},
-          thread};
-use tokio::{executor,
-            runtime::current_thread::Runtime as ThreadRuntime};
+          sync::Once};
+use tokio::{runtime::Handle,
+            sync::mpsc::{self,
+                         UnboundedSender}};
 pub use types::*;
 
 static INIT: Once = Once::new();
@@ -57,13 +48,14 @@ lazy_static! {
     static ref EVENT_CORE: Container = Container::new();
 }
 
-/// Starts a new thread for sending events to a NATS Streaming
-/// server. Stashes the handle to the stream, as well as the core
-/// event information that will be a part of all events, in a global
-/// static reference for access later.
-pub fn init_stream(conn_info: EventConnectionInfo, event_core: EventCore) {
+/// Connects to a NATS server and starts a task on `runtime` for
+/// sending it events. Stashes the handle to the stream, as well as the
+/// core event information that will be a part of all events, in a
+/// global static reference for access later.
+pub fn init_stream(conn_info: EventConnectionInfo, event_core: EventCore, runtime: &Handle) {
     INIT.call_once(|| {
-            let event_stream = init_nats_stream(conn_info).expect("Could not start NATS thread");
+            let event_stream =
+                init_nats_stream(conn_info, runtime).expect("Could not connect to NATS");
             EVENT_STREAM.set(event_stream);
             EVENT_CORE.set(event_core);
         });
@@ -117,7 +109,7 @@ impl EventStream {
     /// Queues an event to be sent out.
     fn send(&self, event: Vec<u8>) {
         trace!("About to queue an event: {:?}", event);
-        if let Err(e) = self.0.unbounded_send(event) {
+        if let Err(e) = self.0.send(event) {
             error!("Failed to queue event: {:?}", e);
         }
     }
@@ -142,87 +134,93 @@ pub trait Event: Debug {
 const DOJO_SUBJECT: &str = "dojo";
 
 /// All the information needed to establish a connection to a NATS
-/// Streaming server.
+/// server.
 // TODO: This will change as we firm up what the interaction between
 // Dojo and A2 looks like.
 pub struct EventConnectionInfo {
-    pub name:        String,
-    pub verbose:     bool,
-    pub cluster_uri: String,
-    pub cluster_id:  String,
+    pub name:   String,
+    pub server: String,
 }
 
-/// Defines default connection information for a NATS Streaming server
-/// running on localhost.
+/// Defines default connection information for a NATS server running
+/// on localhost.
 // TODO: As we become clear on the interaction between Dojo and A2,
 // this implementation *may* disappear. It's useful for testing and
 // prototyping, though.
 impl Default for EventConnectionInfo {
     fn default() -> Self {
-        EventConnectionInfo { name:        String::from("dojo"),
-                              verbose:     true,
-                              cluster_uri: String::from("127.0.0.1:4223"),
-                              cluster_id:  String::from("test-cluster"), }
+        EventConnectionInfo { name:   String::from("dojo"),
+                              server: String::from("nats://127.0.0.1:4222"), }
     }
 }
 
-fn init_nats_stream(conn_info: EventConnectionInfo) -> Result<EventStream> {
+fn init_nats_stream(conn_info: EventConnectionInfo, runtime: &Handle) -> Result<EventStream> {
     // TODO (CM): Investigate back-pressure scenarios
-    let (event_tx, event_rx) = futures_mpsc::unbounded();
-    let (sync_tx, sync_rx) = std_mpsc::sync_channel(0); // rendezvous channel
+    let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Vec<u8>>();
+    let EventConnectionInfo { name, server } = conn_info;
+    let client = runtime.block_on(async_nats::ConnectOptions::new().name(name).connect(server))?;
 
-    // TODO (CM): We could theoretically create this future and spawn
-    // it in the Supervisor's Tokio runtime, but there's currently a
-    // bug: https://github.com/YellowInnovation/nitox/issues/24
-
-    thread::Builder::new().name("events".to_string())
-                          .spawn(move || {
-                              let EventConnectionInfo { name,
-                                                        verbose,
-                                                        cluster_uri,
-                                                        cluster_id, } = conn_info;
-
-                              let cc = ConnectCommand::builder()
-                // .user(Some("nats".to_string()))
-                // .pass(Some("S3Cr3TP@5w0rD".to_string()))
-                .name(Some(name))
-                .verbose(verbose)
-                .build()
-                .unwrap();
-                              let opts =
-                                  NatsClientOptions::builder().connect_command(cc)
-                                                              .cluster_uri(cluster_uri.as_str())
-                                                              .build()
-                                                              .unwrap();
-
-                              let publisher = NatsClient::from_options(opts)
-                .map_err(Into::<NatsStreamingError>::into)
-                .and_then(|client| {
-                    NatsStreamingClient::from(client)
-                        .cluster_id(cluster_id)
-                        .connect()
-                })
-                .map_err(|streaming_error| error!("{}", streaming_error))
-                .and_then(move |client| {
-                    sync_tx.send(()).expect("Couldn't synchronize!");
-                    event_rx.for_each(move |event: Vec<u8>| {
-                        let publish_event = client
-                            .publish(DOJO_SUBJECT.into(), event.into())
-                            .map_err(|e| {
-                                error!("Error publishing event: {:?}", e);
-                            });
-                        executor::spawn(publish_event);
-                        Ok(())
-                    })
-                });
-
-                              ThreadRuntime::new().expect("Couldn't create event stream runtime!")
-                                                  .spawn(publisher)
-                                                  .run()
-                                                  .expect("something seriously wrong has occurred");
-                          })
-                          .expect("Couldn't start events thread!");
-
-    sync_rx.recv()?; // TODO (CM): nicer error message
+    runtime.spawn(async move {
+               while let Some(event) = event_rx.recv().await {
+                   if let Err(e) = client.publish(DOJO_SUBJECT, event.into()).await {
+                       error!("Error publishing event: {:?}", e);
+                   }
+               }
+           });
     Ok(EventStream(event_tx))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{io::{BufRead,
+                   BufReader,
+                   Write},
+              net::TcpListener,
+              sync::mpsc as std_mpsc,
+              thread,
+              time::Duration};
+
+    /// Speaks just enough of the NATS protocol to accept one client, and hands back each message
+    /// it publishes.
+    fn fake_nats() -> (String, std_mpsc::Receiver<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (tx, rx) = std_mpsc::channel();
+        thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket.write_all(b"INFO {\"server_id\":\"fake\",\"server_name\":\"fake\",\
+                               \"version\":\"2.10.0\",\"go\":\"go1.22\",\"host\":\"127.0.0.1\",\
+                               \"port\":4222,\"headers\":true,\"max_payload\":1048576,\
+                               \"proto\":1}\r\n")
+                  .unwrap();
+            let mut reader = BufReader::new(socket.try_clone().unwrap());
+            let mut line = String::new();
+            while reader.read_line(&mut line).unwrap_or(0) > 0 {
+                if line.starts_with("PING") {
+                    socket.write_all(b"PONG\r\n").unwrap();
+                } else if line.starts_with("PUB ") {
+                    let mut payload = String::new();
+                    reader.read_line(&mut payload).unwrap();
+                    tx.send(format!("{}{}", line, payload)).unwrap();
+                }
+                line.clear();
+            }
+        });
+        (format!("nats://{}", addr), rx)
+    }
+
+    #[test]
+    fn events_are_published_on_the_dojo_subject() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let (server, published) = fake_nats();
+        let stream = init_nats_stream(EventConnectionInfo { name: String::from("test"),
+                                                            server },
+                                      runtime.handle()).unwrap();
+
+        stream.send(b"hello".to_vec());
+
+        assert_eq!(published.recv_timeout(Duration::from_secs(10)).unwrap(),
+                   "PUB dojo 5\r\nhello\r\n");
+    }
 }

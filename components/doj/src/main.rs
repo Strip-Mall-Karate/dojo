@@ -78,11 +78,11 @@ use dojo_core as hcore;
 use dojo_sup_client as sup_client;
 use dojo_sup_protocol as protocol;
 use env_logger;
-use futures::prelude::*;
 use pbr;
 use std::{convert::TryFrom,
           env,
           ffi::OsString,
+          fmt,
           fs::File,
           io::{self,
                prelude::*,
@@ -910,49 +910,35 @@ fn sub_svc_set(m: &ArgMatches<'_>) -> Result<()> {
                         .map(ToString::to_string)
                         .unwrap_or_else(|| "UNKNOWN".to_string()),))?;
     ui.status(Status::Creating, "service configuration")?;
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(validate)
-                .for_each(|reply| match reply.message_id() {
-                    "NetOk" => Ok(()),
-                    "NetErr" => {
-                        let m = reply
-                            .parse::<protocol::net::NetErr>()
-                            .map_err(SrvClientError::Decode)?;
-                        match ErrCode::try_from(m.code).ok() {
-                            Some(ErrCode::InvalidPayload) => {
-                                ui.warn(m)?;
-                                Ok(())
-                            }
-                            _ => Err(SrvClientError::from(m)),
-                        }
+    ctl_call(&listen_ctl_addr, &secret_key, validate, |reply| {
+        match reply.message_id() {
+            "NetOk" => Ok(()),
+            "NetErr" => {
+                let m = reply.parse::<protocol::net::NetErr>()
+                             .map_err(SrvClientError::Decode)?;
+                match ErrCode::try_from(m.code).ok() {
+                    Some(ErrCode::InvalidPayload) => {
+                        ui.warn(m)?;
+                        Ok(())
                     }
-                    _ => Err(SrvClientError::from(io::Error::from(
-                        io::ErrorKind::UnexpectedEof,
-                    ))),
-                })
-                                                     })
-                                                     .wait()?;
-    ui.status(Status::Applying, format!("via peer {}", listen_ctl_addr))?;
-    // JW: We should not need to make two connections here. I need a way to return the
-    // SrvClient from a for_each iterator so we can chain upon a successful stream but I don't
-    // know if it's possible with this version of futures.
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(set).for_each(|reply| {
-                          match reply.message_id() {
-                "NetOk" => Ok(()),
-                "NetErr" => {
-                    let m = reply
-                        .parse::<protocol::net::NetErr>()
-                        .map_err(SrvClientError::Decode)?;
-                    Err(SrvClientError::from(m))
+                    _ => Err(SrvClientError::from(m)),
                 }
-                _ => Err(SrvClientError::from(io::Error::from(
-                    io::ErrorKind::UnexpectedEof,
-                ))),
             }
-                      })
-                                                     })
-                                                     .wait()?;
+            _ => Err(SrvClientError::from(io::Error::from(io::ErrorKind::UnexpectedEof))),
+        }
+    })?;
+    ui.status(Status::Applying, format!("via peer {}", listen_ctl_addr))?;
+    ctl_call(&listen_ctl_addr, &secret_key, set, |reply| {
+        match reply.message_id() {
+            "NetOk" => Ok(()),
+            "NetErr" => {
+                let m = reply.parse::<protocol::net::NetErr>()
+                             .map_err(SrvClientError::Decode)?;
+                Err(SrvClientError::from(m))
+            }
+            _ => Err(SrvClientError::from(io::Error::from(io::ErrorKind::UnexpectedEof))),
+        }
+    })?;
     ui.end("Applied configuration")?;
     Ok(())
 }
@@ -964,29 +950,22 @@ fn sub_svc_config(m: &ArgMatches<'_>) -> Result<()> {
     let secret_key = ctl_secret_key(&cfg)?;
     let mut msg = protocol::ctl::SvcGetDefaultCfg::default();
     msg.ident = Some(ident.into());
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(msg).for_each(|reply| {
-                          match reply.message_id() {
-                "ServiceCfg" => {
-                    let m = reply
-                        .parse::<protocol::types::ServiceCfg>()
-                        .map_err(SrvClientError::Decode)?;
-                    println!("{}", m.default.unwrap_or_default());
-                    Ok(())
-                }
-                "NetErr" => {
-                    let m = reply
-                        .parse::<protocol::net::NetErr>()
-                        .map_err(SrvClientError::Decode)?;
-                    Err(SrvClientError::from(m))
-                }
-                _ => Err(SrvClientError::from(io::Error::from(
-                    io::ErrorKind::UnexpectedEof,
-                ))),
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |reply| {
+        match reply.message_id() {
+            "ServiceCfg" => {
+                let m = reply.parse::<protocol::types::ServiceCfg>()
+                             .map_err(SrvClientError::Decode)?;
+                println!("{}", m.default.unwrap_or_default());
+                Ok(())
             }
-                      })
-                                                     })
-                                                     .wait()?;
+            "NetErr" => {
+                let m = reply.parse::<protocol::net::NetErr>()
+                             .map_err(SrvClientError::Decode)?;
+                Err(SrvClientError::from(m))
+            }
+            _ => Err(SrvClientError::from(io::Error::from(io::ErrorKind::UnexpectedEof))),
+        }
+    })?;
     Ok(())
 }
 
@@ -998,11 +977,7 @@ fn sub_svc_load(m: &ArgMatches<'_>) -> Result<()> {
     update_svc_load_from_input(m, &mut msg)?;
     let ident: PackageIdent = m.value_of("PKG_IDENT").unwrap().parse()?;
     msg.ident = Some(ident.into());
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(msg)
-                                                             .for_each(|m| handle_ctl_reply(&m))
-                                                     })
-                                                     .wait()?;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |m| handle_ctl_reply(&m))?;
     Ok(())
 }
 
@@ -1013,11 +988,7 @@ fn sub_svc_unload(m: &ArgMatches<'_>) -> Result<()> {
     let secret_key = ctl_secret_key(&cfg)?;
     let mut msg = protocol::ctl::SvcUnload::default();
     msg.ident = Some(ident.into());
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(msg)
-                                                             .for_each(|m| handle_ctl_reply(&m))
-                                                     })
-                                                     .wait()?;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |m| handle_ctl_reply(&m))?;
     Ok(())
 }
 
@@ -1028,11 +999,7 @@ fn sub_svc_start(m: &ArgMatches<'_>) -> Result<()> {
     let secret_key = ctl_secret_key(&cfg)?;
     let mut msg = protocol::ctl::SvcStart::default();
     msg.ident = Some(ident.into());
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(msg)
-                                                             .for_each(|m| handle_ctl_reply(&m))
-                                                     })
-                                                     .wait()?;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |m| handle_ctl_reply(&m))?;
     Ok(())
 }
 
@@ -1045,34 +1012,14 @@ fn sub_svc_status(m: &ArgMatches<'_>) -> Result<()> {
         msg.ident = Some(PackageIdent::from_str(pkg)?.into());
     }
 
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         let mut out = TabWriter::new(io::stdout());
-                                                         conn.call(msg)
-                .into_future()
-                .map_err(|(err, _)| err)
-                .and_then(move |(reply, rest)| {
-                    match reply {
-                        None => {
-                            return Err(SrvClientError::from(io::Error::from(
-                                io::ErrorKind::UnexpectedEof,
-                            )));
-                        }
-                        Some(m) => print_svc_status(&mut out, &m, true)?,
-                    }
-                    Ok((out, rest))
-                })
-                .and_then(|(out, rest)| {
-                    rest.fold(out, move |mut out, reply| {
-                        print_svc_status(&mut out, &reply, false)?;
-                        Ok::<_, SrvClientError>(out)
-                    })
-                })
-                .and_then(|mut out| {
-                    out.flush()?;
-                    Ok(())
-                })
-                                                     })
-                                                     .wait()?;
+    let mut out = TabWriter::new(io::stdout());
+    let mut first = true;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |reply| {
+        print_svc_status(&mut out, reply, first)?;
+        first = false;
+        Ok(())
+    })?;
+    out.flush()?;
     Ok(())
 }
 
@@ -1083,11 +1030,7 @@ fn sub_svc_stop(m: &ArgMatches<'_>) -> Result<()> {
     let secret_key = ctl_secret_key(&cfg)?;
     let mut msg = protocol::ctl::SvcStop::default();
     msg.ident = Some(ident.into());
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(msg)
-                                                             .for_each(|m| handle_ctl_reply(&m))
-                                                     })
-                                                     .wait()?;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |m| handle_ctl_reply(&m))?;
     Ok(())
 }
 
@@ -1134,33 +1077,24 @@ fn sub_file_put(m: &ArgMatches<'_>) -> Result<()> {
         }
         _ => msg.content = Some(buf.to_vec()),
     }
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         ui.status(Status::Applying,
-                                                                   format!("via peer {}",
-                                                                           listen_ctl_addr))
-                                                           .unwrap();
-                                                         conn.call(msg).for_each(|reply| {
-                          match reply.message_id() {
-                "NetOk" => Ok(()),
-                "NetErr" => {
-                    let m = reply
-                        .parse::<protocol::net::NetErr>()
-                        .map_err(SrvClientError::Decode)?;
-                    match ErrCode::try_from(m.code).ok() {
-                        Some(ErrCode::InvalidPayload) => {
-                            ui.warn(m)?;
-                            Ok(())
-                        }
-                        _ => Err(SrvClientError::from(m)),
+    ui.status(Status::Applying, format!("via peer {}", listen_ctl_addr))?;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |reply| {
+        match reply.message_id() {
+            "NetOk" => Ok(()),
+            "NetErr" => {
+                let m = reply.parse::<protocol::net::NetErr>()
+                             .map_err(SrvClientError::Decode)?;
+                match ErrCode::try_from(m.code).ok() {
+                    Some(ErrCode::InvalidPayload) => {
+                        ui.warn(m)?;
+                        Ok(())
                     }
+                    _ => Err(SrvClientError::from(m)),
                 }
-                _ => Err(SrvClientError::from(io::Error::from(
-                    io::ErrorKind::UnexpectedEof,
-                ))),
             }
-                      })
-                                                     })
-                                                     .wait()?;
+            _ => Err(SrvClientError::from(io::Error::from(io::ErrorKind::UnexpectedEof))),
+        }
+    })?;
     ui.end("Uploaded file")?;
     Ok(())
 }
@@ -1172,31 +1106,23 @@ fn sub_sup_depart(m: &ArgMatches<'_>) -> Result<()> {
     let mut ui = ui();
     let mut msg = protocol::ctl::SupDepart::default();
     msg.member_id = Some(m.value_of("MEMBER_ID").unwrap().to_string());
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-        ui.begin(format!("Permanently marking {} as departed",
-                         msg.member_id
-                            .as_ref()
-                            .map(String::as_str)
-                            .unwrap_or("UNKNOWN")))
-          .unwrap();
-        ui.status(Status::Applying, format!("via peer {}", listen_ctl_addr))
-          .unwrap();
-        conn.call(msg).for_each(|reply| {
-                          match reply.message_id() {
-                "NetOk" => Ok(()),
-                "NetErr" => {
-                    let m = reply
-                        .parse::<protocol::net::NetErr>()
-                        .map_err(SrvClientError::Decode)?;
-                    Err(SrvClientError::from(m))
-                }
-                _ => Err(SrvClientError::from(io::Error::from(
-                    io::ErrorKind::UnexpectedEof,
-                ))),
+    ui.begin(format!("Permanently marking {} as departed",
+                     msg.member_id
+                        .as_ref()
+                        .map(String::as_str)
+                        .unwrap_or("UNKNOWN")))?;
+    ui.status(Status::Applying, format!("via peer {}", listen_ctl_addr))?;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |reply| {
+        match reply.message_id() {
+            "NetOk" => Ok(()),
+            "NetErr" => {
+                let m = reply.parse::<protocol::net::NetErr>()
+                             .map_err(SrvClientError::Decode)?;
+                Err(SrvClientError::from(m))
             }
-                      })
-    })
-    .wait()?;
+            _ => Err(SrvClientError::from(io::Error::from(io::ErrorKind::UnexpectedEof))),
+        }
+    })?;
     ui.end("Departure recorded.")?;
     Ok(())
 }
@@ -1457,6 +1383,22 @@ fn excludes_from_matches(matches: &ArgMatches<'_>) -> Vec<PackageIdent> {
         .collect()
 }
 
+/// Connect to a Supervisor, send it one request and hand each reply to `on_reply` until the last.
+fn ctl_call<T, F>(listen_ctl_addr: &ListenCtlAddr,
+                  secret_key: &str,
+                  request: T,
+                  mut on_reply: F)
+                  -> Result<()>
+    where T: Into<SrvMessage> + fmt::Debug,
+          F: FnMut(&SrvMessage) -> result::Result<(), SrvClientError>
+{
+    let mut conn = SrvClient::connect(listen_ctl_addr, secret_key)?;
+    for reply in conn.call(request)? {
+        on_reply(&reply?)?;
+    }
+    Ok(())
+}
+
 fn handle_ctl_reply(reply: &SrvMessage) -> result::Result<(), SrvClientError> {
     let mut progress_bar = pbr::ProgressBar::<io::Stdout>::new(0);
     progress_bar.set_units(pbr::Units::Bytes);
@@ -1576,29 +1518,26 @@ fn supervisor_services() -> Result<Vec<PackageIdent>> {
     let msg = protocol::ctl::SvcStatus::default();
 
     let mut out: Vec<PackageIdent> = vec![];
-    SrvClient::connect(&listen_ctl_addr, &secret_key).and_then(|conn| {
-                                                         conn.call(msg).for_each(|reply| {
-                          match reply.message_id() {
-                              "ServiceStatus" => {
-                                  let m = reply.parse::<protocol::types::ServiceStatus>()
-                                               .map_err(SrvClientError::Decode)?;
-                                  out.push(m.ident.into());
-                                  Ok(())
-                              }
-                              "NetOk" => Ok(()),
-                              "NetErr" => {
-                                  let err = reply.parse::<protocol::net::NetErr>()
-                                                 .map_err(SrvClientError::Decode)?;
-                                  Err(SrvClientError::from(err))
-                              }
-                              _ => {
-                                  warn!("Unexpected status message, {:?}", reply);
-                                  Ok(())
-                              }
-                          }
-                      })
-                                                     })
-                                                     .wait()?;
+    ctl_call(&listen_ctl_addr, &secret_key, msg, |reply| {
+        match reply.message_id() {
+            "ServiceStatus" => {
+                let m = reply.parse::<protocol::types::ServiceStatus>()
+                             .map_err(SrvClientError::Decode)?;
+                out.push(m.ident.into());
+                Ok(())
+            }
+            "NetOk" => Ok(()),
+            "NetErr" => {
+                let err = reply.parse::<protocol::net::NetErr>()
+                               .map_err(SrvClientError::Decode)?;
+                Err(SrvClientError::from(err))
+            }
+            _ => {
+                warn!("Unexpected status message, {:?}", reply);
+                Ok(())
+            }
+        }
+    })?;
     Ok(out)
 }
 

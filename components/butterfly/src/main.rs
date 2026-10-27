@@ -16,7 +16,6 @@ use env_logger;
 
 use std::{env,
           net::SocketAddr,
-          thread,
           time::Duration};
 
 use dojo_butterfly::{member,
@@ -69,10 +68,15 @@ fn main() {
         server.member_list.add_initial_member(member);
     }
 
-    server.start(server::timing::Timing::default())
+    let runtime = tokio::runtime::Builder::new_current_thread().enable_all()
+                                                               .build()
+                                                               .expect("Cannot build runtime");
+    server.start(server::timing::Timing::default(), runtime.handle())
           .expect("Cannot start server");
-    loop {
-        println!("{:#?}", server.member_list);
-        thread::sleep(Duration::from_millis(1000));
-    }
+    runtime.block_on(async {
+               loop {
+                   println!("{:#?}", server.member_list);
+                   tokio::time::sleep(Duration::from_millis(1000)).await;
+               }
+           });
 }

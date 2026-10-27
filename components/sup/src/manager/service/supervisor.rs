@@ -20,8 +20,7 @@
 use super::{terminator,
             ProcessState};
 use crate::error::{Error,
-                   Result,
-                   SupError};
+                   Result};
 use dojo_common::{outputln,
                   templating::package::Pkg,
                   types::UserInfo};
@@ -32,12 +31,11 @@ use dojo_core::{fs,
                               Pid},
                 service::ServiceGroup};
 use dojo_launcher_client::LauncherCli;
-use futures::{future,
-              Future};
 use serde::{ser::SerializeStruct,
             Serialize,
             Serializer};
 use std::{fs::File,
+          future::Future,
           io::{BufRead,
                BufReader,
                Write},
@@ -170,24 +168,22 @@ impl Supervisor {
     }
 
     /// Returns a future that stops a service asynchronously.
-    pub fn stop(&self) -> impl Future<Item = (), Error = SupError> {
+    pub fn stop(&self) -> impl Future<Output = Result<()>> + Send + 'static {
         // TODO (CM): we should really just keep the service
         // group around AS a service group
         let service_group = self.preamble.clone();
+        let pid = self.pid;
+        let pid_file = self.pid_file.clone();
 
-        if let Some(pid) = self.pid {
-            let pid_file = self.pid_file.clone();
-
-            future::Either::A(terminator::terminate_service(pid, service_group).and_then(
-                |_shutdown_method| {
-                    Supervisor::cleanup_pidfile_future(pid_file);
-                    Ok(())
-                },
-            ))
-        } else {
-            // Not quite sure how we'd get down here without a PID...
-            warn!("Attempted to stop {}, but we have no PID!", service_group);
-            future::Either::B(future::ok(()))
+        async move {
+            if let Some(pid) = pid {
+                terminator::terminate_service(pid, service_group).await?;
+                Supervisor::cleanup_pidfile_future(pid_file);
+            } else {
+                // Not quite sure how we'd get down here without a PID...
+                warn!("Attempted to stop {}, but we have no PID!", service_group);
+            }
+            Ok(())
         }
     }
 

@@ -14,7 +14,6 @@ doc = false
 base64 = "0.10.1"
 dirs = "1.0.5"
 env_logger = "0.6.1"
-futures = "0.1.26"
 dojo-sup-client = { path = "../sup-client" }
 dojo-sup-protocol = { path = "../sup-protocol", default-features = false }
 # We need to lock here since v0.30.0 bumps to a version of pest that fails to build on Windows.
