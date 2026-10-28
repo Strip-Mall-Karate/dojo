@@ -64,11 +64,11 @@
       },
       "locked": {
         "dir": ".nix",
-        "lastModified": 1793037041,
-        "narHash": "sha256-dMYYIAMxIe6Aq4tXz7S5OQ/aEuMYeNB7QVE2+OuuxC0=",
+        "lastModified": 1793214982,
+        "narHash": "sha256-wNtV4eZJQAfvE59WvwNTJEiwPzvKK0TUt9zSC7wCvik=",
         "ref": "refs/heads/main",
-        "rev": "df1e78c3e8e0a3963c207097e6c9c0fc03af3d74",
-        "revCount": 864,
+        "rev": "23cb366a6848ca7f6be51a8021b4894c24c9c6d4",
+        "revCount": 891,
         "type": "git",
         "url": "ssh://git@git.reset.dev:2222/smk/smk-cli"
       },
