@@ -22,8 +22,8 @@ Provider = ""
 [Ci.Settings]
 [Issue]
 Provider = "workq"
-# One project for every repository's work items, as the other smk repositories declare it.
-Project = "SMK"
+# Dojo's own project, which the dojo and dojo-plans repositories share.
+Project = "DOJ"
 Label = "dojo"
 Workspace = "smk"
 [Format]

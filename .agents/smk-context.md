@@ -9,7 +9,7 @@ the commands and facts the skills need.
   run on the local-network Linux machine with the same `support/vm/guest` scripts.
 - Acceptance: `support/vm/boot --check --payload support/vm/out/payload.cpio.gz` and
   `--check-reboot`. `boot --check` without a payload checks the base image.
-- Tracker: workq, project SMK, label `dojo`. The record is the wiki page "Dojo"
+- Tracker: workq, project DOJ, label `dojo`. The record is the wiki page "Dojo"
   (`smk wiki list --match Dojo`); `docs/decisions.md` in the tree is the dated log. The tree's dev
   shell (`direnv allow`) loads the workq credential `smk issue` and `smk wiki` need; without it they
   fail with HTTP 401.
