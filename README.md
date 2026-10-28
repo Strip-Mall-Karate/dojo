@@ -169,13 +169,15 @@ file there) lets an `.envrc` say `use doj`:
 use_doj() {
   watch_file shell.toml shell.lock
   local exports
-  exports="$(doj shell env)" || return 1
+  exports="$(doj shell env)" || exit 1
   eval "${exports}"
 }
 ```
 
-The function returns on a failed `doj shell env`, rather than evaluating
-nothing, so a stale lock stops the load with its error.
+The function exits on a failed `doj shell env`, so a stale lock stops the
+load with its error. direnv runs `.envrc` without `set -e`: a `return` would
+only end the function, and direnv would load the rest of the file as if the
+shell were there.
 
 Resolving from Builder's channels comes when Builder runs.
 
