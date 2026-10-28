@@ -270,13 +270,15 @@ impl<'a> Store<'a> {
         Ok(latest)
     }
 
-    /// The releases `ident` depends on, all of them, from its archive or its install.
+    /// The releases `ident` depends on, all of them, from its install, or from its archive
+    /// when it is not installed. The install's list is a file; the archive's takes inflating
+    /// the whole archive, which for a toolchain is seconds on every `env`.
     fn tdeps(&self, ident: &PackageIdent) -> Result<Vec<PackageIdent>> {
-        if let Some(path) = self.cached(ident)? {
-            return Ok(PackageArchive::new(path).tdeps()?);
-        }
         if let Some(install) = self.installed(ident) {
             return Ok(install.tdeps()?);
+        }
+        if let Some(path) = self.cached(ident)? {
+            return Ok(PackageArchive::new(path).tdeps()?);
         }
         Err(Error::ShellError(format!("{} is neither installed nor in {}",
                                       ident,
@@ -751,5 +753,26 @@ mod tests {
         assert!(error.contains("but shell.lock records"), "{}", error);
         assert!(PackageInstall::load(&PackageIdent::from_str("acme/tool").unwrap(),
                                      Some(world.root.path())).is_err());
+    }
+
+    #[test]
+    fn env_reads_an_installed_packages_dependencies_without_opening_its_archive() {
+        let world = World::new();
+        let dep = world.archive("acme/dep/1.0.0/20260101000000", &[], "");
+        let tool = world.archive("acme/tool/1.0.0/20260101000000",
+                                 &["acme/dep/1.0.0/20260101000000"],
+                                 "");
+        world.declare("packages = [\"acme/tool\"]\n");
+        world.lock(false).unwrap();
+        world.install(&dep);
+        world.install(&tool);
+        // An archive env cannot read: it is still in the cache, and env has no reason to open it.
+        fs::write(&tool, b"not an archive").unwrap();
+
+        let text = world.env().unwrap();
+
+        assert!(text.contains("/doj/pkgs/acme/dep/1.0.0/20260101000000/bin"),
+                "{}",
+                text);
     }
 }
